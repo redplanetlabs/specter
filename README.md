@@ -14,7 +14,7 @@ The usage of Specter will be explained via example. Suppose you have a sequence 
 [2 4]
 ```
 
-`select` extracts a sequence of results from a data structure. It takes in a "selector", which is a sequence of steps on how to navigate into that data structure. In this case, `ALL` looks at every element in the sequence, `:a` looks at the :a key for each element currently navigated to, and even? filters out any elements that aren't an even value.
+`select` extracts a sequence of results from a data structure. It takes in a "selector", which is a sequence of steps on how to navigate into that data structure. In this case, `ALL` looks at every element in the sequence, `:a` looks at the :a key for each element currently navigated to, and `even?` filters out any elements that aren't an even value.
 
 Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specified what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
 
@@ -55,7 +55,7 @@ When doing more involved transformations, you often find you lose context when n
 
 The update function receives as argumnets all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
 
-The three built-in ways for collecting values are VAL, val-selector, and val-selector-one. VAL just adds whatever element it's currently on to the value list, while val-selector and val-selector-one take in a selector to navigate to the desired value. val-selector works just like select by finding a sequence of values, while val-selector-one expects to only navigate to a single value.
+The three built-in ways for collecting values are `VAL`, `val-selector`, and `val-selector-one`. `VAL` just adds whatever element it's currently on to the value list, while `val-selector` and `val-selector-one` take in a selector to navigate to the desired value. `val-selector` works just like `select` by finding a sequence of values, while `val-selector-one` expects to only navigate to a single value.
 
 Each step of a selector implements the `StructurePath` protocol, which looks like:
 
@@ -68,7 +68,7 @@ Each step of a selector implements the `StructurePath` protocol, which looks lik
 
 Looking at the implementations of the built-in operations should provide you with the guidance you need to make your own selectors.
 
-Finally, you can make select and update work much faster by precompiling your selectors using the `comp-structure-paths` function. There's about a 5x speed difference between the following two invocations of update:
+Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-structure-paths` function. There's about a 5x speed difference between the following two invocations of update:
 
 ```clojure
 (def precompiled (comp-structure-paths ALL :a even?))
