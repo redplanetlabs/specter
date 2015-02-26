@@ -9,7 +9,9 @@ Specter is a library for concisely querying and updating nested data structures.
 
 The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
 ```clojure
->>> (select [ALL :a even?]
+user> (use 'com.rpl.specter)
+nil
+user> (select [ALL :a even?]
             [{:a 1} {:a 2} {:a 4} {:a 3}])
 [2 4]
 ```
@@ -19,18 +21,18 @@ The usage of Specter will be explained via example. Suppose you have a sequence 
 Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specified what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
->>> (update [ALL :a even?]
-            inc
-            [{:a 1} {:a 2} {:a 4} {:a 3}])
+user> (update [ALL :a even?]
+              inc
+              [{:a 1} {:a 2} {:a 4} {:a 3}])
 [{:a 1} {:a 3} {:a 5} {:a 3}]
 ```
 
 Specter comes with all sorts of built-in ways of navigating data structures. For example, here's how to increment the last odd number in a sequence:
 
 ```clojure
->>> (update [(filterer odd?) LAST]
-            inc
-            [2 1 3 6 9 4 8])
+user> (update [(filterer odd?) LAST]
+              inc
+              [2 1 3 6 9 4 8])
 [2 1 3 6 10 4 8]
 ```
 
@@ -39,17 +41,17 @@ Specter comes with all sorts of built-in ways of navigating data structures. For
 `walker` is another useful selector that walks the data structure until a predicate is matched. Here's how to get all the numbers out of a map:
 
 ```clojure
->>> (select (walker number?)
-            {2 [1 2 [6 7]] :a 4 :c {:a 1 :d [2 nil]}})
+user> (select (walker number?)
+              {2 [1 2 [6 7]] :a 4 :c {:a 1 :d [2 nil]}})
 [2 1 2 1 2 6 7 4]
 ```
 
 When doing more involved transformations, you often find you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the update function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
 
 ```clojure
->>> (update [ALL (val-selector-one :b) :a even?]
-            +
-            [{:a 1 :b 3} {:a 2 :b -10} {:a 4 :b 10} {:a 3}])
+user> (update [ALL (val-selector-one :b) :a even?]
+              +
+              [{:a 1 :b 3} {:a 2 :b -10} {:a 4 :b 10} {:a 3}])
 [{:b 3, :a 1} {:b -10, :a -8} {:b 10, :a 14} {:a 3}]
 ```
 
@@ -75,7 +77,6 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 
 (update [ALL :a even?] structure)
 (update precompiled structure)
-
 ```
 
 
