@@ -5,6 +5,12 @@ Deep introspection and transformation of data
 
 Specter is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
 
+# Latest Version
+
+The latest release version of Specter is hosted on [Clojars](https://clojars.org):
+
+[![Current Version](https://clojars.org/com.rpl/specter/latest-version.svg)](https://clojars.org/com.rpl/specter)
+
 # How to use
 
 The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
@@ -85,4 +91,6 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 - Any connection to transducers?
 - Add Clojurescript compatibility
 
+# License
 
+Copyright 2015 Red Planet Labs. Specter is licensed under Apache License v2.0.
