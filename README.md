@@ -61,7 +61,7 @@ user> (update [ALL (val-selector-one :b) :a even?]
 [{:b 3, :a 1} {:b -10, :a -8} {:b 10, :a 14} {:a 3}]
 ```
 
-The update function receives as argumnets all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
+The update function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
 
 The three built-in ways for collecting values are `VAL`, `val-selector`, and `val-selector-one`. `VAL` just adds whatever element it's currently on to the value list, while `val-selector` and `val-selector-one` take in a selector to navigate to the desired value. `val-selector` works just like `select` by finding a sequence of values, while `val-selector-one` expects to only navigate to a single value.
 
