@@ -18,7 +18,7 @@ The usage of Specter will be explained via example. Suppose you have a sequence 
 user> (use 'com.rpl.specter)
 nil
 user> (select [ALL :a even?]
-            [{:a 1} {:a 2} {:a 4} {:a 3}])
+              [{:a 1} {:a 2} {:a 4} {:a 3}])
 [2 4]
 ```
 
