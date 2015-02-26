@@ -102,20 +102,19 @@
         ret
         ))))
 
-(defn- conj-all! [atrans elems]
-  (doseq [e elems]
-    (conj! atrans e)))
+(defn- conj-all! [cell elems]
+  (set-cell! cell (concat (get-cell cell) elems)))
 
 ;; returns vector of all results
 (defn- walk-select [pred continue-fn structure]
-  (let [ret (transient [])
+  (let [ret (mutable-cell [])
         walker (fn this [structure]
                  (if (pred structure)
                    (conj-all! ret (continue-fn structure))
                    (walk/walk this identity structure))
                  )]
     (walker structure)
-    (persistent! ret)
+    (get-cell ret)
     ))
 
 (defn- filter+ancestry [afn aseq]
