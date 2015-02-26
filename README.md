@@ -1,9 +1,9 @@
-# clojung
+# Specter
 Deep introspection and transformation of data
 
 # About
 
-Clojung is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
+Specter is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
 
 # How to use
 
