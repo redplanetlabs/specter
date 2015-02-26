@@ -119,21 +119,17 @@
     ))
 
 (defn- filter+ancestry [afn aseq]
-  (let [aseq (vec aseq)
-        seqret (transient [])
-        ;; transient maps are broken, e.g.:
-        ;; (def m (transient {}))
-        ;; (doseq [i (range 9)] (assoc! m i i))
-        ;; (persistent! m) --> only has 8 elements!
-        mapret (mutable-cell {})]
-    (doseq [i (range (count aseq))
-            :let [e (get aseq i)]]
-      (when (afn e)
-        (conj! seqret e)
-        (set-cell! mapret (assoc (get-cell mapret) (-> seqret count dec) i))
-        ))
-    [(persistent! seqret) (get-cell mapret)]
-    ))
+  (let [aseq (vec aseq)]
+    (reduce (fn [[s m :as orig] i]
+              (let [e (get aseq i)
+                    pos (count s)]
+                (if (afn e)
+                  [(conj s e) (assoc m pos i)]
+                  orig
+                  )))
+            [[] {}]            
+            (range (count aseq))
+            )))
 
 (defn key-select [akey vals structure next-fn]
   (next-fn vals (get structure akey)))
