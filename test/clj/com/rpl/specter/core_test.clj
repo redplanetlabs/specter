@@ -23,11 +23,12 @@
 
 (defspec select-all-keyword-filter
   (for-all+
-    [v (gen/vector (max-size 5 
-                     (gen-map-with-keys gen/keyword gen/int :a)))
+    [kw gen/keyword
+     v (gen/vector (max-size 5 
+                     (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
-    (= (select [ALL :a pred] v)
-       (->> v (map :a) (filter pred))
+    (= (select [ALL kw pred] v)
+       (->> v (map kw) (filter pred))
        )))
 
 (defspec select-pos-extreme-pred
@@ -105,11 +106,13 @@
 
 (defspec update-with-context
   (for-all+
-    [m (max-size 10 (gen-map-with-keys gen/keyword gen/int :a :b))
+    [kw1 gen/keyword
+     kw2 gen/keyword
+     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
      pred (gen/elements [odd? even?])]
-    (= (update [(val-selector-one :b) :a pred] + m)
-       (if (pred (:a m))
-          (assoc m :a (+ (:a m) (:b m)))
+    (= (update [(val-selector-one kw2) kw1 pred] + m)
+       (if (pred (kw1 m))
+          (assoc m kw1 (+ (kw1 m) (kw2 m)))
           m
           ))))
 
