@@ -143,14 +143,7 @@
     (into [] (r/mapcat (partial next-fn vals) structure)))
   (update* [this vals structure next-fn]
     (let [ret (r/map (partial next-fn vals) structure)]
-      (cond (vector? structure)
-            (into [] ret)
-
-            (map? structure)
-            (into {} ret)
-            
-            :else
-            (into '() ret)))
+      (into (empty structure) ret))
     ))
 
 (deftype ValStructurePath []
