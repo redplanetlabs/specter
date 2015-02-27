@@ -1,5 +1,5 @@
 # Specter
-Deep introspection and transformation of data
+Deep introspection and transformation of nested data
 
 # About
 
@@ -93,4 +93,4 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 
 # License
 
-Copyright 2015 Red Planet Labs. Specter is licensed under Apache License v2.0.
+Copyright 2015 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
