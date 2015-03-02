@@ -75,7 +75,7 @@
   (for-all+
    [v (gen/list gen/int)]
    (let [v2 (update [ALL] inc v)]
-     (and (list? v2) (= v2 (map inc v)))
+     (and (seq? v2) (= v2 (map inc v)))
      )))
 
 (defspec update-all-filter
