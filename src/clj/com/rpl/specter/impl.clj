@@ -142,9 +142,12 @@
   (select* [this vals structure next-fn]
     (into [] (r/mapcat (partial next-fn vals) structure)))
   (update* [this vals structure next-fn]
-    (let [ret (r/map (partial next-fn vals) structure)]
-      (into (empty structure) ret))
-    ))
+    (let [ret (r/map (partial next-fn vals) structure)
+          res (into (empty structure) ret)]
+      (if (list? structure)
+        (reverse res)
+        res
+        ))))
 
 (deftype ValStructurePath []
   StructurePath
