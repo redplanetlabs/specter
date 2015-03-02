@@ -145,7 +145,7 @@
     (let [empty-structure (empty structure)
           pfn (partial next-fn vals)]
       (if (list? empty-structure)
-        (map pfn structure)
+        (doall (map pfn structure))
         (->> structure (r/map pfn) (into empty-structure))
         ))))
 
