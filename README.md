@@ -24,7 +24,7 @@ user> (select [ALL :a even?]
 
 `select` extracts a sequence of results from a data structure. It takes in a "selector", which is a sequence of steps on how to navigate into that data structure. In this case, `ALL` looks at every element in the sequence, `:a` looks at the :a key for each element currently navigated to, and `even?` filters out any elements that aren't an even value.
 
-Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specified what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
+Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specifies what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
 user> (update [ALL :a even?]
