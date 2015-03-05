@@ -3,7 +3,7 @@ Deep introspection and transformation of nested data
 
 # About
 
-Specter is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
+Specter is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
 
 # Latest Version
 
@@ -85,6 +85,22 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 (update precompiled structure)
 ```
 
+Some more examples:
+
+Decrement every value in a map:
+```clojure
+user> (update [ALL LAST]
+              dec
+              {:a 1 :b 3})
+{:b 2 :a 0}
+```
+
+Get every number divisible by 3 out of a sequence of sequences:
+```clojure
+user> (select [ALL ALL #(= 0 (mod % 3))]
+              [[1 2 3 4] [] [5 3 2 18] [2 4 6] [12]])
+[3 3 18 6 12]
+```
 
 # Future work
 - Make it possible to parallelize selects/updates
