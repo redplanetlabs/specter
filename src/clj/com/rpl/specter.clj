@@ -55,6 +55,8 @@
                  (apply update-fn (conj vals structure)))
                ))))
 
+(defn setval [selector val structure]
+  (update selector (fn [_] val) structure))
 
 (defn replace-in [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   "Returns [new structure [<user-ret> <user-ret>...]"
