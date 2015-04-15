@@ -68,8 +68,8 @@ user> (setval (srange 2 4) [-1 -1 -1] [0 1 2 3 4 5 6 7 8 9])
 Here's how to concatenate the sequence [:a :b] to every nested sequence of a sequence:
 
 ```clojure
-user> (setval [ALL END] [:a :b] [[1] [1 2] [:c]])
-[[1 :a :b] [1 2 :a :b] [:c :a :b]]
+user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
+[[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
 `END` is a wrapper around `srange-dynamic`, which takes in functions that return the start index and end index given the structure.
