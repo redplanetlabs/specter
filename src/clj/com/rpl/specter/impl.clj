@@ -4,25 +4,53 @@
             [clojure.core.reducers :as r])
   )
 
+(defprotocol CoerceStructureValsPath
+  (coerce-path [this]))
+
+(extend-protocol CoerceStructureValsPath
+
+  com.rpl.specter.protocols.StructureValsPath
+  (coerce-path [this] this)
+
+  com.rpl.specter.protocols.ValPath
+  (coerce-path [valpath]
+    (reify StructureValsPath
+      (select-full* [this vals structure next-fn]
+        (next-fn (conj vals (select-val valpath structure)) structure))
+      (update-full* [this vals structure next-fn]
+        (next-fn (conj vals (select-val valpath structure)) structure))))
+
+  ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
+  Object
+  (coerce-path [spath]
+    (reify StructureValsPath
+      (select-full* [this vals structure next-fn]
+        (select* spath structure (fn [structure] (next-fn vals structure))))
+      (update-full* [this vals structure next-fn]
+        (update* spath structure (fn [structure] (next-fn vals structure)))
+        )))
+  )
+
+
 (extend-protocol StructurePathComposer
   Object
   (comp-structure-paths* [sp]
-    sp)
+    (coerce-path sp))
   java.util.List
   (comp-structure-paths* [structure-paths]
     (reduce (fn [sp-curr sp]
-              (reify StructurePath
-                (select* [this vals structure next-fn]
-                  (select* sp vals structure
-                           (fn [vals-next structure-next]
-                             (select* sp-curr vals-next structure-next next-fn)))
+              (reify StructureValsPath
+                (select-full* [this vals structure next-fn]
+                  (select-full* sp vals structure
+                                (fn [vals-next structure-next]
+                                  (select-full* sp-curr vals-next structure-next next-fn)))
                   )
-                (update* [this vals structure next-fn]
-                  (update* sp vals structure
-                           (fn [vals-next structure-next]
-                             (update* sp-curr vals-next structure-next next-fn))))
+                (update-full* [this vals structure next-fn]
+                  (update-full* sp vals structure
+                                (fn [vals-next structure-next]
+                                  (update-full* sp-curr vals-next structure-next next-fn))))
                 ))
-          (-> structure-paths flatten reverse))
+          (->> structure-paths flatten (map coerce-path) reverse))
     ))
 
 ;; cell implementation idea taken from prismatic schema library
@@ -130,70 +158,67 @@
             (range (count aseq))
             )))
 
-(defn key-select [akey vals structure next-fn]
-  (next-fn vals (get structure akey)))
+(defn key-select [akey structure next-fn]
+  (next-fn (get structure akey)))
 
-(defn key-update [akey vals structure next-fn]
-  (assoc structure akey (next-fn vals (get structure akey))
+(defn key-update [akey structure next-fn]
+  (assoc structure akey (next-fn (get structure akey))
   ))
 
 (deftype AllStructurePath []
   StructurePath
-  (select* [this vals structure next-fn]
-    (into [] (r/mapcat (partial next-fn vals) structure)))
-  (update* [this vals structure next-fn]
-    (let [empty-structure (empty structure)
-          pfn (partial next-fn vals)]
+  (select* [this structure next-fn]
+    (into [] (r/mapcat next-fn structure)))
+  (update* [this structure next-fn]
+    (let [empty-structure (empty structure)]
       (if (list? empty-structure)
         ;; this is done to maintain order, otherwise lists get reversed
-        (doall (map pfn structure))
-        (->> structure (r/map pfn) (into empty-structure))
+        (doall (map next-fn structure))
+        (->> structure (r/map next-fn) (into empty-structure))
         ))))
 
 (deftype ValStructurePath []
-  StructurePath
-  (select* [this vals structure next-fn]
-    (next-fn (conj vals structure) structure))
-  (update* [this vals structure next-fn]
-    (next-fn (conj vals structure) structure)))
+  ValPath
+  (select-val [this structure]
+    structure))
 
 (deftype LastStructurePath []
   StructurePath
-  (select* [this vals structure next-fn]
-    (next-fn vals (last structure)))
-  (update* [this vals structure next-fn]
-    (set-last structure (next-fn vals (last structure)))))
+  (select* [this structure next-fn]
+    (next-fn (last structure)))
+  (update* [this structure next-fn]
+    (set-last structure (next-fn (last structure)))))
 
 (deftype FirstStructurePath []
   StructurePath
-  (select* [this vals structure next-fn]
-    (next-fn vals (first structure)))
-  (update* [this vals structure next-fn]
-    (set-first structure (next-fn vals (first structure)))))
+  (select* [this structure next-fn]
+    (next-fn (first structure)))
+  (update* [this structure next-fn]
+    (set-first structure (next-fn (first structure)))))
 
 (deftype WalkerStructurePath [afn]
   StructurePath
-  (select* [this vals structure next-fn]
-    (walk-select afn (partial next-fn vals) structure))
-  (update* [this vals structure next-fn]
-    (walk-until afn (partial next-fn vals) structure)))
+  (select* [this structure next-fn]
+    (walk-select afn next-fn structure))
+  (update* [this structure next-fn]
+    (walk-until afn next-fn structure)))
 
 (deftype CodeWalkerStructurePath [afn]
   StructurePath
-  (select* [this vals structure next-fn]
-    (walk-select afn (partial next-fn vals) structure))
-  (update* [this vals structure next-fn]
-    (codewalk-until afn (partial next-fn vals) structure)))
+  (select* [this structure next-fn]
+    (walk-select afn next-fn structure))
+  (update* [this structure next-fn]
+    (codewalk-until afn next-fn structure)))
 
 (deftype FilterStructurePath [afn]
   StructurePath
-  (select* [this vals structure next-fn]
-    (next-fn vals (filter afn structure)))
-  (update* [this vals structure next-fn]
+  (select* [this structure next-fn]
+    (next-fn (filter afn structure)))
+  (update* [this structure next-fn]
     (let [[filtered ancestry] (filter+ancestry afn structure)
           ;; the vec is necessary so that we can get by index later
           ;; (can't get by index for cons'd lists)
-          next (vec (next-fn vals filtered))]
+          next (vec (next-fn filtered))]
       (reduce (fn [curr [newi oldi]]
                 (assoc curr oldi (get next newi)))
               (vec structure)
@@ -201,36 +226,30 @@
 
 (deftype KeyPath [akey]
   StructurePath
-  (select* [this vals structure next-fn]
-    (key-select akey vals structure next-fn))
-  (update* [this vals structure next-fn]
-    (key-update akey vals structure next-fn)
+  (select* [this structure next-fn]
+    (key-select akey structure next-fn))
+  (update* [this structure next-fn]
+    (key-update akey structure next-fn)
     ))
 
-(defn- selector-vals* [sel-fn selector vals structure next-fn]
-  (next-fn (vec (concat vals
-                        [(sel-fn selector structure)]))
-           structure))
 
 (deftype SelectorValsPath [sel-fn selector]
-  StructurePath
-  (select* [this vals structure next-fn]
-    (selector-vals* sel-fn selector vals structure next-fn))
-  (update* [this vals structure next-fn]
-    (selector-vals* sel-fn selector vals structure next-fn)))
+  ValPath
+  (select-val [this structure]
+    (sel-fn selector structure)))
 
 (deftype SRangePath [start-fn end-fn]
   StructurePath
-  (select* [this vals structure next-fn]
+  (select* [this structure next-fn]
     (let [start (start-fn structure)
           end (end-fn structure)]
-      (next-fn vals (-> structure vec (subvec start end)))
+      (next-fn (-> structure vec (subvec start end)))
       ))
-  (update* [this vals structure next-fn]
+  (update* [this structure next-fn]
     (let [start (start-fn structure)
           end (end-fn structure)
           structurev (vec structure)
-          newpart (next-fn vals (-> structurev (subvec start end)))
+          newpart (next-fn (-> structurev (subvec start end)))
           res (concat (subvec structurev 0 start)
                       newpart
                       (subvec structurev end (count structure)))]

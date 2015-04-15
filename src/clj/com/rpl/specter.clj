@@ -13,11 +13,11 @@
 
 (defn select [selector structure]
   (let [sp (comp-structure-paths* selector)]
-    (select* sp
-             []
-             structure
-             (fn [vals structure]
-               (if-not (empty? vals) [(conj vals structure)] [structure])))
+    (select-full* sp
+                  []
+                  structure
+                  (fn [vals structure]
+                    (if-not (empty? vals) [(conj vals structure)] [structure])))
     ))
 
 (defn select-one
@@ -46,14 +46,14 @@
 
 (defn update [selector update-fn structure]
   (let [selector (comp-structure-paths* selector)]
-    (update* selector
-             []
-             structure
-             (fn [vals structure]
-               (if (empty? vals)
-                 (update-fn structure)
-                 (apply update-fn (conj vals structure)))
-               ))))
+    (update-full* selector
+                  []
+                  structure
+                  (fn [vals structure]
+                    (if (empty? vals)
+                      (update-fn structure)
+                      (apply update-fn (conj vals structure)))
+                    ))))
 
 (defn setval [selector val structure]
   (update selector (fn [_] val) structure))
@@ -104,20 +104,20 @@
 
 (extend-type clojure.lang.Keyword
   StructurePath
-  (select* [kw vals structure next-fn]
-    (key-select kw vals structure next-fn))
-  (update* [kw vals structure next-fn]
-    (key-update kw vals structure next-fn)
+  (select* [kw structure next-fn]
+    (key-select kw structure next-fn))
+  (update* [kw structure next-fn]
+    (key-update kw structure next-fn)
     ))
 
 (extend-type clojure.lang.AFn
   StructurePath
-  (select* [afn vals structure next-fn]
+  (select* [afn structure next-fn]
     (if (afn structure)
-      (next-fn vals structure)))
-  (update* [afn vals structure next-fn]
+      (next-fn structure)))
+  (update* [afn structure next-fn]
     (if (afn structure)
-      (next-fn vals structure)
+      (next-fn structure)
       structure)))
 
 (defn val-selector [& selector]
