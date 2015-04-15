@@ -145,6 +145,7 @@
     (let [empty-structure (empty structure)
           pfn (partial next-fn vals)]
       (if (list? empty-structure)
+        ;; this is done to maintain order, otherwise lists get reversed
         (doall (map pfn structure))
         (->> structure (r/map pfn) (into empty-structure))
         ))))
@@ -217,3 +218,23 @@
     (selector-vals* sel-fn selector vals structure next-fn))
   (update* [this vals structure next-fn]
     (selector-vals* sel-fn selector vals structure next-fn)))
+
+(deftype SRangePath [start-fn end-fn]
+  StructurePath
+  (select* [this vals structure next-fn]
+    (let [start (start-fn structure)
+          end (end-fn structure)]
+      (next-fn vals (-> structure vec (subvec start end)))
+      ))
+  (update* [this vals structure next-fn]
+    (let [start (start-fn structure)
+          end (end-fn structure)
+          structurev (vec structure)
+          newpart (next-fn vals (-> structurev (subvec start end)))
+          res (concat (subvec structurev 0 start)
+                      newpart
+                      (subvec structurev end (count structure)))]
+      (if (vector? structure)
+        (vec res)
+        res
+        ))))

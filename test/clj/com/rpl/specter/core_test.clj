@@ -180,6 +180,32 @@
          [res user-ret]
          ))))
 
+(defspec srange-extremes-test
+  (for-all+
+   [v (gen/vector gen/int)
+    v2 (gen/vector gen/int)]
+   (let [b (setval START v2 v)
+         e (setval END v2 v)]
+     (and (= b (concat v2 v))
+          (= e (concat v v2)))
+     )))
+
+(defspec srange-test
+  (for-all+
+   [v (gen/vector gen/int)
+    b (gen/elements (-> v count inc range))
+    e (gen/elements (range b (-> v count inc)))
+    ]
+   (let [sv (subvec v b e)
+         predcount (fn [pred v] (->> v (filter pred) count))
+         even-count (partial predcount even?)
+         odd-count (partial predcount odd?)
+         b (update (srange b e) (fn [r] (filter odd? r)) v)]
+     (and (= (odd-count v) (odd-count b))
+          (= (+ (even-count b) (even-count sv))
+             (even-count v)))
+     )))
+
 (deftest structure-path-directly-test
   (is (= 3 (select-one :b {:a 1 :b 3})))
   (is (= 5 (select-one (comp-structure-paths :a :b) {:a {:b 5}})))

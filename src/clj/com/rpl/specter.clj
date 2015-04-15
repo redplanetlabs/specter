@@ -86,6 +86,14 @@
 
 (def FIRST (->FirstStructurePath))
 
+(defn srange-dynamic [start-fn end-fn] (->SRangePath start-fn end-fn))
+
+(defn srange [start end] (srange-dynamic (fn [_] start) (fn [_] end)))
+
+(def START (srange 0 0))
+
+(def END (srange-dynamic count count))
+
 (defn walker [afn] (->WalkerStructurePath afn))
 
 (defn codewalker [afn] (->CodeWalkerStructurePath afn))
