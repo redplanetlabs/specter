@@ -44,6 +44,36 @@ user> (update [(filterer odd?) LAST]
 
 `filterer` navigates you to a view of the sequence currently being looked at. `LAST` navigates you to the last element of whatever sequence you're looking at. But of course during updates, the updates are performed on the original data structure. 
 
+`srange` is a selector for looking at or replacing a subsequence of a sequence. For example, here's how to increment all the odd numbers between indexes 1 and 4:
+
+```clojure
+user> (update [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
+[0 2 2 4 4 5 6 7]
+```
+
+`srange` can also be used to replace that subsequence entirely with a new sequence. For example, here's how to replace the subsequence from index 2 to 4 with [-1 -1 -1]:
+
+```clojure
+user> (update (srange 2 4) (fn [_] [-1 -1 -1]) [0 1 2 3 4 5 6 7 8 9])
+[0 1 -1 -1 -1 4 5 6 7 8 9]
+```
+
+The above can be written more concisely using the `setval` function, which is a wrapper around `update`:
+
+```clojure
+user> (setval (srange 2 4) [-1 -1 -1] [0 1 2 3 4 5 6 7 8 9])
+[0 1 -1 -1 -1 4 5 6 7 8 9]
+```
+
+Here's how to concatenate the sequence [:a :b] to every nested sequence of a sequence:
+
+```clojure
+user> (setval [ALL END] [:a :b] [[1] [1 2] [:c]])
+[[1 :a :b] [1 2 :a :b] [:c :a :b]]
+```
+
+`END` is a wrapper around `srange-dynamic`, which takes in functions that return the start index and end index given the structure.
+
 `walker` is another useful selector that walks the data structure until a predicate is matched. Here's how to get all the numbers out of a map:
 
 ```clojure
