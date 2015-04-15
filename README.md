@@ -95,12 +95,12 @@ The update function receives as arguments all the collected values followed by t
 
 The three built-in ways for collecting values are `VAL`, `val-selector`, and `val-selector-one`. `VAL` just adds whatever element it's currently on to the value list, while `val-selector` and `val-selector-one` take in a selector to navigate to the desired value. `val-selector` works just like `select` by finding a sequence of values, while `val-selector-one` expects to only navigate to a single value.
 
-Each step of a selector implements the `StructurePath` protocol, which looks like:
+To make your own selector, implement the `StructurePath` protocol which looks like:
 
 ```clojure
 (defprotocol StructurePath
-  (select* [this vals structure next-fn])
-  (update* [this vals structure next-fn])
+  (select* [this structure next-fn])
+  (update* [this structure next-fn])
   )
 ```
 
