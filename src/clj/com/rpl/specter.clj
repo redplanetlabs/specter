@@ -102,6 +102,11 @@
 
 (defn keypath [akey] (->KeyPath akey))
 
+(defn view [afn] (->ViewPath afn))
+
+(defmacro viewfn [& args]
+  `(view (fn ~@args)))
+
 (extend-type clojure.lang.Keyword
   StructurePath
   (select* [kw structure next-fn]

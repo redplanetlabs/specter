@@ -232,7 +232,6 @@
     (key-update akey structure next-fn)
     ))
 
-
 (deftype SelectorValsPath [sel-fn selector]
   ValPath
   (select-val [this structure]
@@ -257,3 +256,11 @@
         (vec res)
         res
         ))))
+
+(deftype ViewPath [view-fn]
+  StructurePath
+  (select* [this structure next-fn]
+    (-> structure view-fn next-fn))
+  (update* [this structure next-fn]
+    (-> structure view-fn next-fn)
+    ))

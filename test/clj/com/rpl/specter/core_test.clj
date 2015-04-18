@@ -210,3 +210,13 @@
   (is (= 3 (select-one :b {:a 1 :b 3})))
   (is (= 5 (select-one (comp-structure-paths :a :b) {:a {:b 5}})))
   )
+
+(defspec view-test
+  (for-all+
+    [i gen/int
+     afn (gen/elements [inc dec])]
+    (= (first (select (view afn) i))
+       (first (select (viewfn [i] (afn i)) i))
+       (afn i)
+       (update (view afn) identity i)
+       )))
