@@ -4,6 +4,11 @@
             [clojure.core.reducers :as r])
   )
 
+(defn benchmark [iters afn]
+  (time
+   (dotimes [_ iters]
+     (afn))))
+
 (defprotocol CoerceStructureValsPath
   (coerce-path [this]))
 
