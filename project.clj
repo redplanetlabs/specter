@@ -1,4 +1,4 @@
-(defproject com.rpl/specter "0.0.9"
+(defproject com.rpl/specter "0.1.0"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  ]
   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"] ; this prevents JVM from doing optimizations which can remove stack traces from NPE and other exceptions
