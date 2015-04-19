@@ -132,6 +132,16 @@ user> (select [ALL ALL #(= 0 (mod % 3))]
 [3 3 18 6 12]
 ```
 
+Append [:c :d] to every subsequence that has at least two even numbers:
+```clojure
+user> (setval [ALL
+               (selected? (filterer even?) (view count) #(>= % 2))
+               END]
+              [:c :d]
+              [[1 2 3 4 5 6] [7 0 -1] [8 8] []])
+[[1 2 3 4 5 6 :c :d] [7 0 -1] [8 8 :c :d] []]
+```
+
 # Future work
 - Make it possible to parallelize selects/updates
 - Any connection to transducers?
