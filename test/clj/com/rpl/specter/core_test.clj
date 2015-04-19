@@ -117,7 +117,7 @@
      kw2 gen/keyword
      m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
      pred (gen/elements [odd? even?])]
-    (= (update [(val-selector-one kw2) kw1 pred] + m)
+    (= (update [(collect-one kw2) kw1 pred] + m)
        (if (pred (kw1 m))
           (assoc m kw1 (+ (kw1 m) (kw2 m)))
           m
@@ -208,7 +208,7 @@
 
 (deftest structure-path-directly-test
   (is (= 3 (select-one :b {:a 1 :b 3})))
-  (is (= 5 (select-one (comp-structure-paths :a :b) {:a {:b 5}})))
+  (is (= 5 (select-one (comp-paths :a :b) {:a {:b 5}})))
   )
 
 (defspec view-test
@@ -220,3 +220,10 @@
        (afn i)
        (update (view afn) identity i)
        )))
+
+(deftest selected?-test
+  (is (= [[1 3 5] [2 :a] [7 11 4 2 :a] [10 1 :a] []]
+         (setval [ALL (selected? ALL even?) END]
+                 [:a]
+                 [[1 3 5] [2] [7 11 4 2] [10 1] []]
+                 ))))

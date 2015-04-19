@@ -85,7 +85,7 @@ user> (select (walker number?)
 When doing more involved transformations, you often find you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the update function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
 
 ```clojure
-user> (update [ALL (val-selector-one :b) :a even?]
+user> (update [ALL (collect-one :b) :a even?]
               +
               [{:a 1 :b 3} {:a 2 :b -10} {:a 4 :b 10} {:a 3}])
 [{:b 3, :a 1} {:b -10, :a -8} {:b 10, :a 14} {:a 3}]
@@ -93,7 +93,7 @@ user> (update [ALL (val-selector-one :b) :a even?]
 
 The update function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
 
-The three built-in ways for collecting values are `VAL`, `val-selector`, and `val-selector-one`. `VAL` just adds whatever element it's currently on to the value list, while `val-selector` and `val-selector-one` take in a selector to navigate to the desired value. `val-selector` works just like `select` by finding a sequence of values, while `val-selector-one` expects to only navigate to a single value.
+The three built-in ways for collecting values are `VAL`, `collect`, and `collect-one`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value.
 
 To make your own selector, implement the `StructurePath` protocol which looks like:
 
@@ -106,10 +106,10 @@ To make your own selector, implement the `StructurePath` protocol which looks li
 
 Looking at the implementations of the built-in selectors should provide you with the guidance you need to make your own selectors.
 
-Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-structure-paths` function. There's about a 5x speed difference between the following two invocations of update:
+Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 5x speed difference between the following two invocations of update:
 
 ```clojure
-(def precompiled (comp-structure-paths ALL :a even?))
+(def precompiled (comp-paths ALL :a even?))
 
 (update [ALL :a even?] structure)
 (update precompiled structure)

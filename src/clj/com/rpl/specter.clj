@@ -6,13 +6,13 @@
 ;;there are going to be. this should make it much easier to allocate space for vals without doing concats
 ;;all over the place. The apply to the vals + structure can also be avoided since the number of vals is known
 ;;beforehand
-(defn comp-structure-paths [& structure-paths]
-  (comp-structure-paths* (vec structure-paths)))
+(defn comp-paths [& paths]
+  (comp-paths* (vec paths)))
 
 ;; Selector functions
 
 (defn select [selector structure]
-  (let [sp (comp-structure-paths* selector)]
+  (let [sp (comp-paths* selector)]
     (select-full* sp
                   []
                   structure
@@ -45,7 +45,7 @@
 ;; Update functions
 
 (defn update [selector update-fn structure]
-  (let [selector (comp-structure-paths* selector)]
+  (let [selector (comp-paths* selector)]
     (update-full* selector
                   []
                   structure
@@ -80,7 +80,7 @@
 
 (def ALL (->AllStructurePath))
 
-(def VAL (->ValStructurePath))
+(def VAL (->ValCollect))
 
 (def LAST (->LastStructurePath))
 
@@ -107,6 +107,18 @@
 (defmacro viewfn [& args]
   `(view (fn ~@args)))
 
+(defn selected?
+  "Filters the current value based on whether a selector finds anything.
+  e.g. (selected? :vals ALL even?) keeps the current element only if an
+  even number exists for the :vals key"
+  [& selectors]
+  (let [s (comp-paths selectors)]
+    (fn [structure]
+      (->> structure
+           (select s)
+           empty?
+           not))))
+
 (extend-type clojure.lang.Keyword
   StructurePath
   (select* [kw structure next-fn]
@@ -125,8 +137,8 @@
       (next-fn structure)
       structure)))
 
-(defn val-selector [& selector]
-  (->SelectorValsPath select (comp-structure-paths* selector)))
+(defn collect [& selector]
+  (->SelectCollector select (comp-paths* selector)))
 
-(defn val-selector-one [& selector]
-  (->SelectorValsPath select-one (comp-structure-paths* selector)))
+(defn collect-one [& selector]
+  (->SelectCollector select-one (comp-paths* selector)))

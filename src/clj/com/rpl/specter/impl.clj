@@ -17,13 +17,13 @@
   com.rpl.specter.protocols.StructureValsPath
   (coerce-path [this] this)
 
-  com.rpl.specter.protocols.ValPath
-  (coerce-path [valpath]
+  com.rpl.specter.protocols.Collector
+  (coerce-path [collector]
     (reify StructureValsPath
       (select-full* [this vals structure next-fn]
-        (next-fn (conj vals (select-val valpath structure)) structure))
+        (next-fn (conj vals (collect-val collector structure)) structure))
       (update-full* [this vals structure next-fn]
-        (next-fn (conj vals (select-val valpath structure)) structure))))
+        (next-fn (conj vals (collect-val collector structure)) structure))))
 
   ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
   Object
@@ -37,12 +37,12 @@
   )
 
 
-(extend-protocol StructurePathComposer
+(extend-protocol StructureValsPathComposer
   Object
-  (comp-structure-paths* [sp]
+  (comp-paths* [sp]
     (coerce-path sp))
   java.util.List
-  (comp-structure-paths* [structure-paths]
+  (comp-paths* [structure-paths]
     (reduce (fn [sp-curr sp]
               (reify StructureValsPath
                 (select-full* [this vals structure next-fn]
@@ -182,9 +182,9 @@
         (->> structure (r/map next-fn) (into empty-structure))
         ))))
 
-(deftype ValStructurePath []
-  ValPath
-  (select-val [this structure]
+(deftype ValCollect []
+  Collector
+  (collect-val [this structure]
     structure))
 
 (deftype LastStructurePath []
@@ -237,9 +237,9 @@
     (key-update akey structure next-fn)
     ))
 
-(deftype SelectorValsPath [sel-fn selector]
-  ValPath
-  (select-val [this structure]
+(deftype SelectCollector [sel-fn selector]
+  Collector
+  (collect-val [this structure]
     (sel-fn selector structure)))
 
 (deftype SRangePath [start-fn end-fn]
@@ -269,3 +269,6 @@
   (update* [this structure next-fn]
     (-> structure view-fn next-fn)
     ))
+
+
+
