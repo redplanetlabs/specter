@@ -107,6 +107,9 @@
 (defmacro viewfn [& args]
   `(view (fn ~@args)))
 
+(defn split [& selectors]
+  (->SplitPath (->> selectors (map comp-paths*) doall)))
+
 (defn selected?
   "Filters the current value based on whether a selector finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an

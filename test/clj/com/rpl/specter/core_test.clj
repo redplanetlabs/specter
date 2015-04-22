@@ -3,7 +3,7 @@
         [clojure.test.check.clojure-test]
         [com.rpl specter]
         [com.rpl.specter test-helpers])
-  (:require [clojure.test.check             
+  (:require [clojure.test.check
              [generators :as gen]
              [properties :as prop]]
             [clojure.test.check :as qc]))
@@ -24,7 +24,7 @@
 (defspec select-all-keyword-filter
   (for-all+
     [kw gen/keyword
-     v (gen/vector (max-size 5 
+     v (gen/vector (max-size 5
                      (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
     (= (select [ALL kw pred] v)
@@ -157,7 +157,7 @@
      )))
 
 (defspec replace-in-test
-  (for-all+ 
+  (for-all+
     [v (gen/vector gen/int)]
     (let [res (->> v (map (fn [v] (if (even? v) (inc v) v))))
           user-ret (->> v
@@ -170,7 +170,7 @@
          ))))
 
 (defspec replace-in-custom-merge
-  (for-all+ 
+  (for-all+
     [v (gen/vector gen/int)]
     (let [res (->> v (map (fn [v] (if (even? v) (inc v) v))))
           last-even (->> v (filter even?) last)
@@ -227,3 +227,15 @@
                  [:a]
                  [[1 3 5] [2] [7 11 4 2] [10 1] []]
                  ))))
+
+(deftest split-test
+  (let [data {:a [1 2 3 4] :b {:c :d}}]
+    (is (= (select (split [:a ALL even?] [:b :c]) data)
+           [2 4 :d]))
+    ;;TODO: this behavior is highly confusing... any way to have split selectors go first and THEN updates applied? ... only affects updates... what if it matches both selectors?
+    ;; maybe shouldn't allow splitting for ALL
+    (is (= (update [:a ALL (split [even? (view -)] odd?)]
+                   inc
+                   data)
+           {:a [2 0 4 -2] :b {:c :d}}
+           ))))

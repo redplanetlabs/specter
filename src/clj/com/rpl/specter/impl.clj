@@ -117,8 +117,8 @@
 
 (defn- walk-until [pred on-match-fn structure]
   (if (pred structure)
-    (on-match-fn structure)    
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)    
+    (on-match-fn structure)
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)
     ))
 
 (defn- fn-invocation? [f]
@@ -130,7 +130,7 @@
   (if (pred structure)
     (on-match-fn structure)
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (fn-invocation? structure) (fn-invocation? ret))        
+      (if (and (fn-invocation? structure) (fn-invocation? ret))
         (with-meta ret (meta structure))
         ret
         ))))
@@ -159,7 +159,7 @@
                   [(conj s e) (assoc m pos i)]
                   orig
                   )))
-            [[] {}]            
+            [[] {}]
             (range (count aseq))
             )))
 
@@ -270,5 +270,10 @@
     (-> structure view-fn next-fn)
     ))
 
-
-
+(deftype SplitPath [selectors]
+  StructureValsPath
+  (select-full* [this vals structure next-fn]
+    (into [] (r/mapcat #(select-full* % vals structure next-fn) selectors)))
+  (update-full* [this vals structure next-fn]
+    (reduce (fn [structure s] (update-full* s vals structure next-fn)) structure selectors)
+    ))
