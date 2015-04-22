@@ -218,7 +218,7 @@
 (deftype FilterStructurePath [afn]
   StructurePath
   (select* [this structure next-fn]
-    (next-fn (filter afn structure)))
+    (->> structure (filter afn) doall next-fn))
   (update* [this structure next-fn]
     (let [[filtered ancestry] (filter+ancestry afn structure)
           ;; the vec is necessary so that we can get by index later
