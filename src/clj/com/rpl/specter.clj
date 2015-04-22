@@ -11,7 +11,9 @@
 
 ;; Selector functions
 
-(defn select [selector structure]
+(defn select
+  "Navigates to and returns a sequence of all the elements specified by the selector."
+  [selector structure]
   (let [sp (comp-paths* selector)]
     (select-full* sp
                   []
@@ -21,7 +23,7 @@
     ))
 
 (defn select-one
-  "Like select, but returns either one element or nil. Throws exception if multiple elements returned"
+  "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
   (let [res (select selector structure)]
     (when (> (count res) 1)
@@ -30,7 +32,7 @@
     ))
 
 (defn select-one!
-  "Returns exactly one element, throws exception if zero or multiple elements returned"
+  "Returns exactly one element, throws exception if zero or multiple elements found"
   [selector structure]
   (let [res (select-one selector structure)]
     (when (nil? res) (throw-illegal "No elements found for params: " selector structure))
@@ -38,13 +40,16 @@
     ))
 
 (defn select-first
-  "Returns first element returned. Not any more efficient than select, just a convenience"
+  "Returns first element found. Not any more efficient than select, just a convenience"
   [selector structure]
   (first (select selector structure)))
 
 ;; Update functions
 
-(defn update [selector update-fn structure]
+(defn update
+  "Navigates to each value specified by the selector and replaces it by the result of running
+  the update-fn on it"
+  [selector update-fn structure]
   (let [selector (comp-paths* selector)]
     (update-full* selector
                   []
@@ -55,11 +60,17 @@
                       (apply update-fn (conj vals structure)))
                     ))))
 
-(defn setval [selector val structure]
+(defn setval
+  "Navigates to each value specified by the selector and replaces it by val"
+  [selector val structure]
   (update selector (fn [_] val) structure))
 
 (defn replace-in [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  "Returns [new structure [<user-ret> <user-ret>...]"
+  "Similar to update, except returns a pair of [updated-structure sequence-of-user-ret].
+  The update-fn in this case is expected to return [ret user-ret]. ret is 
+   what's used to update the data structure, while user-ret will be added to the user-ret sequence
+   in the final return. replace-in is useful for situations where you need to know the specific values
+   of what was updated in the data structure."
   (let [state (mutable-cell nil)]
     [(update selector
              (fn [e]
