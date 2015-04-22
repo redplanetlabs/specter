@@ -44,7 +44,7 @@ user> (update [(filterer odd?) LAST]
 
 `filterer` navigates you to a view of the sequence currently being looked at. `LAST` navigates you to the last element of whatever sequence you're looking at. But of course during updates, the updates are performed on the original data structure. 
 
-`srange` is a selector for looking at or replacing a subsequence of a sequence. For example, here's how to increment all the odd numbers between indexes 1 and 4:
+`srange` is a selector for looking at or replacing a subsequence of a sequence. For example, here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
 
 ```clojure
 user> (update [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
