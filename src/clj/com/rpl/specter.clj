@@ -15,11 +15,7 @@
   "Navigates to and returns a sequence of all the elements specified by the selector."
   [selector structure]
   (let [sp (comp-paths* selector)]
-    (select-full* sp
-                  []
-                  structure
-                  (fn [vals structure]
-                    (if-not (empty? vals) [(conj vals structure)] [structure])))
+    (exec-select selector structure)
     ))
 
 (defn select-one
@@ -51,14 +47,8 @@
   the update-fn on it"
   [selector update-fn structure]
   (let [selector (comp-paths* selector)]
-    (update-full* selector
-                  []
-                  structure
-                  (fn [vals structure]
-                    (if (empty? vals)
-                      (update-fn structure)
-                      (apply update-fn (conj vals structure)))
-                    ))))
+    (exec-update selector update-fn structure)
+    ))
 
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"

@@ -12,5 +12,8 @@
 (defprotocol Collector
   (collect-val [this structure]))
 
-(defprotocol StructureValsPathComposer
-  (comp-paths* [paths]))
+;;TODO: Collectors in sequence become a StructureValsPath that does all collection at once
+;;StructurePath in sequence become a single StructurePath
+;;any StructureValsPath composed with anything becomes a StructureValsPath
+;;TODO: update update/select to be able to execute a StructurePath directly without coercing it
+;;   - this will avoid MANY layers of indirection and overhead

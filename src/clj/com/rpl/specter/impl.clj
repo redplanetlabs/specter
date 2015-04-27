@@ -9,14 +9,10 @@
    (dotimes [_ iters]
      (afn))))
 
-(defprotocol CoerceStructureValsPath
+(defprotocol CoercePath
   (coerce-path [this]))
 
-(extend-protocol CoerceStructureValsPath
-
-  com.rpl.specter.protocols.StructureValsPath
-  (coerce-path [this] this)
-
+(extend-protocol CoercePath
   com.rpl.specter.protocols.Collector
   (coerce-path [collector]
     (reify StructureValsPath
@@ -28,22 +24,74 @@
   ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
   Object
   (coerce-path [spath]
+    spath))
+
+(defprotocol CoerceStructureValsPath
+  (coerce-structure-vals-path [this]))
+
+(extend-protocol CoerceStructureValsPath
+  com.rpl.specter.protocols.StructureValsPath
+  (coerce-structure-vals-path [this] this)
+
+  com.rpl.specter.protocols.Collector
+  (coerce-structure-vals-path [this] (coerce-path this))
+
+
+  ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
+  Object
+  (coerce-structure-vals-path [spath]
     (reify StructureValsPath
       (select-full* [this vals structure next-fn]
         (select* spath structure (fn [structure] (next-fn vals structure))))
       (update-full* [this vals structure next-fn]
         (update* spath structure (fn [structure] (next-fn vals structure)))
-        )))
-  )
+        ))))
 
+(defn- combine-same-types [[f & _ :as all]]
+  (cond (extends? StructureValsPath (class f))
+        all
 
-(extend-protocol StructureValsPathComposer
+        (extends? Collector (class f))
+        [(reify StructureValsPath
+          (select-full* [this vals structure next-fn]
+            (next-fn (reduce conj vals (for [c all] (collect-val c structure))) structure))
+          (update-full* [this vals structure next-fn]
+            (next-fn (reduce conj vals (for [c all] (collect-val c structure))) structure))
+          )]
+
+        :else
+        [(reduce (fn [curr sp]
+                    (reify StructurePath
+                      (select* [this structure next-fn]
+                        (select* sp structure
+                                (fn [structure-next]
+                                  (select* curr structure-next next-fn))))
+                      (update* [this structure next-fn]
+                        (update* sp structure
+                                (fn [structure-next]
+                                  (update* curr structure-next next-fn))))
+                      ))
+                 (reverse all))]))
+
+(defprotocol PathComposer
+  (comp-paths* [paths]))
+
+(extend-protocol PathComposer
   Object
   (comp-paths* [sp]
     (coerce-path sp))
   java.util.List
   (comp-paths* [structure-paths]
-    (reduce (fn [sp-curr sp]
+    (let [combined (->> structure-paths
+                        flatten
+                        (partition-by (fn [e]
+                                        (cond (extends? StructureValsPath (class e)) :svalspath
+                                              (extends? Collector (class e)) :collector
+                                                   :else :spath)))
+                        (mapcat combine-same-types))]
+      (if (= 1 (count combined))
+        (first combined)
+        (reduce (fn [sp-curr sp]
               (reify StructureValsPath
                 (select-full* [this vals structure next-fn]
                   (select-full* sp vals structure
@@ -55,7 +103,35 @@
                                 (fn [vals-next structure-next]
                                   (update-full* sp-curr vals-next structure-next next-fn))))
                 ))
-          (->> structure-paths flatten (map coerce-path) reverse))
+          (->> structure-paths (map coerce-structure-vals-path) reverse))
+        ))))
+
+(defprotocol Executor
+  (exec-select [selector structure])
+  (exec-update [selector update-fn structure]))
+
+(extend-protocol Executor
+  com.rpl.specter.protocols.StructureValsPath
+  (exec-select [selector structure]
+    (select-full* selector
+                  []
+                  structure
+                  (fn [vals structure]
+                    (if-not (empty? vals) [(conj vals structure)] [structure]))))
+  (exec-update [selector update-fn structure]
+    (update-full* selector
+                  []
+                  structure
+                  (fn [vals structure]
+                    (if (empty? vals)
+                      (update-fn structure)
+                      (apply update-fn (conj vals structure))))))
+
+  Object
+  (exec-select [selector structure]
+    (select* selector structure (fn [e] [e])))
+  (exec-update [selector update-fn structure]
+    (update* selector structure update-fn)
     ))
 
 ;; cell implementation idea taken from prismatic schema library
@@ -117,8 +193,8 @@
 
 (defn- walk-until [pred on-match-fn structure]
   (if (pred structure)
-    (on-match-fn structure)    
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)    
+    (on-match-fn structure)
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)
     ))
 
 (defn- fn-invocation? [f]
@@ -130,7 +206,7 @@
   (if (pred structure)
     (on-match-fn structure)
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (fn-invocation? structure) (fn-invocation? ret))        
+      (if (and (fn-invocation? structure) (fn-invocation? ret))
         (with-meta ret (meta structure))
         ret
         ))))
@@ -159,7 +235,7 @@
                   [(conj s e) (assoc m pos i)]
                   orig
                   )))
-            [[] {}]            
+            [[] {}]
             (range (count aseq))
             )))
 
@@ -269,6 +345,3 @@
   (update* [this structure next-fn]
     (-> structure view-fn next-fn)
     ))
-
-
-
