@@ -3,7 +3,7 @@
         [clojure.test.check.clojure-test]
         [com.rpl specter]
         [com.rpl.specter test-helpers])
-  (:require [clojure.test.check             
+  (:require [clojure.test.check
              [generators :as gen]
              [properties :as prop]]
             [clojure.test.check :as qc]))
@@ -24,7 +24,7 @@
 (defspec select-all-keyword-filter
   (for-all+
     [kw gen/keyword
-     v (gen/vector (max-size 5 
+     v (gen/vector (max-size 5
                      (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
     (= (select [ALL kw pred] v)
@@ -33,12 +33,12 @@
 
 (defspec select-pos-extreme-pred
   (for-all+
-    [v (gen/vector gen/int)
-     pred (gen/elements [odd? even?])
-     pos (gen/elements [[FIRST first] [LAST last]])]
-    (= (select-one [(filterer pred) (first pos)] v)
-       (->> v (filter pred) ((last pos)))
-       )))
+   [v (gen/vector gen/int)
+    pred (gen/elements [odd? even?])
+    pos (gen/elements [[FIRST first] [LAST last]])]
+   (= (select-one [(filterer pred) (first pos)] v)
+      (->> v (filter pred) ((last pos)))
+      )))
 
 (defspec select-all-on-map
   (for-all+
@@ -157,7 +157,7 @@
      )))
 
 (defspec replace-in-test
-  (for-all+ 
+  (for-all+
     [v (gen/vector gen/int)]
     (let [res (->> v (map (fn [v] (if (even? v) (inc v) v))))
           user-ret (->> v
@@ -170,7 +170,7 @@
          ))))
 
 (defspec replace-in-custom-merge
-  (for-all+ 
+  (for-all+
     [v (gen/vector gen/int)]
     (let [res (->> v (map (fn [v] (if (even? v) (inc v) v))))
           last-even (->> v (filter even?) last)
