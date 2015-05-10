@@ -153,7 +153,7 @@
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key"
   [& selectors]
-  (let [s (comp-paths selectors)]
+  (let [s (comp-paths* selectors)]
     (fn [structure]
       (->> structure
            (select s)

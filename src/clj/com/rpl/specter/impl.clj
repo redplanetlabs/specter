@@ -97,17 +97,17 @@
                     updater (.updater sp)]
                 (->StructureValsPathFunctions
                   (fn [vals structure next-fn]
-                    (selector vals structure
+                    (curr-selector vals structure
                               (fn [vals-next structure-next]
-                                (curr-selector vals-next structure-next next-fn)
+                                (selector vals-next structure-next next-fn)
                                 )))
                   (fn [vals structure next-fn]
-                    (updater vals structure
+                    (curr-updater vals structure
                               (fn [vals-next structure-next]
-                                (curr-updater vals-next structure-next next-fn)
+                                (updater vals-next structure-next next-fn)
                                 )))
                   )))
-          (->> structure-paths flatten (map coerce-path) reverse))
+          (map coerce-path structure-paths))
     ))
 
 ;; cell implementation idea taken from prismatic schema library
