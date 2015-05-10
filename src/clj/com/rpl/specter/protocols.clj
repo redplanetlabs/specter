@@ -1,6 +1,7 @@
 (ns com.rpl.specter.protocols)
 
 
+;;TODO: can use find-protocol-impl function to avoid all the protocol calls
 (defprotocol StructureValsPath
   (select-full* [this vals structure next-fn])
   (update-full* [this vals structure next-fn]))

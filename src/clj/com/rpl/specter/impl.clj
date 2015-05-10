@@ -9,31 +9,55 @@
    (dotimes [_ iters]
      (afn))))
 
-(defprotocol CoerceStructureValsPath
+(deftype StructureValsPathFunctions [selector updater]
+  StructureValsPath
+  (select-full* [this vals structure next-fn]
+    (selector vals structure next-fn))
+  (update-full* [this vals structure next-fn]
+    (updater vals structure next-fn)))
+
+(defprotocol CoerceStructureValsPathFunctions
   (coerce-path [this]))
 
-(extend-protocol CoerceStructureValsPath
+(extend-protocol CoerceStructureValsPathFunctions
 
   com.rpl.specter.protocols.StructureValsPath
-  (coerce-path [this] this)
+  (coerce-path [this]
+    (let [pimpl (->> this
+                     (find-protocol-impl StructureValsPath))
+          selector (:select-full* pimpl)
+          updater (:update-full* pimpl)]
+      (->StructureValsPathFunctions
+        (fn [vals structure next-fn]
+          (selector this vals structure next-fn))
+        (fn [vals structure next-fn]
+          (updater this vals structure next-fn)))
+      ))
 
   com.rpl.specter.protocols.Collector
   (coerce-path [collector]
-    (reify StructureValsPath
-      (select-full* [this vals structure next-fn]
-        (next-fn (conj vals (collect-val collector structure)) structure))
-      (update-full* [this vals structure next-fn]
-        (next-fn (conj vals (collect-val collector structure)) structure))))
+    (let [pimpl (->> collector
+                     (find-protocol-impl Collector)
+                     :collect-val
+                     )
+          afn (fn [vals structure next-fn]
+                (next-fn (conj vals (pimpl collector structure)) structure)
+                )]
+      (->StructureValsPathFunctions afn afn)))
 
   ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
   Object
-  (coerce-path [spath]
-    (reify StructureValsPath
-      (select-full* [this vals structure next-fn]
-        (select* spath structure (fn [structure] (next-fn vals structure))))
-      (update-full* [this vals structure next-fn]
-        (update* spath structure (fn [structure] (next-fn vals structure)))
-        )))
+  (coerce-path [this]
+    (let [pimpl (->> this
+                     (find-protocol-impl StructurePath))
+          selector (:select* pimpl)
+          updater (:update* pimpl)]
+      (->StructureValsPathFunctions
+        (fn [vals structure next-fn]
+          (selector this structure (fn [structure] (next-fn vals structure))))
+        (fn [vals structure next-fn]
+          (updater this structure (fn [structure] (next-fn vals structure))))
+      )))
   )
 
 
@@ -43,18 +67,26 @@
     (coerce-path sp))
   java.util.List
   (comp-paths* [structure-paths]
-    (reduce (fn [sp-curr sp]
-              (reify StructureValsPath
-                (select-full* [this vals structure next-fn]
-                  (select-full* sp vals structure
-                                (fn [vals-next structure-next]
-                                  (select-full* sp-curr vals-next structure-next next-fn)))
-                  )
-                (update-full* [this vals structure next-fn]
-                  (update-full* sp vals structure
-                                (fn [vals-next structure-next]
-                                  (update-full* sp-curr vals-next structure-next next-fn))))
-                ))
+    ;;TODO: don't reify any protocols... instead coerce to a "StructureValsPathFunctions" record
+    ;; and compose functions directly
+
+    (reduce (fn [^StructureValsPathFunctions sp-curr ^StructureValsPathFunctions sp]
+              (let [curr-selector (.selector sp-curr)
+                    selector (.selector sp)
+                    curr-updater (.updater sp-curr)
+                    updater (.updater sp)]
+                (->StructureValsPathFunctions
+                  (fn [vals structure next-fn]
+                    (selector vals structure
+                              (fn [vals-next structure-next]
+                                (curr-selector vals-next structure-next next-fn)
+                                )))
+                  (fn [vals structure next-fn]
+                    (updater vals structure
+                              (fn [vals-next structure-next]
+                                (curr-updater vals-next structure-next next-fn)
+                                )))
+                  )))
           (->> structure-paths flatten (map coerce-path) reverse))
     ))
 

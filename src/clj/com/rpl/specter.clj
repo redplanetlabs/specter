@@ -22,6 +22,13 @@
                     (if-not (empty? vals) [(conj vals structure)] [structure])))
     ))
 
+(defn select-fast
+  [^com.rpl.specter.impl.StructureValsPathFunctions selfns structure]
+  ((.selector selfns) [] structure
+   (fn [vals structure]
+     (if-not (empty? vals) [(conj vals structure)] [structure])))
+  )
+
 (defn select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
@@ -67,7 +74,7 @@
 
 (defn replace-in [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   "Similar to update, except returns a pair of [updated-structure sequence-of-user-ret].
-  The update-fn in this case is expected to return [ret user-ret]. ret is 
+  The update-fn in this case is expected to return [ret user-ret]. ret is
    what's used to update the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was updated in the data structure."
