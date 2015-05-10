@@ -67,6 +67,15 @@
                       (apply update-fn (conj vals structure)))
                     ))))
 
+(defn update-fast [^com.rpl.specter.impl.StructureValsPathFunctions selfns update-fn structure]
+  ((.updater selfns) [] structure
+   (fn [vals structure]
+     (if (empty? vals)
+       (update-fn structure)
+       (apply update-fn (conj vals structure)))
+     ))
+  )
+
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
   [selector val structure]
