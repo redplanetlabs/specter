@@ -4,61 +4,84 @@
             [clojure.core.reducers :as r])
   )
 
+(defmacro throw* [etype & args]
+  `(throw (new ~etype (pr-str ~@args))))
+
+(defmacro throw-illegal [& args]
+  `(throw* IllegalArgumentException ~@args))
+
 (defn benchmark [iters afn]
   (time
    (dotimes [_ iters]
      (afn))))
 
-(deftype StructureValsPathFunctions [selector updater]
-  StructureValsPath
-  (select-full* [this vals structure next-fn]
-    (selector vals structure next-fn))
-  (update-full* [this vals structure next-fn]
-    (updater vals structure next-fn)))
+(deftype StructureValsPathFunctions [selector updater])
 
 (defprotocol CoerceStructureValsPathFunctions
   (coerce-path [this]))
 
+(defn no-prot-error-str [obj]
+  (str "Protocol implementation cannot be found for object.
+        Extending Specter protocols should not be done inline in a deftype definition
+        because that prevents Specter from finding the protocol implementations for 
+        optimized performance. Instead, you should extend the protocols via an 
+        explicit extend-protocol call. \n" obj))
+
+(defn find-protocol-impl! [prot obj]
+  (let [ret (find-protocol-impl prot obj)]
+    (if (= ret obj)
+      (throw-illegal (no-prot-error-str obj))
+      ret
+      )))
+
+(defn coerce-structure-vals-path [this]
+  (let [pimpl (find-protocol-impl! StructureValsPath this)
+        selector (:select-full* pimpl)
+        updater (:update-full* pimpl)]
+    (->StructureValsPathFunctions
+      (fn [vals structure next-fn]
+        (selector this vals structure next-fn))
+      (fn [vals structure next-fn]
+        (updater this vals structure next-fn)))
+    ))
+
+(defn coerce-collector [this]
+  (let [cfn (->> this
+                 (find-protocol-impl! Collector)
+                 :collect-val
+                 )
+        afn (fn [vals structure next-fn]
+              (next-fn (conj vals (cfn this structure)) structure)
+              )]
+    (->StructureValsPathFunctions afn afn)))
+
+(defn coerce-structure-path [this]
+  (let [pimpl (find-protocol-impl! StructurePath this)
+        selector (:select* pimpl)
+        updater (:update* pimpl)]
+    (->StructureValsPathFunctions
+      (fn [vals structure next-fn]
+        (selector this structure (fn [structure] (next-fn vals structure))))
+      (fn [vals structure next-fn]
+        (updater this structure (fn [structure] (next-fn vals structure))))
+    )))
+
+(defn obj-extends? [prot obj]
+  (->> obj (find-protocol-impl prot) nil? not))
+
 (extend-protocol CoerceStructureValsPathFunctions
 
-  com.rpl.specter.protocols.StructureValsPath
+  StructureValsPathFunctions
   (coerce-path [this]
-    (let [pimpl (->> this
-                     (find-protocol-impl StructureValsPath))
-          selector (:select-full* pimpl)
-          updater (:update-full* pimpl)]
-      (->StructureValsPathFunctions
-        (fn [vals structure next-fn]
-          (selector this vals structure next-fn))
-        (fn [vals structure next-fn]
-          (updater this vals structure next-fn)))
-      ))
+    this)
 
-  com.rpl.specter.protocols.Collector
-  (coerce-path [collector]
-    (let [pimpl (->> collector
-                     (find-protocol-impl Collector)
-                     :collect-val
-                     )
-          afn (fn [vals structure next-fn]
-                (next-fn (conj vals (pimpl collector structure)) structure)
-                )]
-      (->StructureValsPathFunctions afn afn)))
-
-  ;; need to say Object instead of StructurePath so that things like Keyword are properly coerced
   Object
   (coerce-path [this]
-    (let [pimpl (->> this
-                     (find-protocol-impl StructurePath))
-          selector (:select* pimpl)
-          updater (:update* pimpl)]
-      (->StructureValsPathFunctions
-        (fn [vals structure next-fn]
-          (selector this structure (fn [structure] (next-fn vals structure))))
-        (fn [vals structure next-fn]
-          (updater this structure (fn [structure] (next-fn vals structure))))
+    (cond (obj-extends? StructurePath this) (coerce-structure-path this)
+          (obj-extends? Collector this) (coerce-collector this)
+          (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
+          :else (throw-illegal (no-prot-error-str this))
       )))
-  )
 
 
 (extend-protocol StructureValsPathComposer
@@ -67,9 +90,6 @@
     (coerce-path sp))
   java.util.List
   (comp-paths* [structure-paths]
-    ;;TODO: don't reify any protocols... instead coerce to a "StructureValsPathFunctions" record
-    ;; and compose functions directly
-
     (reduce (fn [^StructureValsPathFunctions sp-curr ^StructureValsPathFunctions sp]
               (let [curr-selector (.selector sp-curr)
                     selector (.selector sp)
@@ -109,12 +129,6 @@
 
 (defn get-cell [^PMutableCell cell]
   (.get_cell cell))
-
-(defmacro throw* [etype & args]
-  `(throw (new ~etype (pr-str ~@args))))
-
-(defmacro throw-illegal [& args]
-  `(throw* IllegalArgumentException ~@args))
 
 (defn update-cell! [cell afn]
   (let [ret (afn (get-cell cell))]
@@ -202,8 +216,10 @@
   (assoc structure akey (next-fn (get structure akey))
   ))
 
-(deftype AllStructurePath []
-  StructurePath
+(deftype AllStructurePath [])
+
+(extend-protocol StructurePath
+  AllStructurePath
   (select* [this structure next-fn]
     (into [] (r/mapcat next-fn structure)))
   (update* [this structure next-fn]
@@ -214,45 +230,58 @@
         (->> structure (r/map next-fn) (into empty-structure))
         ))))
 
-(deftype ValCollect []
-  Collector
+(deftype ValCollect [])
+
+(extend-protocol Collector
+  ValCollect
   (collect-val [this structure]
     structure))
 
-(deftype LastStructurePath []
-  StructurePath
+(deftype LastStructurePath [])
+
+(extend-protocol StructurePath
+  LastStructurePath
   (select* [this structure next-fn]
     (next-fn (last structure)))
   (update* [this structure next-fn]
     (set-last structure (next-fn (last structure)))))
 
-(deftype FirstStructurePath []
-  StructurePath
+(deftype FirstStructurePath [])
+
+(extend-protocol StructurePath
+  FirstStructurePath
   (select* [this structure next-fn]
     (next-fn (first structure)))
   (update* [this structure next-fn]
     (set-first structure (next-fn (first structure)))))
 
-(deftype WalkerStructurePath [afn]
-  StructurePath
-  (select* [this structure next-fn]
-    (walk-select afn next-fn structure))
-  (update* [this structure next-fn]
-    (walk-until afn next-fn structure)))
+(deftype WalkerStructurePath [afn])
 
-(deftype CodeWalkerStructurePath [afn]
-  StructurePath
-  (select* [this structure next-fn]
-    (walk-select afn next-fn structure))
-  (update* [this structure next-fn]
-    (codewalk-until afn next-fn structure)))
+(extend-protocol StructurePath
+  WalkerStructurePath
+  (select* [^WalkerStructurePath this structure next-fn]
+    (walk-select (.afn this) next-fn structure))
+  (update* [^WalkerStructurePath this structure next-fn]
+    (walk-until (.afn this) next-fn structure)))
 
-(deftype FilterStructurePath [afn]
-  StructurePath
-  (select* [this structure next-fn]
-    (->> structure (filter afn) doall next-fn))
-  (update* [this structure next-fn]
-    (let [[filtered ancestry] (filter+ancestry afn structure)
+(deftype CodeWalkerStructurePath [afn])
+
+(extend-protocol StructurePath
+  CodeWalkerStructurePath
+  (select* [^CodeWalkerStructurePath this structure next-fn]
+    (walk-select (.afn this) next-fn structure))
+  (update* [^CodeWalkerStructurePath this structure next-fn]
+    (codewalk-until (.afn this) next-fn structure)))
+
+
+(deftype FilterStructurePath [afn])
+
+(extend-protocol StructurePath
+  FilterStructurePath
+  (select* [^FilterStructurePath this structure next-fn]
+    (->> structure (filter (.afn this)) doall next-fn))
+  (update* [^FilterStructurePath this structure next-fn]
+    (let [[filtered ancestry] (filter+ancestry (.afn this) structure)
           ;; the vec is necessary so that we can get by index later
           ;; (can't get by index for cons'd lists)
           next (vec (next-fn filtered))]
@@ -261,29 +290,36 @@
               (vec structure)
               ancestry))))
 
-(deftype KeyPath [akey]
-  StructurePath
-  (select* [this structure next-fn]
-    (key-select akey structure next-fn))
-  (update* [this structure next-fn]
-    (key-update akey structure next-fn)
+(deftype KeyPath [akey])
+  
+
+(extend-protocol StructurePath
+  KeyPath
+  (select* [^KeyPath this structure next-fn]
+    (key-select (.akey this) structure next-fn))
+  (update* [^KeyPath this structure next-fn]
+    (key-update (.akey this) structure next-fn)
     ))
 
-(deftype SelectCollector [sel-fn selector]
-  Collector
-  (collect-val [this structure]
-    (sel-fn selector structure)))
+(deftype SelectCollector [sel-fn selector])
+  
+(extend-protocol Collector
+  SelectCollector
+  (collect-val [^SelectCollector this structure]
+    ((.sel-fn this) (.selector this) structure)))
 
-(deftype SRangePath [start-fn end-fn]
-  StructurePath
-  (select* [this structure next-fn]
-    (let [start (start-fn structure)
-          end (end-fn structure)]
+(deftype SRangePath [start-fn end-fn])
+
+(extend-protocol StructurePath
+  SRangePath
+  (select* [^SRangePath this structure next-fn]
+    (let [start ((.start-fn this) structure)
+          end ((.end-fn this) structure)]
       (next-fn (-> structure vec (subvec start end)))
       ))
-  (update* [this structure next-fn]
-    (let [start (start-fn structure)
-          end (end-fn structure)
+  (update* [^SRangePath this structure next-fn]
+    (let [start ((.start-fn this) structure)
+          end ((.end-fn this) structure)
           structurev (vec structure)
           newpart (next-fn (-> structurev (subvec start end)))
           res (concat (subvec structurev 0 start)
@@ -294,12 +330,14 @@
         res
         ))))
 
-(deftype ViewPath [view-fn]
-  StructurePath
-  (select* [this structure next-fn]
-    (-> structure view-fn next-fn))
-  (update* [this structure next-fn]
-    (-> structure view-fn next-fn)
+(deftype ViewPath [view-fn])
+
+(extend-protocol StructurePath
+  ViewPath
+  (select* [^ViewPath this structure next-fn]
+    (->> structure ((.view-fn this)) next-fn))
+  (update* [^ViewPath this structure next-fn]
+    (->> structure ((.view-fn this)) next-fn)
     ))
 
 

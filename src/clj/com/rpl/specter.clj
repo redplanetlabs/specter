@@ -11,84 +11,89 @@
 
 ;; Selector functions
 
-(defn select
-  "Navigates to and returns a sequence of all the elements specified by the selector."
-  [selector structure]
-  (let [sp (comp-paths* selector)]
-    (select-full* sp
-                  []
-                  structure
-                  (fn [vals structure]
-                    (if-not (empty? vals) [(conj vals structure)] [structure])))
-    ))
-
-(defn select-fast
+(defn compiled-select
+  "Version of select that takes in a selector pre-compiled with comp-paths"
   [^com.rpl.specter.impl.StructureValsPathFunctions selfns structure]
   ((.selector selfns) [] structure
    (fn [vals structure]
-     (if-not (empty? vals) [(conj vals structure)] [structure])))
-  )
+     (if-not (empty? vals) [(conj vals structure)] [structure]))))
 
-(defn select-one
-  "Like select, but returns either one element or nil. Throws exception if multiple elements found"
+(defn select
+  "Navigates to and returns a sequence of all the elements specified by the selector."
   [selector structure]
-  (let [res (select selector structure)]
+  (compiled-select (comp-paths* selector)
+                   structure))
+
+(defn compiled-select-one
+  "Version of select-one that takes in a selector pre-compiled with comp-paths"
+  [selector structure]
+  (let [res (compiled-select selector structure)]
     (when (> (count res) 1)
       (throw-illegal "More than one element found for params: " selector structure))
     (first res)
     ))
 
-(defn select-one!
-  "Returns exactly one element, throws exception if zero or multiple elements found"
+(defn select-one
+  "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
-  (let [res (select-one selector structure)]
+  (compiled-select-one (comp-paths* selector) structure))
+
+(defn compiled-select-one!
+  "Version of select-one! that takes in a selector pre-compiled with comp-paths"
+  [selector structure]
+  (let [res (compiled-select-one selector structure)]
     (when (nil? res) (throw-illegal "No elements found for params: " selector structure))
     res
     ))
 
+(defn select-one!
+  "Returns exactly one element, throws exception if zero or multiple elements found"
+  [selector structure]
+  (compiled-select-one! (comp-paths* selector) structure))
+
+(defn compiled-select-first
+  "Version of select-first that takes in a selector pre-compiled with comp-paths"
+  [selector structure]
+  (first (compiled-select selector structure)))
+
 (defn select-first
   "Returns first element found. Not any more efficient than select, just a convenience"
   [selector structure]
-  (first (select selector structure)))
+  (compiled-select-first (comp-paths* selector) structure))
 
 ;; Update functions
 
-(defn update
-  "Navigates to each value specified by the selector and replaces it by the result of running
-  the update-fn on it"
-  [selector update-fn structure]
-  (let [selector (comp-paths* selector)]
-    (update-full* selector
-                  []
-                  structure
-                  (fn [vals structure]
-                    (if (empty? vals)
-                      (update-fn structure)
-                      (apply update-fn (conj vals structure)))
-                    ))))
-
-(defn update-fast [^com.rpl.specter.impl.StructureValsPathFunctions selfns update-fn structure]
+(defn compiled-update
+  "Version of update that takes in a selector pre-compiled with comp-paths"
+  [^com.rpl.specter.impl.StructureValsPathFunctions selfns update-fn structure]
   ((.updater selfns) [] structure
    (fn [vals structure]
      (if (empty? vals)
        (update-fn structure)
        (apply update-fn (conj vals structure)))
-     ))
-  )
+     )))
+
+(defn update
+  "Navigates to each value specified by the selector and replaces it by the result of running
+  the update-fn on it"
+  [selector update-fn structure]
+  (compiled-update (comp-paths* selector) update-fn structure))
+
+(defn compiled-setval
+  "Version of setval that takes in a selector pre-compiled with comp-paths"
+  [selector val structure]
+  (compiled-update selector (fn [_] val) structure))
 
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
   [selector val structure]
-  (update selector (fn [_] val) structure))
+  (compiled-setval (comp-paths* selector) val structure))
 
-(defn replace-in [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  "Similar to update, except returns a pair of [updated-structure sequence-of-user-ret].
-  The update-fn in this case is expected to return [ret user-ret]. ret is
-   what's used to update the data structure, while user-ret will be added to the user-ret sequence
-   in the final return. replace-in is useful for situations where you need to know the specific values
-   of what was updated in the data structure."
+(defn compiled-replace-in
+  "Version of replace-in that takes in a selector pre-compiled with comp-paths"
+  [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (let [state (mutable-cell nil)]
-    [(update selector
+    [(compiled-update selector
              (fn [e]
                (let [res (update-fn e)]
                  (if res
@@ -102,6 +107,15 @@
              structure)
      (get-cell state)]
     ))
+
+(defn replace-in
+  "Similar to update, except returns a pair of [updated-structure sequence-of-user-ret].
+  The update-fn in this case is expected to return [ret user-ret]. ret is
+   what's used to update the data structure, while user-ret will be added to the user-ret sequence
+   in the final return. replace-in is useful for situations where you need to know the specific values
+   of what was updated in the data structure."
+  [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  (compiled-replace-in (comp-paths* selector) update-fn structure :merge-fn merge-fn))
 
 ;; Built-in pathing and context operations
 
