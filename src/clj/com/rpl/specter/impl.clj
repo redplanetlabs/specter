@@ -131,10 +131,10 @@
         (if (= t :svalspath)
           (fn [curr next]
             (fn [vals structure next-fn]
-                    (curr vals structure
-                          (fn [vals-next structure-next]
-                            (next vals-next structure-next next-fn)
-                            ))))
+              (curr vals structure
+                    (fn [vals-next structure-next]
+                      (next vals-next structure-next next-fn)
+                      ))))
           (fn [curr next]
             (fn [structure next-fn]
               (curr structure (fn [structure] (next structure next-fn)))))
