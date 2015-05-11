@@ -25,6 +25,16 @@ user> (select [ALL :a even?]
 
 `select` extracts a sequence of results from a data structure. It takes in a "selector", which is a sequence of steps on how to navigate into that data structure. In this case, `ALL` looks at every element in the sequence, `:a` looks at the :a key for each element currently navigated to, and `even?` filters out any elements that aren't an even value.
 
+If you had a map with a sequence as the value for the :a key, here's how to get all odd numbers in that sequence:
+
+```clojure
+user> (use 'com.rpl.specter)
+nil
+user> (select [:a ALL odd?]
+              {:a [1 2 3 5] :b :c})
+[1 3 5]
+```
+
 Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specifies what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
@@ -32,6 +42,17 @@ user> (update [ALL :a even?]
               inc
               [{:a 1} {:a 2} {:a 4} {:a 3}])
 [{:a 1} {:a 3} {:a 5} {:a 3}]
+```
+
+Here's another example of update:
+
+```clojure
+user> (use 'com.rpl.specter)
+nil
+user> (update [:a ALL odd?]
+              dec
+              {:a [1 2 3 5] :b :c})
+{:b :c, :a [0 2 2 4]}
 ```
 
 Specter comes with all sorts of built-in ways of navigating data structures. For example, here's how to increment the last odd number in a sequence:
