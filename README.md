@@ -126,7 +126,19 @@ To make your own selector, implement the `StructurePath` protocol which looks li
   )
 ```
 
-Looking at the implementations of the built-in selectors should provide you with the guidance you need to make your own selectors.
+As an example, here is how Clojure keywords implement this protocol:
+
+```clojure
+(extend-type clojure.lang.Keyword
+  StructurePath
+  (select* [kw structure next-fn]
+    (next-fn (get structure kw)))
+  (update* [kw structure next-fn]
+    (assoc structure kw (next-fn (get structure kw)))
+    ))
+```
+
+`next-fn` represents the rest of the select or update, respectively. As you can see, this implementation perfectly captures what it means to navigate via a keyword within a data structure. In the select case, it completes the select by calling `next-fn` on the value of the keyword. In the update case, it updates the nested data structure using next-fn and then replaces the current value of the keyword with that updated data structure.
 
 Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of update:
 
