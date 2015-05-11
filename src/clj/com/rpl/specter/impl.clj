@@ -95,6 +95,18 @@
         (updater this structure next-fn))
     )))
 
+(defn coerce-structure-path-direct [this]
+  (let [pimpl (find-protocol-impl! StructurePath this)
+        selector (:select* pimpl)
+        updater (:update* pimpl)]
+    (->TransformFunctions
+      StructureValsPathExecutor
+      (fn [vals structure next-fn]
+        (selector this structure (fn [structure] (next-fn vals structure))))
+      (fn [vals structure next-fn]
+        (updater this structure (fn [structure] (next-fn vals structure))))
+    )))
+
 (defn obj-extends? [prot obj]
   (->> obj (find-protocol-impl prot) nil? not))
 
@@ -149,11 +161,8 @@
              all)))
 
 (defn coerce-structure-vals [^TransformFunctions tfns]
-  (condp = (extype tfns)
-    :svalspath
+  (if (= (extype tfns) :svalspath)
     tfns
-
-    :spath
     (let [selector (.selector tfns)
           updater (.updater tfns)]
       (->TransformFunctions
@@ -181,6 +190,24 @@
              (map coerce-structure-vals)
              combine-same-types)
         ))))
+
+(defn coerce-structure-vals-direct [this]
+  (cond (obj-extends? StructurePath this) (coerce-structure-path-direct this)
+        (obj-extends? Collector this) (coerce-collector this)
+        (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
+        (instance? TransformFunctions this) this
+        :else (throw-illegal (no-prot-error-str this))
+  ))
+
+;;this composes paths together much faster than comp-paths* but the resulting composition 
+;;won't execute as fast. Useful for when select/update are used without pre-compiled paths
+;;(where cost of compiling dominates execution time)
+(defn comp-unoptimal [sp]
+  (if (instance? java.util.List sp)
+    (->> sp
+         (map (fn [p] (-> p coerce-structure-vals-direct)))
+         combine-same-types)    
+    (coerce-path sp)))
 
 ;; cell implementation idea taken from prismatic schema library
 (definterface PMutableCell

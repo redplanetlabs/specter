@@ -21,7 +21,7 @@
 (defn select
   "Navigates to and returns a sequence of all the elements specified by the selector."
   [selector structure]
-  (compiled-select (comp-paths* selector)
+  (compiled-select (comp-unoptimal selector)
                    structure))
 
 (defn compiled-select-one
@@ -36,7 +36,7 @@
 (defn select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
-  (compiled-select-one (comp-paths* selector) structure))
+  (compiled-select-one (comp-unoptimal selector) structure))
 
 (defn compiled-select-one!
   "Version of select-one! that takes in a selector pre-compiled with comp-paths"
@@ -49,7 +49,7 @@
 (defn select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found"
   [selector structure]
-  (compiled-select-one! (comp-paths* selector) structure))
+  (compiled-select-one! (comp-unoptimal selector) structure))
 
 (defn compiled-select-first
   "Version of select-first that takes in a selector pre-compiled with comp-paths"
@@ -59,7 +59,7 @@
 (defn select-first
   "Returns first element found. Not any more efficient than select, just a convenience"
   [selector structure]
-  (compiled-select-first (comp-paths* selector) structure))
+  (compiled-select-first (comp-unoptimal selector) structure))
 
 ;; Update functions
 
@@ -74,7 +74,7 @@
   "Navigates to each value specified by the selector and replaces it by the result of running
   the update-fn on it"
   [selector update-fn structure]
-  (compiled-update (comp-paths* selector) update-fn structure))
+  (compiled-update (comp-unoptimal selector) update-fn structure))
 
 (defn compiled-setval
   "Version of setval that takes in a selector pre-compiled with comp-paths"
@@ -84,7 +84,7 @@
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
   [selector val structure]
-  (compiled-setval (comp-paths* selector) val structure))
+  (compiled-setval (comp-unoptimal selector) val structure))
 
 (defn compiled-replace-in
   "Version of replace-in that takes in a selector pre-compiled with comp-paths"
@@ -112,7 +112,7 @@
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was updated in the data structure."
   [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (compiled-replace-in (comp-paths* selector) update-fn structure :merge-fn merge-fn))
+  (compiled-replace-in (comp-unoptimal selector) update-fn structure :merge-fn merge-fn))
 
 ;; Built-in pathing and context operations
 
