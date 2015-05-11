@@ -4,7 +4,9 @@ Most of Clojure programming involves creating, manipulating, and transforming im
 
 Specter is a library for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
 
-Specter is a very high performance library. For example – the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
+Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
+
+Specter is a very high performance library. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
 
 # Latest Version
 
