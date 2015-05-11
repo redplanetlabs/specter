@@ -13,10 +13,10 @@
 
 (defn compiled-select
   "Version of select that takes in a selector pre-compiled with comp-paths"
-  [^com.rpl.specter.impl.StructureValsPathFunctions selfns structure]
-  ((.selector selfns) [] structure
-   (fn [vals structure]
-     (if-not (empty? vals) [(conj vals structure)] [structure]))))
+  [^com.rpl.specter.impl.TransformFunctions tfns structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.select-executor ex) (.selector tfns) structure)
+    ))
 
 (defn select
   "Navigates to and returns a sequence of all the elements specified by the selector."
@@ -65,13 +65,10 @@
 
 (defn compiled-update
   "Version of update that takes in a selector pre-compiled with comp-paths"
-  [^com.rpl.specter.impl.StructureValsPathFunctions selfns update-fn structure]
-  ((.updater selfns) [] structure
-   (fn [vals structure]
-     (if (empty? vals)
-       (update-fn structure)
-       (apply update-fn (conj vals structure)))
-     )))
+  [^com.rpl.specter.impl.TransformFunctions tfns update-fn structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.update-executor ex) (.updater tfns) update-fn structure)
+    ))
 
 (defn update
   "Navigates to each value specified by the selector and replaces it by the result of running
@@ -162,10 +159,11 @@
 
 (extend-type clojure.lang.Keyword
   StructurePath
-  (select* [kw structure next-fn]
-    (key-select kw structure next-fn))
-  (update* [kw structure next-fn]
-    (key-update kw structure next-fn)
+  ;; faster to invoke keyword directly on structure rather than reuse key-select and key-update functions
+  (select* [^clojure.lang.Keyword kw structure next-fn]
+    (next-fn (kw structure)))
+  (update* [^clojure.lang.Keyword kw structure next-fn]
+    (assoc structure kw (next-fn (kw structure)))
     ))
 
 (extend-type clojure.lang.AFn

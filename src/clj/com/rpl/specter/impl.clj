@@ -15,9 +15,36 @@
    (dotimes [_ iters]
      (afn))))
 
-(deftype StructureValsPathFunctions [selector updater])
+(deftype ExecutorFunctions [type select-executor update-executor])
 
-(defprotocol CoerceStructureValsPathFunctions
+(def StructureValsPathExecutor
+  (->ExecutorFunctions
+    :svalspath
+    (fn [selector structure]
+      (selector [] structure
+        (fn [vals structure]
+          (if-not (empty? vals) [(conj vals structure)] [structure]))))
+    (fn [updater update-fn structure]
+      (updater [] structure
+        (fn [vals structure]
+          (if (empty? vals)
+            (update-fn structure)
+            (apply update-fn (conj vals structure))))))
+    ))
+
+(def StructurePathExecutor
+  (->ExecutorFunctions
+    :spath
+    (fn [selector structure]
+      (selector structure (fn [structure] [structure])))
+    (fn [updater update-fn structure]
+      (updater structure update-fn))
+    ))
+
+(deftype TransformFunctions [executors selector updater])
+
+
+(defprotocol CoerceTransformFunctions
   (coerce-path [this]))
 
 (defn no-prot-error-str [obj]
@@ -38,7 +65,8 @@
   (let [pimpl (find-protocol-impl! StructureValsPath this)
         selector (:select-full* pimpl)
         updater (:update-full* pimpl)]
-    (->StructureValsPathFunctions
+    (->TransformFunctions
+      StructureValsPathExecutor
       (fn [vals structure next-fn]
         (selector this vals structure next-fn))
       (fn [vals structure next-fn]
@@ -53,13 +81,14 @@
         afn (fn [vals structure next-fn]
               (next-fn (conj vals (cfn this structure)) structure)
               )]
-    (->StructureValsPathFunctions afn afn)))
+    (->TransformFunctions StructureValsPathExecutor afn afn)))
 
 (defn coerce-structure-path [this]
   (let [pimpl (find-protocol-impl! StructurePath this)
         selector (:select* pimpl)
         updater (:update* pimpl)]
-    (->StructureValsPathFunctions
+    (->TransformFunctions
+      StructureValsPathExecutor
       (fn [vals structure next-fn]
         (selector this structure (fn [structure] (next-fn vals structure))))
       (fn [vals structure next-fn]
@@ -69,9 +98,9 @@
 (defn obj-extends? [prot obj]
   (->> obj (find-protocol-impl prot) nil? not))
 
-(extend-protocol CoerceStructureValsPathFunctions
+(extend-protocol CoerceTransformFunctions
 
-  StructureValsPathFunctions
+  TransformFunctions
   (coerce-path [this]
     this)
 
@@ -94,12 +123,20 @@
     (coerce-path sp))
   java.util.List
   (comp-paths* [structure-paths]
-    (reduce (fn [^StructureValsPathFunctions sp-curr ^StructureValsPathFunctions sp]
+    ;;TODO: need to get smart here
+    ;;   - select/update become stupid and just run execute-select / execute-update
+    ;; - coerce-path doesn't go all the way to structurevalspath interface but actually keeps things as is
+    ;;     (except for collector)
+    ;; - compose together consecutive structurepaths and consecutive structurevalspath
+    ;; - if only one structurepath remaining, return that
+    ;;    - otherwise coerce structurepath to structurevalspath and finish combining
+    (reduce (fn [^TransformFunctions sp-curr ^TransformFunctions sp]
               (let [curr-selector (.selector sp-curr)
                     selector (.selector sp)
                     curr-updater (.updater sp-curr)
                     updater (.updater sp)]
-                (->StructureValsPathFunctions
+                (->TransformFunctions
+                  StructureValsPathExecutor
                   (fn [vals structure next-fn]
                     (curr-selector vals structure
                               (fn [vals-next structure-next]
@@ -295,7 +332,6 @@
               ancestry))))
 
 (deftype KeyPath [akey])
-  
 
 (extend-protocol StructurePath
   KeyPath
