@@ -75,6 +75,10 @@
   (coerce-path [this]
     this)
 
+  java.util.List
+  (coerce-path [this]
+    (comp-paths* this))
+
   Object
   (coerce-path [this]
     (cond (obj-extends? StructurePath this) (coerce-structure-path this)
