@@ -159,11 +159,10 @@
 
 (extend-type clojure.lang.Keyword
   StructurePath
-  ;; faster to invoke keyword directly on structure rather than reuse key-select and key-update functions
-  (select* [^clojure.lang.Keyword kw structure next-fn]
-    (next-fn (kw structure)))
-  (update* [^clojure.lang.Keyword kw structure next-fn]
-    (assoc structure kw (next-fn (kw structure)))
+  (select* [kw structure next-fn]
+    (next-fn (get structure kw)))
+  (update* [kw structure next-fn]
+    (assoc structure kw (next-fn (get structure kw)))
     ))
 
 (extend-type clojure.lang.AFn
