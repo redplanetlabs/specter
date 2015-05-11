@@ -1,9 +1,10 @@
 # Specter
-Deep introspection and transformation of nested data
 
-# About
+Most of Clojure programming involves creating, manipulating, and transforming immutable values. However, as soon as your values become more complicated than a simple map or list – like a list of maps of maps – transforming these data structures becomes extremely cumbersome. 
 
-Specter is a library for concisely querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions. 
+Specter is a library for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
+
+Specter is a very high performance library. For example – the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
 
 # Latest Version
 
@@ -106,7 +107,7 @@ To make your own selector, implement the `StructurePath` protocol which looks li
 
 Looking at the implementations of the built-in selectors should provide you with the guidance you need to make your own selectors.
 
-Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 10x speed difference between the following two invocations of update:
+Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of update:
 
 ```clojure
 (def precompiled (comp-paths ALL :a even?))
@@ -114,6 +115,8 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 (update [ALL :a even?] inc structure)
 (update precompiled inc structure)
 ```
+
+Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup.
 
 Some more examples:
 
