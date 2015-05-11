@@ -86,6 +86,7 @@
 
 (defn structure-path-impl [this]
   (if (fn? this) 
+    ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
     (-> StructurePath :impls (get clojure.lang.AFn))
     (find-protocol-impl! StructurePath this)))
 

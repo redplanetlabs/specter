@@ -111,8 +111,8 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 ```clojure
 (def precompiled (comp-paths ALL :a even?))
 
-(update [ALL :a even?] structure)
-(update precompiled structure)
+(update [ALL :a even?] inc structure)
+(update precompiled inc structure)
 ```
 
 Some more examples:
