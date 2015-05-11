@@ -88,11 +88,11 @@
         selector (:select* pimpl)
         updater (:update* pimpl)]
     (->TransformFunctions
-      StructureValsPathExecutor
-      (fn [vals structure next-fn]
-        (selector this structure (fn [structure] (next-fn vals structure))))
-      (fn [vals structure next-fn]
-        (updater this structure (fn [structure] (next-fn vals structure))))
+      StructurePathExecutor
+      (fn [structure next-fn]
+        (selector this structure next-fn))
+      (fn [structure next-fn]
+        (updater this structure next-fn))
     )))
 
 (defn obj-extends? [prot obj]
@@ -117,39 +117,70 @@
       )))
 
 
+(defn extype [^TransformFunctions f]
+  (let [^ExecutorFunctions exs (.executors f)]
+    (.type exs)
+    ))
+
+(defn- combine-same-types [[^TransformFunctions f & _ :as all]]
+  (let [^ExecutorFunctions exs (.executors f)
+        
+        t (.type exs)
+
+        combiner
+        (if (= t :svalspath)
+          (fn [curr next]
+            (fn [vals structure next-fn]
+                    (curr vals structure
+                          (fn [vals-next structure-next]
+                            (next vals-next structure-next next-fn)
+                            ))))
+          (fn [curr next]
+            (fn [structure next-fn]
+              (curr structure (fn [structure] (next structure next-fn)))))
+          )]
+          
+    (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
+              (->TransformFunctions
+                exs
+                (combiner (.selector curr) (.selector next))
+                (combiner (.updater curr) (.updater next))
+                ))
+             all)))
+
+(defn coerce-structure-vals [^TransformFunctions tfns]
+  (condp = (extype tfns)
+    :svalspath
+    tfns
+
+    :spath
+    (let [selector (.selector tfns)
+          updater (.updater tfns)]
+      (->TransformFunctions
+        StructureValsPathExecutor
+        (fn [vals structure next-fn]
+          (selector structure (fn [structure] (next-fn vals structure))))
+        (fn [vals structure next-fn]
+          (updater structure (fn [structure] (next-fn vals structure))))
+        ))))
+
 (extend-protocol StructureValsPathComposer
   Object
   (comp-paths* [sp]
     (coerce-path sp))
   java.util.List
   (comp-paths* [structure-paths]
-    ;;TODO: need to get smart here
-    ;;   - select/update become stupid and just run execute-select / execute-update
-    ;; - coerce-path doesn't go all the way to structurevalspath interface but actually keeps things as is
-    ;;     (except for collector)
-    ;; - compose together consecutive structurepaths and consecutive structurevalspath
-    ;; - if only one structurepath remaining, return that
-    ;;    - otherwise coerce structurepath to structurevalspath and finish combining
-    (reduce (fn [^TransformFunctions sp-curr ^TransformFunctions sp]
-              (let [curr-selector (.selector sp-curr)
-                    selector (.selector sp)
-                    curr-updater (.updater sp-curr)
-                    updater (.updater sp)]
-                (->TransformFunctions
-                  StructureValsPathExecutor
-                  (fn [vals structure next-fn]
-                    (curr-selector vals structure
-                              (fn [vals-next structure-next]
-                                (selector vals-next structure-next next-fn)
-                                )))
-                  (fn [vals structure next-fn]
-                    (curr-updater vals structure
-                              (fn [vals-next structure-next]
-                                (updater vals-next structure-next next-fn)
-                                )))
-                  )))
-          (map coerce-path structure-paths))
-    ))
+    (let [combined (->> structure-paths
+                        (map coerce-path)
+                        (partition-by extype)
+                        (map combine-same-types)
+                        )]
+      (if (= 1 (count combined))
+        (first combined)
+        (->> combined
+             (map coerce-structure-vals)
+             combine-same-types)
+        ))))
 
 ;; cell implementation idea taken from prismatic schema library
 (definterface PMutableCell
