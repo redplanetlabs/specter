@@ -106,7 +106,7 @@ To make your own selector, implement the `StructurePath` protocol which looks li
 
 Looking at the implementations of the built-in selectors should provide you with the guidance you need to make your own selectors.
 
-Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 5x speed difference between the following two invocations of update:
+Finally, you can make `select` and `update` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 10x speed difference between the following two invocations of update:
 
 ```clojure
 (def precompiled (comp-paths ALL :a even?))
