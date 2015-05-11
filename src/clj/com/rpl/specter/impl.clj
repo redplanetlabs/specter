@@ -83,8 +83,14 @@
               )]
     (->TransformFunctions StructureValsPathExecutor afn afn)))
 
+
+(defn structure-path-impl [this]
+  (if (fn? this) 
+    (-> StructurePath :impls (get clojure.lang.AFn))
+    (find-protocol-impl! StructurePath this)))
+
 (defn coerce-structure-path [this]
-  (let [pimpl (find-protocol-impl! StructurePath this)
+  (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         updater (:update* pimpl)]
     (->TransformFunctions
@@ -96,7 +102,7 @@
     )))
 
 (defn coerce-structure-path-direct [this]
-  (let [pimpl (find-protocol-impl! StructurePath this)
+  (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         updater (:update* pimpl)]
     (->TransformFunctions
@@ -110,6 +116,9 @@
 (defn obj-extends? [prot obj]
   (->> obj (find-protocol-impl prot) nil? not))
 
+(defn structure-path? [obj]
+  (or (fn? obj) (obj-extends? StructurePath obj)))
+
 (extend-protocol CoerceTransformFunctions
 
   TransformFunctions
@@ -122,7 +131,7 @@
 
   Object
   (coerce-path [this]
-    (cond (obj-extends? StructurePath this) (coerce-structure-path this)
+    (cond (structure-path? this) (coerce-structure-path this)
           (obj-extends? Collector this) (coerce-collector this)
           (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
           :else (throw-illegal (no-prot-error-str this))
@@ -192,7 +201,7 @@
         ))))
 
 (defn coerce-structure-vals-direct [this]
-  (cond (obj-extends? StructurePath this) (coerce-structure-path-direct this)
+  (cond (structure-path? this) (coerce-structure-path-direct this)
         (obj-extends? Collector this) (coerce-collector this)
         (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
         (instance? TransformFunctions this) this
