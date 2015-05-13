@@ -148,7 +148,7 @@ Finally, you can make `select` and `update` work much faster by precompiling you
 (def precompiled (comp-paths ALL :a even?))
 
 (update [ALL :a even?] inc structure)
-(update precompiled inc structure)
+(compiled-update precompiled inc structure)
 ```
 
 Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup.
