@@ -448,5 +448,21 @@
     (->> structure ((.view-fn this)) next-fn)
     ))
 
+(deftype IdentityPath [])
 
+(extend-protocol StructurePath
+  IdentityPath
+  (select* [this structure next-fn]
+    (next-fn structure))
+  (update* [this structure next-fn]
+    (next-fn structure)
+    ))
+
+(deftype PutValCollector [val])
+
+(extend-protocol Collector
+  PutValCollector
+  (collect-val [^PutValCollector this structure]
+    (.val this)
+    ))
 

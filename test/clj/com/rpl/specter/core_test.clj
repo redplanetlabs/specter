@@ -227,3 +227,21 @@
                  [:a]
                  [[1 3 5] [2] [7 11 4 2] [10 1] []]
                  ))))
+
+(defspec identity-test
+  (for-all+
+    [i gen/int
+     afn (gen/elements [inc dec])]
+    (and (= [i] (select IDENTITY-PATH i))
+         (= (afn i) (update IDENTITY-PATH afn i)))))
+
+(defspec putval-test
+  (for-all+
+    [kw gen/keyword
+     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
+     c gen/int]
+    (= (update [(putval c) kw] + m)
+       (update [kw (putval c)] + m)
+       (assoc m kw (+ c (get m kw)))
+       )))
+
