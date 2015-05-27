@@ -117,7 +117,7 @@ user> (update [ALL (collect-one :b) :a even?]
 
 The update function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
 
-The three built-in ways for collecting values are `VAL`, `collect`, and `collect-one`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value.
+The four built-in ways for collecting values are `VAL`, `collect`, `collect-one`, and `putval`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value. Finally, `putval` adds an external value into the collected values list.
 
 To make your own selector, implement the `StructurePath` protocol which looks like:
 
@@ -161,6 +161,14 @@ user> (update [ALL LAST]
               dec
               {:a 1 :b 3})
 {:b 2 :a 0}
+```
+
+Increment the value for :a key by 10:
+```clojure
+user> (update [:a (putval 10)]
+              +
+              {:a 1 :b 3})
+{:b 3 :a 11}
 ```
 
 Get every number divisible by 3 out of a sequence of sequences:
