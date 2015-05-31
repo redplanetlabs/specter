@@ -50,8 +50,8 @@
 (defn no-prot-error-str [obj]
   (str "Protocol implementation cannot be found for object.
         Extending Specter protocols should not be done inline in a deftype definition
-        because that prevents Specter from finding the protocol implementations for 
-        optimized performance. Instead, you should extend the protocols via an 
+        because that prevents Specter from finding the protocol implementations for
+        optimized performance. Instead, you should extend the protocols via an
         explicit extend-protocol call. \n" obj))
 
 (defn find-protocol-impl! [prot obj]
@@ -85,7 +85,7 @@
 
 
 (defn structure-path-impl [this]
-  (if (fn? this) 
+  (if (fn? this)
     ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
     (-> StructurePath :impls (get clojure.lang.AFn))
     (find-protocol-impl! StructurePath this)))
@@ -121,6 +121,9 @@
   (or (fn? obj) (obj-extends? StructurePath obj)))
 
 (extend-protocol CoerceTransformFunctions
+  nil ; needs its own path because it doesn't count as an Object
+  (coerce-path [this]
+    (coerce-structure-path nil))
 
   TransformFunctions
   (coerce-path [this]
@@ -145,30 +148,32 @@
     ))
 
 (defn- combine-same-types [[^TransformFunctions f & _ :as all]]
-  (let [^ExecutorFunctions exs (.executors f)
-        
-        t (.type exs)
+  (if (empty? all)
+    (coerce-path nil)
+    (let [^ExecutorFunctions exs (.executors f)
 
-        combiner
-        (if (= t :svalspath)
-          (fn [curr next]
-            (fn [vals structure next-fn]
-              (curr vals structure
-                    (fn [vals-next structure-next]
-                      (next vals-next structure-next next-fn)
-                      ))))
-          (fn [curr next]
-            (fn [structure next-fn]
-              (curr structure (fn [structure] (next structure next-fn)))))
-          )]
-          
-    (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
-              (->TransformFunctions
-                exs
-                (combiner (.selector curr) (.selector next))
-                (combiner (.updater curr) (.updater next))
-                ))
-             all)))
+          t (.type exs)
+
+          combiner
+          (if (= t :svalspath)
+            (fn [curr next]
+              (fn [vals structure next-fn]
+                (curr vals structure
+                      (fn [vals-next structure-next]
+                        (next vals-next structure-next next-fn)
+                        ))))
+            (fn [curr next]
+              (fn [structure next-fn]
+                (curr structure (fn [structure] (next structure next-fn)))))
+            )]
+
+      (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
+                (->TransformFunctions
+                 exs
+                 (combiner (.selector curr) (.selector next))
+                 (combiner (.updater curr) (.updater next))
+                 ))
+              all))))
 
 (defn coerce-structure-vals [^TransformFunctions tfns]
   (if (= (extype tfns) :svalspath)
@@ -209,14 +214,14 @@
         :else (throw-illegal (no-prot-error-str this))
   ))
 
-;;this composes paths together much faster than comp-paths* but the resulting composition 
+;;this composes paths together much faster than comp-paths* but the resulting composition
 ;;won't execute as fast. Useful for when select/update are used without pre-compiled paths
 ;;(where cost of compiling dominates execution time)
 (defn comp-unoptimal [sp]
   (if (instance? java.util.List sp)
     (->> sp
          (map (fn [p] (-> p coerce-structure-vals-direct)))
-         combine-same-types)    
+         combine-same-types)
     (coerce-path sp)))
 
 ;; cell implementation idea taken from prismatic schema library
@@ -272,8 +277,8 @@
 
 (defn- walk-until [pred on-match-fn structure]
   (if (pred structure)
-    (on-match-fn structure)    
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)    
+    (on-match-fn structure)
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)
     ))
 
 (defn- fn-invocation? [f]
@@ -285,7 +290,7 @@
   (if (pred structure)
     (on-match-fn structure)
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (fn-invocation? structure) (fn-invocation? ret))        
+      (if (and (fn-invocation? structure) (fn-invocation? ret))
         (with-meta ret (meta structure))
         ret
         ))))
@@ -314,7 +319,7 @@
                   [(conj s e) (assoc m pos i)]
                   orig
                   )))
-            [[] {}]            
+            [[] {}]
             (range (count aseq))
             )))
 
@@ -410,7 +415,7 @@
     ))
 
 (deftype SelectCollector [sel-fn selector])
-  
+
 (extend-protocol Collector
   SelectCollector
   (collect-val [^SelectCollector this structure]
@@ -448,16 +453,6 @@
     (->> structure ((.view-fn this)) next-fn)
     ))
 
-(deftype IdentityPath [])
-
-(extend-protocol StructurePath
-  IdentityPath
-  (select* [this structure next-fn]
-    (next-fn structure))
-  (update* [this structure next-fn]
-    (next-fn structure)
-    ))
-
 (deftype PutValCollector [val])
 
 (extend-protocol Collector
@@ -466,3 +461,11 @@
     (.val this)
     ))
 
+
+(extend-protocol StructurePath
+  nil
+  (select* [this structure next-fn]
+    (next-fn structure))
+  (update* [this structure next-fn]
+    (next-fn structure)
+    ))

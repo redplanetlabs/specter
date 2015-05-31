@@ -232,16 +232,42 @@
   (for-all+
     [i gen/int
      afn (gen/elements [inc dec])]
-    (and (= [i] (select IDENTITY-PATH i))
-         (= (afn i) (update IDENTITY-PATH afn i)))))
+    (and (= [i] (select nil i))
+         (= (afn i) (update nil afn i)))))
 
 (defspec putval-test
   (for-all+
-    [kw gen/keyword
-     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
-     c gen/int]
-    (= (update [(putval c) kw] + m)
-       (update [kw (putval c)] + m)
-       (assoc m kw (+ c (get m kw)))
-       )))
+   [kw gen/keyword
+    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
+    c gen/int]
+   (= (update [(putval c) kw] + m)
+      (update [kw (putval c)] + m)
+      (assoc m kw (+ c (get m kw)))
+      )))
 
+(defspec empty-selector-test
+  (for-all+
+   [v (gen/vector gen/int)]
+   (= [v]
+      (select [] v)
+      (select nil v)
+      (select (comp-paths) v)
+      (select (comp-paths nil) v)
+      (select [nil nil nil] v)
+      )))
+
+(defspec empty-selector-update-test
+  (for-all+
+   [kw gen/keyword
+    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
+   (and (= m
+           (update nil identity m)
+           (update [] identity m)
+           (update (comp-paths []) identity m)
+           (update (comp-paths nil nil) identity m)
+           )
+        (= (update kw inc m)
+           (update [nil kw] inc m)
+           (update (comp-paths kw nil) inc m)
+           (update (comp-paths nil kw nil) inc m)
+           ))))

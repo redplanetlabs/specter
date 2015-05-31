@@ -124,8 +124,6 @@
 
 (def FIRST (->FirstStructurePath))
 
-(def IDENTITY-PATH (->IdentityPath))
-
 (defn srange-dynamic [start-fn end-fn] (->SRangePath start-fn end-fn))
 
 (defn srange [start end] (srange-dynamic (fn [_] start) (fn [_] end)))
@@ -184,7 +182,7 @@
   (->SelectCollector select-one (comp-paths* selector)))
 
 (defn putval
-  "Adds an external value to the collected vals. Useful when additional arguments 
+  "Adds an external value to the collected vals. Useful when additional arguments
   are required to the update function that would otherwise require partial
   application or a wrapper function.
 
