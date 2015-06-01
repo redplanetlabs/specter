@@ -210,7 +210,7 @@
   (cond (structure-path? this) (coerce-structure-path-direct this)
         (obj-extends? Collector this) (coerce-collector this)
         (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
-        (instance? TransformFunctions this) this
+        (instance? TransformFunctions this) (coerce-structure-vals this)
         :else (throw-illegal (no-prot-error-str this))
   ))
 
@@ -220,7 +220,7 @@
 (defn comp-unoptimal [sp]
   (if (instance? java.util.List sp)
     (->> sp
-         (map (fn [p] (-> p coerce-structure-vals-direct)))
+         (map coerce-structure-vals-direct)
          combine-same-types)
     (coerce-path sp)))
 

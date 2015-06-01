@@ -271,3 +271,27 @@
            (update (comp-paths kw nil) inc m)
            (update (comp-paths nil kw nil) inc m)
            ))))
+
+(deftest compose-empty-comp-path-test
+  (let [m {:a 1}]
+    (is (= [1]
+           (select [:a (comp-paths)] m)
+           (select [(comp-paths) :a] m)
+           ))))
+
+(defspec mixed-selector-test
+  (for-all+
+   [k1 (max-size 3 gen/keyword)
+    k2 (max-size 3 gen/keyword)
+    m (max-size 5
+                (gen-map-with-keys
+                 gen/keyword
+                 (gen-map-with-keys gen/keyword gen/int k2)
+                 k1))]
+   (= [(-> m k1 k2)]
+      (select [k1 (comp-paths k2)] m)
+      (select [(comp-paths k1) k2] m)
+      (select [(comp-paths k1 k2) nil] m)
+      (select [(comp-paths) k1 k2] m)
+      (select [k1 (comp-paths) k2] m)
+      )))
