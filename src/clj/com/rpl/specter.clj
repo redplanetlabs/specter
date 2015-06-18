@@ -11,12 +11,8 @@
 
 ;; Selector functions
 
-(defn compiled-select
-  "Version of select that takes in a selector pre-compiled with comp-paths"
-  [^com.rpl.specter.impl.TransformFunctions tfns structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.select-executor ex) (.selector tfns) structure)
-    ))
+(def ^{:doc "Version of select that takes in a selector pre-compiled with comp-paths"}
+  compiled-select compiled-select*)
 
 (defn select
   "Navigates to and returns a sequence of all the elements specified by the selector."
@@ -63,12 +59,9 @@
 
 ;; Update functions
 
-(defn compiled-update
-  "Version of update that takes in a selector pre-compiled with comp-paths"
-  [^com.rpl.specter.impl.TransformFunctions tfns update-fn structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.update-executor ex) (.updater tfns) update-fn structure)
-    ))
+
+(def ^{:doc "Version of update that takes in a selector pre-compiled with comp-paths"}
+  compiled-update compiled-update*)
 
 (defn update
   "Navigates to each value specified by the selector and replaces it by the result of running
@@ -190,3 +183,22 @@
   (update [:a :b (putval 3)] + some-map)"
   [val]
   (->PutValCollector val))
+
+(defn cond-path
+  "Takes in alternating cond-fn selector cond-fn selector...
+   Tests the structure on the cond-fn, and if it matches uses the following selector for
+   the rest of the selector. Otherwise, it moves on to the next selector. If nothing
+   matches, then the structure is not selected."
+  [& conds]
+  (->> conds
+       (partition 2)
+       (map (fn [[c p]] [c (comp-paths* p)]))
+       doall
+       ->ConditionalPath
+       ))
+
+(defn if-path
+  "Like cond-path, but with if semantics."
+  ([cond-fn if-path] (cond-path cond-fn if-path))
+  ([cond-fn if-path else-path]
+    (cond-path cond-fn if-path (fn [_] true) else-path)))

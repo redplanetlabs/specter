@@ -469,3 +469,39 @@
   (update* [this structure next-fn]
     (next-fn structure)
     ))
+
+(defn compiled-select*
+  [^com.rpl.specter.impl.TransformFunctions tfns structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.select-executor ex) (.selector tfns) structure)
+    ))
+
+(defn compiled-update*
+  [^com.rpl.specter.impl.TransformFunctions tfns update-fn structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.update-executor ex) (.updater tfns) update-fn structure)
+    ))
+
+(deftype ConditionalPath [cond-pairs])
+
+(defn- retrieve-selector [cond-pairs structure]
+  (->> cond-pairs
+       (drop-while (fn [[c-fn _]] (not (c-fn structure))))
+       first
+       second
+       ))
+
+;;TODO: test nothing matches case
+(extend-protocol StructurePath
+  ConditionalPath
+  (select* [this structure next-fn]
+    (if-let [selector (retrieve-selector (.cond-pairs this) structure)]
+      (->> (compiled-select* selector structure)
+           (mapcat next-fn)
+           doall)))
+  (update* [this structure next-fn]
+    (if-let [selector (retrieve-selector (.cond-pairs this) structure)]
+      (compiled-update* selector next-fn structure)
+      structure
+      )))
+

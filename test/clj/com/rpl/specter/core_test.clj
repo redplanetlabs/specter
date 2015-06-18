@@ -295,3 +295,23 @@
       (select [(comp-paths) k1 k2] m)
       (select [k1 (comp-paths) k2] m)
       )))
+
+(deftest cond-path-test
+  (is (= [4 2 6 8 10]
+         (select [ALL (cond-path even? [(view inc) (view inc)]
+                                 #(= 3 %) (view dec))]
+                 [1 2 3 4 5 6 7 8])))
+  (is (empty? (select (if-path odd? (view inc)) 2)))
+  (is (= [6 2 10 6 14] 
+         (update [(putval 2)
+                  ALL
+                  (if-path odd? [(view inc) (view inc)] (view dec))]
+                  *
+                  [1 2 3 4 5]
+                     )))
+  (is (= 2
+         (update [(putval 2)
+                  (if-path odd? (view inc))]
+                  *
+                  2)))
+  )
