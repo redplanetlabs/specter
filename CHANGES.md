@@ -1,3 +1,6 @@
+## 0.5.4
+* Change cond-path and if-path to take in a selector for conditionals (same idea as selected?)
+
 ## 0.5.3
 * Added cond-path and if-path selectors for choosing paths depending on value of structure at that location
 
