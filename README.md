@@ -188,6 +188,15 @@ user> (setval [ALL
 [[1 2 3 4 5 6 :c :d] [7 0 -1] [8 8 :c :d] []]
 ```
 
+For every map in a sequence, increment :c if :a is even and :d if :a is odd:
+
+```clojure
+user> (update [ALL (if-path [:a even?] :c :d)]
+              inc
+              [{:a 2 :c 3 :d 4} {:a 4 :c 5} {:a -1 :c 1 :d 1}])
+[{:c 4, :d 4, :a 2} {:c 6, :a 4} {:c 1, :d 2, :a -1}]
+```
+
 # Future work
 - Make it possible to parallelize selects/updates
 - Any connection to transducers?
