@@ -189,6 +189,9 @@
         ))))
 
 (extend-protocol StructureValsPathComposer
+  nil
+  (comp-paths* [sp]
+    (coerce-path sp))
   Object
   (comp-paths* [sp]
     (coerce-path sp))
@@ -486,7 +489,10 @@
 
 (defn- retrieve-selector [cond-pairs structure]
   (->> cond-pairs
-       (drop-while (fn [[c-fn _]] (not (c-fn structure))))
+       (drop-while (fn [[c-selector _]]
+                     (->> structure
+                          (compiled-select* c-selector)
+                          empty?)))
        first
        second
        ))

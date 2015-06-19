@@ -192,7 +192,7 @@
   [& conds]
   (->> conds
        (partition 2)
-       (map (fn [[c p]] [c (comp-paths* p)]))
+       (map (fn [[c p]] [(comp-paths* c) (comp-paths* p)]))
        doall
        ->ConditionalPath
        ))
@@ -201,4 +201,4 @@
   "Like cond-path, but with if semantics."
   ([cond-fn if-path] (cond-path cond-fn if-path))
   ([cond-fn if-path else-path]
-    (cond-path cond-fn if-path (fn [_] true) else-path)))
+    (cond-path cond-fn if-path nil else-path)))

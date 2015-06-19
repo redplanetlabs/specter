@@ -2,6 +2,7 @@
   (:use [clojure.test]
         [clojure.test.check.clojure-test]
         [com.rpl specter]
+        [com.rpl.specter protocols]
         [com.rpl.specter test-helpers])
   (:require [clojure.test.check
              [generators :as gen]
@@ -235,6 +236,9 @@
     (and (= [i] (select nil i))
          (= (afn i) (update nil afn i)))))
 
+(deftest nil-comp-test
+  (is (= [5] (select (comp-paths* nil) 5))))
+
 (defspec putval-test
   (for-all+
    [kw gen/keyword
@@ -315,3 +319,26 @@
                   *
                   2)))
   )
+
+(defspec cond-path-selector-test
+  (for-all+
+   [k1 (max-size 3 gen/keyword)
+    k2 (max-size 3 gen/keyword)
+    k3 (max-size 3 gen/keyword)
+    m (max-size 5
+                (gen-map-with-keys
+                 gen/keyword
+                 gen/int
+                 k1
+                 k2
+                 k3))
+    pred (gen/elements [odd? even?])
+    ]
+   (let [v1 (get m k1)
+         k (if (pred v1) k2 k3)]
+     (and
+       (= (update (if-path [k1 pred] k2 k3) inc m)
+          (update k inc m)) 
+       (= (select (if-path [k1 pred] k2 k3) m)
+          (select k m)) 
+       ))))
