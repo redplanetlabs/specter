@@ -188,13 +188,13 @@ user> (setval [ALL
 [[1 2 3 4 5 6 :c :d] [7 0 -1] [8 8 :c :d] []]
 ```
 
-For every map in a sequence, increment :c if :a is even and :d if :a is odd:
+For every map in a sequence, increment every number in :c's value if :a is even or increment :d if :a is odd:
 
 ```clojure
-user> (update [ALL (if-path [:a even?] :c :d)]
+user> (update [ALL (if-path [:a even?] [:c ALL] :d)]
               inc
-              [{:a 2 :c 3 :d 4} {:a 4 :c 5} {:a -1 :c 1 :d 1}])
-[{:c 4, :d 4, :a 2} {:c 6, :a 4} {:c 1, :d 2, :a -1}]
+              [{:a 2 :c [1 2] :d 4} {:a 4 :c [0 10 -1]} {:a -1 :c [1 1 1] :d 1}])
+[{:c [2 3], :d 4, :a 2} {:c [1 11 0], :a 4} {:c [1 1 1], :d 2, :a -1}]
 ```
 
 # Future work
