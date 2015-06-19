@@ -185,10 +185,11 @@
   (->PutValCollector val))
 
 (defn cond-path
-  "Takes in alternating cond-fn selector cond-fn selector...
-   Tests the structure on the cond-fn, and if it matches uses the following selector for
-   the rest of the selector. Otherwise, it moves on to the next selector. If nothing
-   matches, then the structure is not selected."
+  "Takes in alternating cond-path selector cond-path selector...
+   Tests the structure if selecting with cond-path returns anything.
+   If so, it uses the following selector for this portion of the navigation.
+   Otherwise, it tries the next cond-path. If nothing matches, then the structure
+   is not selected."
   [& conds]
   (->> conds
        (partition 2)
