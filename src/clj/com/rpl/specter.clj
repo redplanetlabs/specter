@@ -129,7 +129,7 @@
 
 (defn codewalker [afn] (->CodeWalkerStructurePath afn))
 
-(defn filterer [afn] (->FilterStructurePath afn))
+(defn filterer [& path] (->FilterStructurePath (comp-paths* path)))
 
 (defn keypath [akey] (->KeyPath akey))
 
