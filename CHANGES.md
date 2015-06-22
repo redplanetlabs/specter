@@ -1,3 +1,6 @@
+## 0.5.5
+* Change filterer to accept a selector (that acts like selected? to determine whether or not to select value)
+
 ## 0.5.4
 * Change cond-path and if-path to take in a selector for conditionals (same idea as selected?)
 
