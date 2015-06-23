@@ -1,4 +1,5 @@
 (ns com.rpl.specter
+  (:refer-clojure :exclude [update])
   (:use [com.rpl.specter impl protocols])
   )
 
