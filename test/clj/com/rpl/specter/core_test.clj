@@ -1,4 +1,5 @@
 (ns com.rpl.specter.core-test
+  (:refer-clojure :exclude [update])
   (:use [clojure.test]
         [clojure.test.check.clojure-test]
         [com.rpl specter]
