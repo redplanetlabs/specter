@@ -1,7 +1,8 @@
 (ns com.rpl.specter.impl
   (:use [com.rpl.specter.protocols :only [StructurePath StructureValsPath Collector StructureValsPathComposer comp-paths*]])
   (:require [clojure.walk :as walk]
-            [clojure.core.reducers :as r])
+            [clojure.core.reducers :as r]
+            [clojure.string :as s])
   )
 
 #?(
@@ -71,6 +72,28 @@
       ret
       )))
 
+(defn- seq-contains? [aseq val]
+  (->> aseq
+       (filter (partial = val))
+       empty?
+       not))
+
+#?(
+:clj
+(defmacro obj-extends? [quoted-prot-sym obj]
+  `(->> ~obj (find-protocol-impl ~(second quoted-prot-sym)) nil? not))
+
+:cljs
+(defn obj-extends? [prot-sym obj]
+  ;; this requires that prot-sym be fully qualified
+  (let [props (->> obj type .-prototype (.getOwnPropertyNames js/Object) seq)
+        ns (namespace prot-sym)
+        n (name prot-sym)
+        lookup (str (s/replace ns "." "$") "$" n "$")]
+    (seq-contains? props lookup)
+    ))
+)
+
 (defn coerce-structure-vals-path [this]
   (let [pimpl (find-protocol-impl! StructureValsPath this)
         selector (:select-full* pimpl)
@@ -124,11 +147,8 @@
         (transformer this structure (fn [structure] (next-fn vals structure))))
     )))
 
-(defn obj-extends? [prot obj]
-  (->> obj (find-protocol-impl prot) nil? not))
-
 (defn structure-path? [obj]
-  (or (fn? obj) (obj-extends? StructurePath obj)))
+  (or (fn? obj) (obj-extends? `StructurePath obj)))
 
 (extend-protocol CoerceTransformFunctions
   nil ; needs its own path because it doesn't count as an Object
@@ -147,8 +167,8 @@
   #?(:clj Object :cljs js/Object)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
-          (obj-extends? Collector this) (coerce-collector this)
-          (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
+          (obj-extends? `Collector this) (coerce-collector this)
+          (obj-extends? `StructureValsPath this) (coerce-structure-vals-path this)
           :else (throw-illegal (no-prot-error-str this))
       )))
 
@@ -222,8 +242,8 @@
 
 (defn coerce-structure-vals-direct [this]
   (cond (structure-path? this) (coerce-structure-path-direct this)
-        (obj-extends? Collector this) (coerce-collector this)
-        (obj-extends? StructureValsPath this) (coerce-structure-vals-path this)
+        (obj-extends? `Collector this) (coerce-collector this)
+        (obj-extends? `StructureValsPath this) (coerce-structure-vals-path this)
         (instance? TransformFunctions this) (coerce-structure-vals this)
         :else (throw-illegal (no-prot-error-str this))
   ))
