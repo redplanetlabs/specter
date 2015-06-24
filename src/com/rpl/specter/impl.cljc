@@ -206,6 +206,18 @@
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (coerce-path [this]
     (comp-paths* this))
+
+  #?@(:cljs [
+    cljs.core/IndexedSeq
+    (coerce-path [this]
+      (coerce-path (vec this)))
+    cljs.core/EmptyList
+    (coerce-path [this]
+      (coerce-path (vec this)))
+    cljs.core/List
+    (coerce-path [this]
+      (coerce-path (vec this)))
+    ])
   
   #?(:clj Object :cljs js/Object)
   (coerce-path [this]
