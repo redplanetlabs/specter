@@ -15,7 +15,7 @@
    (dotimes [_ iters]
      (afn))))
 
-(deftype ExecutorFunctions [type select-executor update-executor])
+(deftype ExecutorFunctions [type select-executor transform-executor])
 
 (def StructureValsPathExecutor
   (->ExecutorFunctions
@@ -24,12 +24,12 @@
       (selector [] structure
         (fn [vals structure]
           (if-not (empty? vals) [(conj vals structure)] [structure]))))
-    (fn [updater update-fn structure]
-      (updater [] structure
+    (fn [transformer transform-fn structure]
+      (transformer [] structure
         (fn [vals structure]
           (if (empty? vals)
-            (update-fn structure)
-            (apply update-fn (conj vals structure))))))
+            (transform-fn structure)
+            (apply transform-fn (conj vals structure))))))
     ))
 
 (def StructurePathExecutor
@@ -37,11 +37,11 @@
     :spath
     (fn [selector structure]
       (selector structure (fn [structure] [structure])))
-    (fn [updater update-fn structure]
-      (updater structure update-fn))
+    (fn [transformer transform-fn structure]
+      (transformer structure transform-fn))
     ))
 
-(deftype TransformFunctions [executors selector updater])
+(deftype TransformFunctions [executors selector transformer])
 
 
 (defprotocol CoerceTransformFunctions
@@ -64,13 +64,13 @@
 (defn coerce-structure-vals-path [this]
   (let [pimpl (find-protocol-impl! StructureValsPath this)
         selector (:select-full* pimpl)
-        updater (:update-full* pimpl)]
+        transformer (:transform-full* pimpl)]
     (->TransformFunctions
       StructureValsPathExecutor
       (fn [vals structure next-fn]
         (selector this vals structure next-fn))
       (fn [vals structure next-fn]
-        (updater this vals structure next-fn)))
+        (transformer this vals structure next-fn)))
     ))
 
 (defn coerce-collector [this]
@@ -93,25 +93,25 @@
 (defn coerce-structure-path [this]
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
-        updater (:update* pimpl)]
+        transformer (:transform* pimpl)]
     (->TransformFunctions
       StructurePathExecutor
       (fn [structure next-fn]
         (selector this structure next-fn))
       (fn [structure next-fn]
-        (updater this structure next-fn))
+        (transformer this structure next-fn))
     )))
 
 (defn coerce-structure-path-direct [this]
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
-        updater (:update* pimpl)]
+        transformer (:transform* pimpl)]
     (->TransformFunctions
       StructureValsPathExecutor
       (fn [vals structure next-fn]
         (selector this structure (fn [structure] (next-fn vals structure))))
       (fn [vals structure next-fn]
-        (updater this structure (fn [structure] (next-fn vals structure))))
+        (transformer this structure (fn [structure] (next-fn vals structure))))
     )))
 
 (defn obj-extends? [prot obj]
@@ -171,7 +171,7 @@
                 (->TransformFunctions
                  exs
                  (combiner (.selector curr) (.selector next))
-                 (combiner (.updater curr) (.updater next))
+                 (combiner (.transformer curr) (.transformer next))
                  ))
               all))))
 
@@ -179,13 +179,13 @@
   (if (= (extype tfns) :svalspath)
     tfns
     (let [selector (.selector tfns)
-          updater (.updater tfns)]
+          transformer (.transformer tfns)]
       (->TransformFunctions
         StructureValsPathExecutor
         (fn [vals structure next-fn]
           (selector structure (fn [structure] (next-fn vals structure))))
         (fn [vals structure next-fn]
-          (updater structure (fn [structure] (next-fn vals structure))))
+          (transformer structure (fn [structure] (next-fn vals structure))))
         ))))
 
 (extend-protocol StructureValsPathComposer
@@ -218,7 +218,7 @@
   ))
 
 ;;this composes paths together much faster than comp-paths* but the resulting composition
-;;won't execute as fast. Useful for when select/update are used without pre-compiled paths
+;;won't execute as fast. Useful for when select/transform are used without pre-compiled paths
 ;;(where cost of compiling dominates execution time)
 (defn comp-unoptimal [sp]
   (if (instance? java.util.List sp)
@@ -307,10 +307,10 @@
     ((.select-executor ex) (.selector tfns) structure)
     ))
 
-(defn compiled-update*
-  [^com.rpl.specter.impl.TransformFunctions tfns update-fn structure]
+(defn compiled-transform*
+  [^com.rpl.specter.impl.TransformFunctions tfns transform-fn structure]
   (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.update-executor ex) (.updater tfns) update-fn structure)
+    ((.transform-executor ex) (.transformer tfns) transform-fn structure)
     ))
 
 (defn selected?*
@@ -348,7 +348,7 @@
 (defn key-select [akey structure next-fn]
   (next-fn (get structure akey)))
 
-(defn key-update [akey structure next-fn]
+(defn key-transform [akey structure next-fn]
   (assoc structure akey (next-fn (get structure akey))
   ))
 
@@ -358,7 +358,7 @@
   AllStructurePath
   (select* [this structure next-fn]
     (into [] (r/mapcat next-fn structure)))
-  (update* [this structure next-fn]
+  (transform* [this structure next-fn]
     (let [empty-structure (empty structure)]
       (if (list? empty-structure)
         ;; this is done to maintain order, otherwise lists get reversed
@@ -379,7 +379,7 @@
   LastStructurePath
   (select* [this structure next-fn]
     (next-fn (last structure)))
-  (update* [this structure next-fn]
+  (transform* [this structure next-fn]
     (set-last structure (next-fn (last structure)))))
 
 (deftype FirstStructurePath [])
@@ -388,7 +388,7 @@
   FirstStructurePath
   (select* [this structure next-fn]
     (next-fn (first structure)))
-  (update* [this structure next-fn]
+  (transform* [this structure next-fn]
     (set-first structure (next-fn (first structure)))))
 
 (deftype WalkerStructurePath [afn])
@@ -397,7 +397,7 @@
   WalkerStructurePath
   (select* [^WalkerStructurePath this structure next-fn]
     (walk-select (.afn this) next-fn structure))
-  (update* [^WalkerStructurePath this structure next-fn]
+  (transform* [^WalkerStructurePath this structure next-fn]
     (walk-until (.afn this) next-fn structure)))
 
 (deftype CodeWalkerStructurePath [afn])
@@ -406,7 +406,7 @@
   CodeWalkerStructurePath
   (select* [^CodeWalkerStructurePath this structure next-fn]
     (walk-select (.afn this) next-fn structure))
-  (update* [^CodeWalkerStructurePath this structure next-fn]
+  (transform* [^CodeWalkerStructurePath this structure next-fn]
     (codewalk-until (.afn this) next-fn structure)))
 
 
@@ -416,7 +416,7 @@
   FilterStructurePath
   (select* [^FilterStructurePath this structure next-fn]
     (->> structure (filter #(selected?* (.path this) %)) doall next-fn))
-  (update* [^FilterStructurePath this structure next-fn]
+  (transform* [^FilterStructurePath this structure next-fn]
     (let [[filtered ancestry] (filter+ancestry (.path this) structure)
           ;; the vec is necessary so that we can get by index later
           ;; (can't get by index for cons'd lists)
@@ -432,8 +432,8 @@
   KeyPath
   (select* [^KeyPath this structure next-fn]
     (key-select (.akey this) structure next-fn))
-  (update* [^KeyPath this structure next-fn]
-    (key-update (.akey this) structure next-fn)
+  (transform* [^KeyPath this structure next-fn]
+    (key-transform (.akey this) structure next-fn)
     ))
 
 (deftype SelectCollector [sel-fn selector])
@@ -452,7 +452,7 @@
           end ((.end-fn this) structure)]
       (next-fn (-> structure vec (subvec start end)))
       ))
-  (update* [^SRangePath this structure next-fn]
+  (transform* [^SRangePath this structure next-fn]
     (let [start ((.start-fn this) structure)
           end ((.end-fn this) structure)
           structurev (vec structure)
@@ -471,7 +471,7 @@
   ViewPath
   (select* [^ViewPath this structure next-fn]
     (->> structure ((.view-fn this)) next-fn))
-  (update* [^ViewPath this structure next-fn]
+  (transform* [^ViewPath this structure next-fn]
     (->> structure ((.view-fn this)) next-fn)
     ))
 
@@ -488,9 +488,10 @@
   nil
   (select* [this structure next-fn]
     (next-fn structure))
-  (update* [this structure next-fn]
+  (transform* [this structure next-fn]
     (next-fn structure)
     ))
+
 
 (deftype ConditionalPath [cond-pairs])
 
@@ -512,9 +513,9 @@
       (->> (compiled-select* selector structure)
            (mapcat next-fn)
            doall)))
-  (update* [this structure next-fn]
+  (transform* [this structure next-fn]
     (if-let [selector (retrieve-selector (.cond-pairs this) structure)]
-      (compiled-update* selector next-fn structure)
+      (compiled-transform* selector next-fn structure)
       structure
       )))
 

@@ -58,67 +58,67 @@
   (is (nil? (select-first [ALL even?] [1 3 5 9])))
   )
 
-(defspec update-all-on-map
+(defspec transform-all-on-map
   (for-all+
     [m (max-size 5 (gen/map gen/keyword gen/int))]
-    (= (update [ALL LAST] inc m)
+    (= (transform [ALL LAST] inc m)
        (into {} (for [[k v] m] [k (inc v)]))
        )))
 
-(defspec update-all
+(defspec transform-all
   (for-all+
    [v (gen/vector gen/int)]
-   (let [v2 (update [ALL] inc v)]
+   (let [v2 (transform [ALL] inc v)]
     (and (vector? v2) (= v2 (map inc v)))
     )))
 
-(defspec update-all-list
+(defspec transform-all-list
   (for-all+
    [v (gen/list gen/int)]
-   (let [v2 (update [ALL] inc v)]
+   (let [v2 (transform [ALL] inc v)]
      (and (seq? v2) (= v2 (map inc v)))
      )))
 
-(defspec update-all-filter
+(defspec transform-all-filter
   (for-all+
    [v (gen/vector gen/int)
     pred (gen/elements [odd? even?])
     action (gen/elements [inc dec])]
-   (let [v2 (update [ALL pred] action v)]
+   (let [v2 (transform [ALL pred] action v)]
      (= v2 (map (fn [v] (if (pred v) (action v) v)) v))
      )))
 
-(defspec update-last
+(defspec transform-last
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
-   (let [v2 (update [LAST] pred v)]
+   (let [v2 (transform [LAST] pred v)]
      (= v2 (concat (butlast v) [(pred (last v))]))
      )))
 
-(defspec update-first
+(defspec transform-first
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
-   (let [v2 (update [FIRST] pred v)]
+   (let [v2 (transform [FIRST] pred v)]
      (= v2 (concat [(pred (first v))] (rest v) ))
      )))
 
-(defspec update-filterer-all-equivalency
+(defspec transform-filterer-all-equivalency
   (prop/for-all
    [v (gen/vector gen/int)]
-   (let [v2 (update [(filterer odd?) ALL] inc v)
-         v3 (update [ALL odd?] inc v)]
+   (let [v2 (transform [(filterer odd?) ALL] inc v)
+         v3 (transform [ALL odd?] inc v)]
      (= v2 v3))
      ))
 
-(defspec update-with-context
+(defspec transform-with-context
   (for-all+
     [kw1 gen/keyword
      kw2 gen/keyword
      m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
      pred (gen/elements [odd? even?])]
-    (= (update [(collect-one kw2) kw1 pred] + m)
+    (= (transform [(collect-one kw2) kw1 pred] + m)
        (if (pred (kw1 m))
           (assoc m kw1 (+ (kw1 m) (kw2 m)))
           m
@@ -131,10 +131,10 @@
                         i)))
        (filter identity)))
 
-(defspec update-last-compound
+(defspec transform-last-compound
   (for-all+
    [v (gen/such-that #(some odd? %) (gen/vector gen/int))]
-   (let [v2 (update [(filterer odd?) LAST] inc v)
+   (let [v2 (transform [(filterer odd?) LAST] inc v)
          differing-elems (differing-elements v v2)]
      (and (= (count v2) (count v))
           (= (count differing-elems) 1)
@@ -142,7 +142,7 @@
           ))))
 
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
-(defspec update-keyword
+(defspec transform-keyword
   (for-all+
    [k1 (max-size 3 gen/keyword)
     k2 (max-size 3 gen/keyword)
@@ -152,7 +152,7 @@
                   (gen-map-with-keys gen/keyword gen/int k2)
                   k1))
     pred (gen/elements [inc dec])]
-   (let [m2 (update [k1 k2] pred m1)]
+   (let [m2 (transform [k1 k2] pred m1)]
      (= (assoc-in m1 [k1 k2] nil) (assoc-in m2 [k1 k2] nil))
      (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2]))
      )))
@@ -201,7 +201,7 @@
          predcount (fn [pred v] (->> v (filter pred) count))
          even-count (partial predcount even?)
          odd-count (partial predcount odd?)
-         b (update (srange b e) (fn [r] (filter odd? r)) v)]
+         b (transform (srange b e) (fn [r] (filter odd? r)) v)]
      (and (= (odd-count v) (odd-count b))
           (= (+ (even-count b) (even-count sv))
              (even-count v)))
@@ -219,7 +219,7 @@
     (= (first (select (view afn) i))
        (first (select (viewfn [i] (afn i)) i))
        (afn i)
-       (update (view afn) identity i)
+       (transform (view afn) identity i)
        )))
 
 (deftest selected?-test
@@ -234,7 +234,7 @@
     [i gen/int
      afn (gen/elements [inc dec])]
     (and (= [i] (select nil i))
-         (= (afn i) (update nil afn i)))))
+         (= (afn i) (transform nil afn i)))))
 
 (deftest nil-comp-test
   (is (= [5] (select (comp-paths* nil) 5))))
@@ -244,8 +244,8 @@
    [kw gen/keyword
     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
     c gen/int]
-   (= (update [(putval c) kw] + m)
-      (update [kw (putval c)] + m)
+   (= (transform [(putval c) kw] + m)
+      (transform [kw (putval c)] + m)
       (assoc m kw (+ c (get m kw)))
       )))
 
@@ -260,20 +260,20 @@
       (select [nil nil nil] v)
       )))
 
-(defspec empty-selector-update-test
+(defspec empty-selector-transform-test
   (for-all+
    [kw gen/keyword
     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
    (and (= m
-           (update nil identity m)
-           (update [] identity m)
-           (update (comp-paths []) identity m)
-           (update (comp-paths nil nil) identity m)
+           (transform nil identity m)
+           (transform [] identity m)
+           (transform (comp-paths []) identity m)
+           (transform (comp-paths nil nil) identity m)
            )
-        (= (update kw inc m)
-           (update [nil kw] inc m)
-           (update (comp-paths kw nil) inc m)
-           (update (comp-paths nil kw nil) inc m)
+        (= (transform kw inc m)
+           (transform [nil kw] inc m)
+           (transform (comp-paths kw nil) inc m)
+           (transform (comp-paths nil kw nil) inc m)
            ))))
 
 (deftest compose-empty-comp-path-test
@@ -307,14 +307,14 @@
                  [1 2 3 4 5 6 7 8])))
   (is (empty? (select (if-path odd? (view inc)) 2)))
   (is (= [6 2 10 6 14] 
-         (update [(putval 2)
+         (transform [(putval 2)
                   ALL
                   (if-path odd? [(view inc) (view inc)] (view dec))]
                   *
                   [1 2 3 4 5]
                      )))
   (is (= 2
-         (update [(putval 2)
+         (transform [(putval 2)
                   (if-path odd? (view inc))]
                   *
                   2)))
@@ -337,8 +337,8 @@
    (let [v1 (get m k1)
          k (if (pred v1) k2 k3)]
      (and
-       (= (update (if-path [k1 pred] k2 k3) inc m)
-          (update k inc m)) 
+       (= (transform (if-path [k1 pred] k2 k3) inc m)
+          (transform k inc m)) 
        (= (select (if-path [k1 pred] k2 k3) m)
           (select k m)) 
        ))))
