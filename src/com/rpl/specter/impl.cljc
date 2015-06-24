@@ -315,12 +315,10 @@
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
-  (get_cell [cell])
   (set_cell [cell x]))
 
 (deftype MutableCell [^:volatile-mutable q]
   PMutableCell
-  (get_cell [this] q)
   (set_cell [this x] (set! q x)))
 
 (defn mutable-cell
@@ -331,7 +329,7 @@
   (set_cell cell val))
 
 (defn get-cell [cell]
-  (get_cell cell))
+  (field cell 'q))
 
 (defn update-cell! [cell afn]
   (let [ret (afn (get-cell cell))]
