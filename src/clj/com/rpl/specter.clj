@@ -57,22 +57,22 @@
   [selector structure]
   (compiled-select-first (comp-unoptimal selector) structure))
 
-;; Update functions
+;; Transformfunctions
 
 
-(def ^{:doc "Version of update that takes in a selector pre-compiled with comp-paths"}
-  compiled-update compiled-update*)
+(def ^{:doc "Version of transform that takes in a selector pre-compiled with comp-paths"}
+  compiled-transform compiled-transform*)
 
-(defn update
+(defn transform
   "Navigates to each value specified by the selector and replaces it by the result of running
-  the update-fn on it"
-  [selector update-fn structure]
-  (compiled-update (comp-unoptimal selector) update-fn structure))
+  the transform-fn on it"
+  [selector transform-fn structure]
+  (compiled-transform (comp-unoptimal selector) transform-fn structure))
 
 (defn compiled-setval
   "Version of setval that takes in a selector pre-compiled with comp-paths"
   [selector val structure]
-  (compiled-update selector (fn [_] val) structure))
+  (compiled-transform selector (fn [_] val) structure))
 
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
@@ -81,11 +81,11 @@
 
 (defn compiled-replace-in
   "Version of replace-in that takes in a selector pre-compiled with comp-paths"
-  [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (let [state (mutable-cell nil)]
-    [(compiled-update selector
+    [(compiled-transform selector
              (fn [e]
-               (let [res (update-fn e)]
+               (let [res (transform-fn e)]
                  (if res
                    (let [[ret user-ret] res]
                      (->> user-ret
@@ -99,13 +99,13 @@
     ))
 
 (defn replace-in
-  "Similar to update, except returns a pair of [updated-structure sequence-of-user-ret].
-  The update-fn in this case is expected to return [ret user-ret]. ret is
-   what's used to update the data structure, while user-ret will be added to the user-ret sequence
+  "Similar to transform, except returns a pair of [transformd-structure sequence-of-user-ret].
+  The transform-fn in this case is expected to return [ret user-ret]. ret is
+   what's used to transform the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
-   of what was updated in the data structure."
-  [selector update-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (compiled-replace-in (comp-unoptimal selector) update-fn structure :merge-fn merge-fn))
+   of what was transformd in the data structure."
+  [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  (compiled-replace-in (comp-unoptimal selector) transform-fn structure :merge-fn merge-fn))
 
 ;; Built-in pathing and context operations
 
@@ -154,7 +154,7 @@
   StructurePath
   (select* [kw structure next-fn]
     (next-fn (get structure kw)))
-  (update* [kw structure next-fn]
+  (transform* [kw structure next-fn]
     (assoc structure kw (next-fn (get structure kw)))
     ))
 
@@ -163,7 +163,7 @@
   (select* [afn structure next-fn]
     (if (afn structure)
       (next-fn structure)))
-  (update* [afn structure next-fn]
+  (transform* [afn structure next-fn]
     (if (afn structure)
       (next-fn structure)
       structure)))
@@ -176,11 +176,11 @@
 
 (defn putval
   "Adds an external value to the collected vals. Useful when additional arguments
-  are required to the update function that would otherwise require partial
+  are required to the transform function that would otherwise require partial
   application or a wrapper function.
 
   e.g., incrementing val at path [:a :b] by 3:
-  (update [:a :b (putval 3)] + some-map)"
+  (transform [:a :b (putval 3)] + some-map)"
   [val]
   (->PutValCollector val))
 
