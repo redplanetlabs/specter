@@ -301,6 +301,25 @@
 (defn- conj-all! [cell elems]
   (set-cell! cell (concat (get-cell cell) elems)))
 
+(defn compiled-select*
+  [^com.rpl.specter.impl.TransformFunctions tfns structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.select-executor ex) (.selector tfns) structure)
+    ))
+
+(defn compiled-transform*
+  [^com.rpl.specter.impl.TransformFunctions tfns transform-fn structure]
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
+    ((.transform-executor ex) (.transformer tfns) transform-fn structure)
+    ))
+
+(defn selected?*
+  [compiled-path structure]
+  (->> structure
+       (compiled-select* compiled-path)
+       empty?
+       not))
+
 ;; returns vector of all results
 (defn- walk-select [pred continue-fn structure]
   (let [ret (mutable-cell [])
@@ -313,12 +332,12 @@
     (get-cell ret)
     ))
 
-(defn- filter+ancestry [afn aseq]
+(defn- filter+ancestry [path aseq]
   (let [aseq (vec aseq)]
     (reduce (fn [[s m :as orig] i]
               (let [e (get aseq i)
                     pos (count s)]
-                (if (afn e)
+                (if (selected?* path e)
                   [(conj s e) (assoc m pos i)]
                   orig
                   )))
@@ -391,14 +410,14 @@
     (codewalk-until (.afn this) next-fn structure)))
 
 
-(deftype FilterStructurePath [afn])
+(deftype FilterStructurePath [path])
 
 (extend-protocol StructurePath
   FilterStructurePath
   (select* [^FilterStructurePath this structure next-fn]
-    (->> structure (filter (.afn this)) doall next-fn))
+    (->> structure (filter #(selected?* (.path this) %)) doall next-fn))
   (transform* [^FilterStructurePath this structure next-fn]
-    (let [[filtered ancestry] (filter+ancestry (.afn this) structure)
+    (let [[filtered ancestry] (filter+ancestry (.path this) structure)
           ;; the vec is necessary so that we can get by index later
           ;; (can't get by index for cons'd lists)
           next (vec (next-fn filtered))]
@@ -473,17 +492,6 @@
     (next-fn structure)
     ))
 
-(defn compiled-select*
-  [^com.rpl.specter.impl.TransformFunctions tfns structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.select-executor ex) (.selector tfns) structure)
-    ))
-
-(defn compiled-transform*
-  [^com.rpl.specter.impl.TransformFunctions tfns transform-fn structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.transform-executor ex) (.transformer tfns) transform-fn structure)
-    ))
 
 (deftype ConditionalPath [cond-pairs])
 
