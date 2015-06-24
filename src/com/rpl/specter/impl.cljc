@@ -1,9 +1,22 @@
 (ns com.rpl.specter.impl
-  (:use [com.rpl.specter.protocols :only [StructurePath StructureValsPath Collector StructureValsPathComposer comp-paths*]])
-  (:require [clojure.walk :as walk]
+  (:use [com.rpl.specter.protocols :only
+    [comp-paths*
+     select* transform* collect-val select-full* transform-full*]])
+  (:require [com.rpl.specter.protocols :as p]
+            [clojure.walk :as walk]
             [clojure.core.reducers :as r]
             [clojure.string :as s])
   )
+
+#?(
+:clj
+(defmacro field [obj quoted-field]
+  `(. ~obj ~(second quoted-field)))
+
+:cljs
+(defn field [obj field]
+  (aget obj (s/replace (str field) "-" "_")))
+)
 
 #?(
 :clj
@@ -58,6 +71,12 @@
 (defprotocol CoerceTransformFunctions
   (coerce-path [this]))
 
+(defn- seq-contains? [aseq val]
+  (->> aseq
+       (filter (partial = val))
+       empty?
+       not))
+
 (defn no-prot-error-str [obj]
   (str "Protocol implementation cannot be found for object.
         Extending Specter protocols should not be done inline in a deftype definition
@@ -65,18 +84,16 @@
         optimized performance. Instead, you should extend the protocols via an
         explicit extend-protocol call. \n" obj))
 
+#?(
+:clj
+
 (defn find-protocol-impl! [prot obj]
   (let [ret (find-protocol-impl prot obj)]
     (if (= ret obj)
       (throw-illegal (no-prot-error-str obj))
       ret
       )))
-
-(defn- seq-contains? [aseq val]
-  (->> aseq
-       (filter (partial = val))
-       empty?
-       not))
+)
 
 #?(
 :clj
@@ -94,8 +111,40 @@
     ))
 )
 
+#?(:clj
+(do
+(defn structure-path-impl [this]
+  (if (fn? this)
+    ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
+    (-> p/StructurePath :impls (get clojure.lang.AFn))
+    (find-protocol-impl! p/StructurePath this)))
+
+(defn collector-impl [this]
+  (find-protocol-impl! p/Collector this))
+
+(defn structure-vals-path-impl [this]
+  (find-protocol-impl! p/StructureValsPath this))
+))
+
+#?(:cljs
+(do
+(defn structure-path-impl [_]
+  {:select* (fn [this structure next-fn] (select* this structure next-fn))
+   :transform* (fn [this structure next-fn] (transform* this structure next-fn))
+   })
+
+(defn collector-impl [_]
+  {:collect-val (fn [this structure] (collect-val this structure))
+   })
+
+(defn structure-vals-path-impl [_]
+  {:select-full* (fn [this structure next-fn] (select-full* this structure next-fn))
+   :transform-full* (fn [this structure next-fn] (transform-full* this structure next-fn))
+   })
+))
+
 (defn coerce-structure-vals-path [this]
-  (let [pimpl (find-protocol-impl! StructureValsPath this)
+  (let [pimpl (structure-vals-path-impl this)
         selector (:select-full* pimpl)
         transformer (:transform-full* pimpl)]
     (->TransformFunctions
@@ -108,7 +157,7 @@
 
 (defn coerce-collector [this]
   (let [cfn (->> this
-                 (find-protocol-impl! Collector)
+                 collector-impl
                  :collect-val
                  )
         afn (fn [vals structure next-fn]
@@ -116,12 +165,6 @@
               )]
     (->TransformFunctions StructureValsPathExecutor afn afn)))
 
-
-(defn structure-path-impl [this]
-  (if (fn? this)
-    ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
-    (-> StructurePath :impls (get clojure.lang.AFn))
-    (find-protocol-impl! StructurePath this)))
 
 (defn coerce-structure-path [this]
   (let [pimpl (structure-path-impl this)
@@ -148,7 +191,7 @@
     )))
 
 (defn structure-path? [obj]
-  (or (fn? obj) (obj-extends? `StructurePath obj)))
+  (or (fn? obj) (obj-extends? `p/StructurePath obj)))
 
 (extend-protocol CoerceTransformFunctions
   nil ; needs its own path because it doesn't count as an Object
@@ -167,23 +210,23 @@
   #?(:clj Object :cljs js/Object)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
-          (obj-extends? `Collector this) (coerce-collector this)
-          (obj-extends? `StructureValsPath this) (coerce-structure-vals-path this)
+          (obj-extends? `p/Collector this) (coerce-collector this)
+          (obj-extends? `p/StructureValsPath this) (coerce-structure-vals-path this)
           :else (throw-illegal (no-prot-error-str this))
       )))
 
 
 (defn extype [^TransformFunctions f]
-  (let [^ExecutorFunctions exs (.executors f)]
-    (.type exs)
+  (let [^ExecutorFunctions exs (field f 'executors)]
+    (field exs 'type)
     ))
 
 (defn- combine-same-types [[^TransformFunctions f & _ :as all]]
   (if (empty? all)
     (coerce-path nil)
-    (let [^ExecutorFunctions exs (.executors f)
+    (let [^ExecutorFunctions exs (field f 'executors)
 
-          t (.type exs)
+          t (field exs 'type)
 
           combiner
           (if (= t :svalspath)
@@ -201,16 +244,16 @@
       (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
                 (->TransformFunctions
                  exs
-                 (combiner (.selector curr) (.selector next))
-                 (combiner (.transformer curr) (.transformer next))
+                 (combiner (field curr 'selector) (field next 'selector))
+                 (combiner (field curr 'transformer) (field next 'transformer))
                  ))
               all))))
 
 (defn coerce-structure-vals [^TransformFunctions tfns]
   (if (= (extype tfns) :svalspath)
     tfns
-    (let [selector (.selector tfns)
-          transformer (.transformer tfns)]
+    (let [selector (field tfns 'selector)
+          transformer (field tfns 'transformer)]
       (->TransformFunctions
         StructureValsPathExecutor
         (fn [vals structure next-fn]
@@ -219,7 +262,7 @@
           (transformer structure (fn [structure] (next-fn vals structure))))
         ))))
 
-(extend-protocol StructureValsPathComposer
+(extend-protocol p/StructureValsPathComposer
   nil
   (comp-paths* [sp]
     (coerce-path sp))
@@ -242,8 +285,8 @@
 
 (defn coerce-structure-vals-direct [this]
   (cond (structure-path? this) (coerce-structure-path-direct this)
-        (obj-extends? `Collector this) (coerce-collector this)
-        (obj-extends? `StructureValsPath this) (coerce-structure-vals-path this)
+        (obj-extends? `p/Collector this) (coerce-collector this)
+        (obj-extends? `p/StructureValsPath this) (coerce-structure-vals-path this)
         (instance? TransformFunctions this) (coerce-structure-vals this)
         :else (throw-illegal (no-prot-error-str this))
   ))
@@ -334,14 +377,14 @@
 
 (defn compiled-select*
   [^com.rpl.specter.impl.TransformFunctions tfns structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.select-executor ex) (.selector tfns) structure)
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (field tfns 'executors)]
+    ((field ex 'select-executor) (field tfns 'selector) structure)
     ))
 
 (defn compiled-transform*
   [^com.rpl.specter.impl.TransformFunctions tfns transform-fn structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.executors tfns)]
-    ((.transform-executor ex) (.transformer tfns) transform-fn structure)
+  (let [^com.rpl.specter.impl.ExecutorFunctions ex (field tfns 'executors)]
+    ((field ex 'transform-executor) (field tfns 'transformer) transform-fn structure)
     ))
 
 (defn selected?*
@@ -385,7 +428,7 @@
 
 (deftype AllStructurePath [])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   AllStructurePath
   (select* [this structure next-fn]
     (into [] (r/mapcat next-fn structure)))
@@ -399,14 +442,14 @@
 
 (deftype ValCollect [])
 
-(extend-protocol Collector
+(extend-protocol p/Collector
   ValCollect
   (collect-val [this structure]
     structure))
 
 (deftype LastStructurePath [])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   LastStructurePath
   (select* [this structure next-fn]
     (next-fn (last structure)))
@@ -415,7 +458,7 @@
 
 (deftype FirstStructurePath [])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   FirstStructurePath
   (select* [this structure next-fn]
     (next-fn (first structure)))
@@ -424,31 +467,31 @@
 
 (deftype WalkerStructurePath [afn])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   WalkerStructurePath
   (select* [^WalkerStructurePath this structure next-fn]
-    (walk-select (.afn this) next-fn structure))
+    (walk-select (field this 'afn) next-fn structure))
   (transform* [^WalkerStructurePath this structure next-fn]
-    (walk-until (.afn this) next-fn structure)))
+    (walk-until (field this 'afn) next-fn structure)))
 
 (deftype CodeWalkerStructurePath [afn])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   CodeWalkerStructurePath
   (select* [^CodeWalkerStructurePath this structure next-fn]
-    (walk-select (.afn this) next-fn structure))
+    (walk-select (field this 'afn) next-fn structure))
   (transform* [^CodeWalkerStructurePath this structure next-fn]
-    (codewalk-until (.afn this) next-fn structure)))
+    (codewalk-until (field this 'afn) next-fn structure)))
 
 
 (deftype FilterStructurePath [path])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   FilterStructurePath
   (select* [^FilterStructurePath this structure next-fn]
-    (->> structure (filter #(selected?* (.path this) %)) doall next-fn))
+    (->> structure (filter #(selected?* (field this 'path) %)) doall next-fn))
   (transform* [^FilterStructurePath this structure next-fn]
-    (let [[filtered ancestry] (filter+ancestry (.path this) structure)
+    (let [[filtered ancestry] (filter+ancestry (field this 'path) structure)
           ;; the vec is necessary so that we can get by index later
           ;; (can't get by index for cons'd lists)
           next (vec (next-fn filtered))]
@@ -459,33 +502,33 @@
 
 (deftype KeyPath [akey])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   KeyPath
   (select* [^KeyPath this structure next-fn]
-    (key-select (.akey this) structure next-fn))
+    (key-select (field this 'akey) structure next-fn))
   (transform* [^KeyPath this structure next-fn]
-    (key-transform (.akey this) structure next-fn)
+    (key-transform (field this 'akey) structure next-fn)
     ))
 
 (deftype SelectCollector [sel-fn selector])
 
-(extend-protocol Collector
+(extend-protocol p/Collector
   SelectCollector
   (collect-val [^SelectCollector this structure]
-    ((.sel-fn this) (.selector this) structure)))
+    ((field this 'sel-fn) (field this 'selector) structure)))
 
 (deftype SRangePath [start-fn end-fn])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   SRangePath
   (select* [^SRangePath this structure next-fn]
-    (let [start ((.start-fn this) structure)
-          end ((.end-fn this) structure)]
+    (let [start ((field this 'start-fn) structure)
+          end ((field this 'end-fn) structure)]
       (next-fn (-> structure vec (subvec start end)))
       ))
   (transform* [^SRangePath this structure next-fn]
-    (let [start ((.start-fn this) structure)
-          end ((.end-fn this) structure)
+    (let [start ((field this 'start-fn) structure)
+          end ((field this 'end-fn) structure)
           structurev (vec structure)
           newpart (next-fn (-> structurev (subvec start end)))
           res (concat (subvec structurev 0 start)
@@ -498,24 +541,24 @@
 
 (deftype ViewPath [view-fn])
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   ViewPath
   (select* [^ViewPath this structure next-fn]
-    (->> structure ((.view-fn this)) next-fn))
+    (->> structure ((field this 'view-fn)) next-fn))
   (transform* [^ViewPath this structure next-fn]
-    (->> structure ((.view-fn this)) next-fn)
+    (->> structure ((field this 'view-fn)) next-fn)
     ))
 
 (deftype PutValCollector [val])
 
-(extend-protocol Collector
+(extend-protocol p/Collector
   PutValCollector
   (collect-val [^PutValCollector this structure]
-    (.val this)
+    (field this 'val)
     ))
 
 
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   nil
   (select* [this structure next-fn]
     (next-fn structure))
@@ -537,15 +580,15 @@
        ))
 
 ;;TODO: test nothing matches case
-(extend-protocol StructurePath
+(extend-protocol p/StructurePath
   ConditionalPath
   (select* [this structure next-fn]
-    (if-let [selector (retrieve-selector (.cond-pairs this) structure)]
+    (if-let [selector (retrieve-selector (field this 'cond-pairs) structure)]
       (->> (compiled-select* selector structure)
            (mapcat next-fn)
            doall)))
   (transform* [this structure next-fn]
-    (if-let [selector (retrieve-selector (.cond-pairs this) structure)]
+    (if-let [selector (retrieve-selector (field this 'cond-pairs) structure)]
       (compiled-transform* selector next-fn structure)
       structure
       )))
