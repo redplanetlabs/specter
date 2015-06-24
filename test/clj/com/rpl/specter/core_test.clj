@@ -185,7 +185,7 @@
   (for-all+
    [v (gen/vector gen/int)
     v2 (gen/vector gen/int)]
-   (let [b (setval START v2 v)
+   (let [b (setval BEGINNING v2 v)
          e (setval END v2 v)]
      (and (= b (concat v2 v))
           (= e (concat v v2)))
@@ -217,7 +217,6 @@
     [i gen/int
      afn (gen/elements [inc dec])]
     (= (first (select (view afn) i))
-       (first (select (viewfn [i] (afn i)) i))
        (afn i)
        (transform (view afn) identity i)
        )))

@@ -1,14 +1,24 @@
 (ns com.rpl.specter.impl
-  (:use [com.rpl.specter protocols])
+  (:use [com.rpl.specter.protocols :only [StructurePath StructureValsPath Collector StructureValsPathComposer comp-paths*]])
   (:require [clojure.walk :as walk]
             [clojure.core.reducers :as r])
   )
 
+#?(
+:clj
+(do
 (defmacro throw* [etype & args]
   `(throw (new ~etype (pr-str ~@args))))
 
 (defmacro throw-illegal [& args]
-  `(throw* IllegalArgumentException ~@args))
+  `(throw* IllegalArgumentException ~@args)))
+
+
+:cljs
+(defn throw-illegal [& args]
+  (throw (js/Error. (apply str args)))
+  )
+)
 
 (defn benchmark [iters afn]
   (time
@@ -129,11 +139,12 @@
   (coerce-path [this]
     this)
 
-  java.util.List
+  
+  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (coerce-path [this]
     (comp-paths* this))
-
-  Object
+  
+  #?(:clj Object :cljs js/Object)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
           (obj-extends? Collector this) (coerce-collector this)
@@ -192,10 +203,10 @@
   nil
   (comp-paths* [sp]
     (coerce-path sp))
-  Object
+  #?(:clj Object :cljs js/Object)
   (comp-paths* [sp]
     (coerce-path sp))
-  java.util.List
+  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (comp-paths* [structure-paths]
     (let [combined (->> structure-paths
                         (map coerce-path)
@@ -221,31 +232,31 @@
 ;;won't execute as fast. Useful for when select/transform are used without pre-compiled paths
 ;;(where cost of compiling dominates execution time)
 (defn comp-unoptimal [sp]
-  (if (instance? java.util.List sp)
+  (if (instance? #?(:clj java.util.List :cljs cljs.core/PersistentVector) sp)
     (->> sp
          (map coerce-structure-vals-direct)
          combine-same-types)
     (coerce-path sp)))
 
 ;; cell implementation idea taken from prismatic schema library
-(definterface PMutableCell
-  (get_cell ^Object [])
-  (set_cell [^Object x]))
+(defprotocol PMutableCell
+  (get_cell [cell])
+  (set_cell [cell x]))
 
-(deftype MutableCell [^:volatile-mutable ^Object q]
+(deftype MutableCell [^:volatile-mutable q]
   PMutableCell
   (get_cell [this] q)
   (set_cell [this x] (set! q x)))
 
-(defn mutable-cell ^PMutableCell
+(defn mutable-cell
   ([] (mutable-cell nil))
   ([init] (MutableCell. init)))
 
-(defn set-cell! [^PMutableCell cell val]
-  (.set_cell cell val))
+(defn set-cell! [cell val]
+  (set_cell cell val))
 
-(defn get-cell [^PMutableCell cell]
-  (.get_cell cell))
+(defn get-cell [cell]
+  (get_cell cell))
 
 (defn update-cell! [cell afn]
   (let [ret (afn (get-cell cell))]
@@ -266,12 +277,12 @@
   (append (butlast l) v))
 
 (extend-protocol SetExtremes
-  clojure.lang.PersistentVector
+  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (set-first [v val]
     (assoc v 0 val))
   (set-last [v val]
     (assoc v (-> v count dec) val))
-  Object
+  #?(:clj Object :cljs js/Object)
   (set-first [l val]
     (set-first-list l val))
   (set-last [l val]

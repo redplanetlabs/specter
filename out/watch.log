@@ -1,0 +1,18 @@
+Building ...
+Compiling src/com/rpl/specter/protocols.cljc
+Compiling src/com/rpl/specter/impl.cljc
+Reading analysis cache for jar:file:/Users/pietromenna/git/specter/cljs.jar!/clojure/core/reducers.cljs
+Reading analysis cache for jar:file:/Users/pietromenna/git/specter/cljs.jar!/clojure/walk.cljs
+WARNING: Use of undeclared Var com.rpl.specter.impl/find-protocol-impl at line 68 src/com/rpl/specter/impl.cljc
+WARNING: Use of undeclared Var com.rpl.specter.impl/find-protocol-impl at line 128 src/com/rpl/specter/impl.cljc
+WARNING: Extending an existing JavaScript type - use a different symbol name instead of js/Object e.g object at line 133 src/com/rpl/specter/impl.cljc
+WARNING: Extending an existing JavaScript type - use a different symbol name instead of js/Object e.g object at line 202 src/com/rpl/specter/impl.cljc
+WARNING: Extending an existing JavaScript type - use a different symbol name instead of js/Object e.g object at line 279 src/com/rpl/specter/impl.cljc
+Compiling src/com/rpl/specter.cljc
+WARNING: Extending an existing JavaScript type - use a different symbol name instead of js/Function e.g function at line 159 src/com/rpl/specter.cljc
+Compiling out/clojure/walk.cljs
+Compiling out/cljs/core.cljs
+Using cached cljs.core out/cljs/core.cljs
+Compiling out/clojure/core/reducers.cljs
+... done. Elapsed 0.846669065 seconds
+Watching paths: /Users/pietromenna/git/specter/src
