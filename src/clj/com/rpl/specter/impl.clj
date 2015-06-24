@@ -47,6 +47,16 @@
 (defprotocol CoerceTransformFunctions
   (coerce-path [this]))
 
+;; In addition to the warning below, maybe just add a macro that makes it easy
+;; for people to define records the way you recommend? It might be easier to
+;; say "use my defrecord instead" than to explain what the advantage is.
+(defmacro defrecord*
+  [name- elts protocol & impls]
+  ~(do (defrecord ~name- ~elts)
+       (extend-protocol
+         ~protocol ~name-
+         ~@impls)))
+
 (defn no-prot-error-str [obj]
   (str "Protocol implementation cannot be found for object.
         Extending Specter protocols should not be done inline in a deftype definition
