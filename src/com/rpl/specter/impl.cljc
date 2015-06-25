@@ -606,3 +606,21 @@
       structure
       )))
 
+(deftype MultiPath [paths])
+
+(extend-protocol p/StructurePath
+  MultiPath
+  (select* [this structure next-fn]
+    (->> (field this 'paths)
+         (mapcat #(compiled-select* % structure))
+         (mapcat next-fn)
+         doall
+         ))
+  (transform* [this structure next-fn]
+    (reduce
+      (fn [structure selector]
+        (compiled-transform* selector next-fn structure))
+      structure
+      (field this 'paths))
+    ))
+

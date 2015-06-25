@@ -201,3 +201,9 @@
   ([cond-fn if-path] (cond-path cond-fn if-path))
   ([cond-fn if-path else-path]
     (cond-path cond-fn if-path nil else-path)))
+
+(defn multi-path
+  "A path that branches on multiple paths. For updates,
+   applies updates to the paths in order."
+  [& paths]
+  (i/->MultiPath (->> paths (map comp-paths*) doall)))

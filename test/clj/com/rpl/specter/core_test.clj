@@ -106,9 +106,11 @@
 
 (defspec transform-filterer-all-equivalency
   (prop/for-all
-   [v (gen/vector gen/int)]
-   (let [v2 (transform [(filterer odd?) ALL] inc v)
-         v3 (transform [ALL odd?] inc v)]
+   [v (gen/vector gen/int)
+    pred (gen/elements [even? odd?])
+    updater (gen/elements [inc dec])]
+   (let [v2 (transform [(filterer pred) ALL] updater v)
+         v3 (transform [ALL pred] updater v)]
      (= v2 v3))
      ))
 
@@ -133,12 +135,13 @@
 
 (defspec transform-last-compound
   (for-all+
-   [v (gen/such-that #(some odd? %) (gen/vector gen/int))]
-   (let [v2 (transform [(filterer odd?) LAST] inc v)
+   [pred (gen/elements [odd? even?])
+    v (gen/such-that #(some pred %) (gen/vector gen/int))]
+   (let [v2 (transform [(filterer pred) LAST] inc v)
          differing-elems (differing-elements v v2)]
      (and (= (count v2) (count v))
           (= (count differing-elems) 1)
-          (every? even? (drop (first differing-elems) v2))
+          (every? (complement pred) (drop (first differing-elems) v2))
           ))))
 
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
@@ -341,3 +344,20 @@
        (= (select (if-path [k1 pred] k2 k3) m)
           (select k m)) 
        ))))
+
+(defspec multi-path-test
+  (for-all+
+    [k1 (max-size 3 gen/keyword)
+    k2 (max-size 3 gen/keyword)
+    m (max-size 5
+                (gen-map-with-keys
+                 gen/keyword
+                 gen/int
+                 k1
+                 k2))
+    ]
+    (= (transform (multi-path k1 k2) inc m)
+       (->> m
+            (transform k1 inc)
+            (transform k2 inc)))
+    ))
