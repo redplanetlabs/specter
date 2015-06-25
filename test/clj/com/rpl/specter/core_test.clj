@@ -345,3 +345,20 @@
        (= (select (if-path [k1 pred] k2 k3) m)
           (select k m)) 
        ))))
+
+(defspec multi-path-test
+  (for-all+
+    [k1 (max-size 3 gen/keyword)
+    k2 (max-size 3 gen/keyword)
+    m (max-size 5
+                (gen-map-with-keys
+                 gen/keyword
+                 gen/int
+                 k1
+                 k2))
+    ]
+    (= (transform (multi-path k1 k2) inc m)
+       (->> m
+            (transform k1 inc)
+            (transform k2 inc)))
+    ))

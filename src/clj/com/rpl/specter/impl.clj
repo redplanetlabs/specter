@@ -47,6 +47,7 @@
 (defprotocol CoerceTransformFunctions
   (coerce-path [this]))
 
+
 (defn no-prot-error-str [obj]
   (str "Protocol implementation cannot be found for object.
         Extending Specter protocols should not be done inline in a deftype definition
@@ -518,4 +519,22 @@
       (compiled-transform* selector next-fn structure)
       structure
       )))
+
+(deftype MultiPath [paths])
+
+(extend-protocol StructurePath
+  MultiPath
+  (select* [this structure next-fn]
+    (->> (.paths this)
+         (mapcat #(compiled-select* % structure))
+         (mapcat next-fn)
+         doall
+         ))
+  (transform* [this structure next-fn]
+    (reduce
+      (fn [structure selector]
+        (compiled-transform* selector next-fn structure))
+      structure
+      (.paths this))
+    ))
 
