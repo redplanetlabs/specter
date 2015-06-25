@@ -106,9 +106,11 @@
 
 (defspec transform-filterer-all-equivalency
   (prop/for-all
-   [v (gen/vector gen/int)]
-   (let [v2 (transform [(filterer odd?) ALL] inc v)
-         v3 (transform [ALL odd?] inc v)]
+   [v (gen/vector gen/int)
+    pred (gen/elements [even? odd?])
+    updater (gen/elements [inc dec])]
+   (let [v2 (transform [(filterer pred) ALL] updater v)
+         v3 (transform [ALL pred] updater v)]
      (= v2 v3))
      ))
 
