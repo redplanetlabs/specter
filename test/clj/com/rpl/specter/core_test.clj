@@ -135,12 +135,13 @@
 
 (defspec transform-last-compound
   (for-all+
-   [v (gen/such-that #(some odd? %) (gen/vector gen/int))]
-   (let [v2 (transform [(filterer odd?) LAST] inc v)
+   [pred (gen/elements [odd? even?])
+    v (gen/such-that #(some pred %) (gen/vector gen/int))]
+   (let [v2 (transform [(filterer pred) LAST] inc v)
          differing-elems (differing-elements v v2)]
      (and (= (count v2) (count v))
           (= (count differing-elems) 1)
-          (every? even? (drop (first differing-elems) v2))
+          (every? (complement pred) (drop (first differing-elems) v2))
           ))))
 
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
