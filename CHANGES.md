@@ -1,6 +1,7 @@
 ## 0.5.6
 * Add multi-path implementation
 * change FIRST/LAST to select nothing on an empty sequence
+* Allow sets to be used directly as selectors (acts as filter)
 
 ## 0.5.5
 * Change filterer to accept a selector (that acts like selected? to determine whether or not to select value)
