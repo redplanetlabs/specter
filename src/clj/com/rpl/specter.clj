@@ -113,9 +113,9 @@
 
 (def VAL (->ValCollect))
 
-(def LAST (->LastStructurePath))
+(def LAST (->PosStructurePath last set-last))
 
-(def FIRST (->FirstStructurePath))
+(def FIRST (->PosStructurePath first set-first))
 
 (defn srange-dynamic [start-fn end-fn] (->SRangePath start-fn end-fn))
 
