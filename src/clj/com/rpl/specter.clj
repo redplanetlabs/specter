@@ -161,12 +161,16 @@
 (extend-type clojure.lang.AFn
   StructurePath
   (select* [afn structure next-fn]
-    (if (afn structure)
-      (next-fn structure)))
+    (filter-select afn structure next-fn))
   (transform* [afn structure next-fn]
-    (if (afn structure)
-      (next-fn structure)
-      structure)))
+    (filter-transform afn structure next-fn)))
+
+(extend-protocol StructurePath
+  clojure.lang.PersistentHashSet
+  (select* [aset structure next-fn]
+    (filter-select aset structure next-fn))
+  (transform* [aset structure next-fn]
+    (filter-transform aset structure next-fn)))
 
 (defn collect [& selector]
   (->SelectCollector select (comp-paths* selector)))

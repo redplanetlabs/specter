@@ -532,3 +532,12 @@
       (.paths this))
     ))
 
+(defn filter-select [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)))
+
+(defn filter-transform [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    structure))
+

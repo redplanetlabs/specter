@@ -369,3 +369,12 @@
   (is (= [] (transform FIRST inc [])))
   (is (= [] (transform LAST inc [])))
   )
+
+(defspec set-filter-test
+  (for-all+
+    [k1 gen/keyword
+     k2 (gen/such-that #(not= k1 %) gen/keyword)
+     k3 (gen/such-that (complement #{k1 k2}) gen/keyword)
+     v (gen/vector (gen/elements [k1 k2 k3]))]
+    (= (filter #{k1 k2} v) (select [ALL #{k1 k2}] v))
+    ))
