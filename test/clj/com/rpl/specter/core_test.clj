@@ -362,3 +362,10 @@
             (transform k1 inc)
             (transform k2 inc)))
     ))
+
+(deftest empty-pos-transform
+  (is (empty? (select FIRST [])))
+  (is (empty? (select LAST [])))
+  (is (= [] (transform FIRST inc [])))
+  (is (= [] (transform LAST inc [])))
+  )
