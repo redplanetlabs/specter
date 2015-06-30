@@ -4,9 +4,9 @@ Most of Clojure programming involves creating, manipulating, and transforming im
 
 Specter is a library for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
 
-Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
+Specter is fully extensible. At its core, it's just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
-Specter is a very high performance library. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
+Specter is a very high performance library. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case, the Specter code is equally as convenient. 
 
 # Latest Version
 
@@ -16,7 +16,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 # How to use
 
-The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
+The usage of Specter will be explained via example. Suppose you have a sequence of maps and you want to extract all the even values for :a keys. Here's how you do it:
 ```clojure
 user> (use 'com.rpl.specter)
 nil
@@ -37,7 +37,7 @@ user> (select [:a ALL odd?]
 [1 3 5]
 ```
 
-Another function called `update` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specifies what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
+Another function, called `update`, is used to perform a transformation on a data structure. In addition to a selector, it takes in an "update function" which specifies what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
 user> (update [ALL :a even?]
@@ -106,7 +106,7 @@ user> (select (walker number?)
 [2 1 2 1 2 6 7 4]
 ```
 
-When doing more involved transformations, you often find you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the update function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
+When doing more involved transformations, you may often find that you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the update function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
 
 ```clojure
 user> (update [ALL (collect-one :b) :a even?]
@@ -115,7 +115,7 @@ user> (update [ALL (collect-one :b) :a even?]
 [{:b 3, :a 1} {:b -10, :a -8} {:b 10, :a 14} {:a 3}]
 ```
 
-The update function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the update is performed to :a's value. 
+The update function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key, followed by the value of the :a key; the update is performed to :a's value. 
 
 The four built-in ways for collecting values are `VAL`, `collect`, `collect-one`, and `putval`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value. Finally, `putval` adds an external value into the collected values list.
 
