@@ -1,7 +1,4 @@
-(ns com.rpl.specter.cljs-test-helpers
-  (:require [clojure.test.check             
-             [generators :as gen]
-             [properties :as prop]]))
+(ns com.rpl.specter.cljs-test-helpers)
 
 ;; it seems like gen/bind and gen/return are a monad (hence the names)
 (defmacro for-all+ [bindings & body]
