@@ -37,9 +37,9 @@
 (defn compiled-select-one!
   "Version of select-one! that takes in a selector pre-compiled with comp-paths"
   [selector structure]
-  (let [res (compiled-select-one selector structure)]
-    (when (nil? res) (throw-illegal "No elements found for params: " selector structure))
-    res
+  (let [res (compiled-select selector structure)]
+    (when (not= 1 (count res)) (throw-illegal "Expected exactly one element for params: " selector structure))
+    (first res)
     ))
 
 (defn select-one!
