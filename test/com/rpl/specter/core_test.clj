@@ -361,3 +361,24 @@
             (transform k1 inc)
             (transform k2 inc)))
     ))
+
+(deftest empty-pos-transform
+  (is (empty? (select FIRST [])))
+  (is (empty? (select LAST [])))
+  (is (= [] (transform FIRST inc [])))
+  (is (= [] (transform LAST inc [])))
+  )
+
+(defspec set-filter-test
+  (for-all+
+    [k1 gen/keyword
+     k2 (gen/such-that #(not= k1 %) gen/keyword)
+     k3 (gen/such-that (complement #{k1 k2}) gen/keyword)
+     v (gen/vector (gen/elements [k1 k2 k3]))]
+    (= (filter #{k1 k2} v) (select [ALL #{k1 k2}] v))
+    ))
+
+(deftest nil-select-one-test
+  (is (= nil (select-one! ALL [nil])))
+  (is (thrown? Exception (select-one! ALL [])))
+  )

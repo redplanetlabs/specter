@@ -38,9 +38,9 @@
 (defn compiled-select-one!
   "Version of select-one! that takes in a selector pre-compiled with comp-paths"
   [selector structure]
-  (let [res (compiled-select-one selector structure)]
-    (when (nil? res) (i/throw-illegal "No elements found for params: " selector structure))
-    res
+  (let [res (compiled-select selector structure)]
+    (when (not= 1 (count res)) (i/throw-illegal "Expected exactly one element for params: " selector structure))
+    (first res)
     ))
 
 (defn select-one!
@@ -114,9 +114,9 @@
 
 (def VAL (i/->ValCollect))
 
-(def LAST (i/->LastStructurePath))
+(def LAST (i/->PosStructurePath last set-last))
 
-(def FIRST (i/->FirstStructurePath))
+(def FIRST (i/->PosStructurePath first set-first))
 
 (defn srange-dynamic [start-fn end-fn] (i/->SRangePath start-fn end-fn))
 
@@ -159,12 +159,16 @@
 (extend-type #?(:clj clojure.lang.AFn :cljs js/Function)
   StructurePath
   (select* [afn structure next-fn]
-    (if (afn structure)
-      (next-fn structure)))
+    (i/filter-select afn structure next-fn))
   (transform* [afn structure next-fn]
-    (if (afn structure)
-      (next-fn structure)
-      structure)))
+    (i/filter-transform afn structure next-fn)))
+
+(extend-type #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
+  StructurePath
+  (select* [aset structure next-fn]
+    (i/filter-select aset structure next-fn))
+  (transform* [aset structure next-fn]
+    (i/filter-transform aset structure next-fn)))
 
 (defn collect [& selector]
   (i/->SelectCollector select (comp-paths* selector)))

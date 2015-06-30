@@ -460,23 +460,17 @@
   (collect-val [this structure]
     structure))
 
-(deftype LastStructurePath [])
+(deftype PosStructurePath [getter setter])
 
 (extend-protocol p/StructurePath
-  LastStructurePath
+  PosStructurePath
   (select* [this structure next-fn]
-    (next-fn (last structure)))
+    (if-not (empty? structure)
+      (next-fn ((field this 'getter) structure))))
   (transform* [this structure next-fn]
-    (set-last structure (next-fn (last structure)))))
-
-(deftype FirstStructurePath [])
-
-(extend-protocol p/StructurePath
-  FirstStructurePath
-  (select* [this structure next-fn]
-    (next-fn (first structure)))
-  (transform* [this structure next-fn]
-    (set-first structure (next-fn (first structure)))))
+    (if (empty? structure)
+      structure
+      ((field this 'setter) structure (next-fn ((field this 'getter) structure))))))
 
 (deftype WalkerStructurePath [afn])
 
@@ -623,4 +617,13 @@
       structure
       (field this 'paths))
     ))
+
+(defn filter-select [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)))
+
+(defn filter-transform [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    structure))
 
