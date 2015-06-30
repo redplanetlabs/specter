@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros
              [cljs.test :refer [is deftest]]
              [cljs.test.check.cljs-test :refer [defspec]]
-             [com.rpl.specter.test-helpers :refer [for-all+]]))
+             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]))
   (:use 
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -10,8 +10,9 @@
         [com.rpl.specter.protocols :only [comp-paths*]])
   (:require #?@(:clj [[clojure.test.check.generators :as gen]
                       [clojure.test.check.properties :as prop]]
-                :cljs [[cljs.test.check.generators :as gen]
-                       [cljs.test.check.properties :as prop]]
+                :cljs [[cljs.test.check :as tc]
+                       [cljs.test.check.generators :as gen]
+                       [cljs.test.check.properties :as prop :include-macros true]]
                 )
             [com.rpl.specter :as s]))
 
@@ -19,6 +20,7 @@
 ;; test walk, codewalk
 ;; test keypath
 ;; test comp-structure-paths
+
 
 (defn limit-size [n {gen :gen}]
   (gen/->Generator
@@ -60,7 +62,7 @@
     ))
 
 (deftest select-one-test
-   (is (thrown? Exception (s/select-one [s/ALL even?] [1 2 3 4])))
+   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one [s/ALL even?] [1 2 3 4])))
    (is (= 1 (s/select-one [s/ALL odd?] [2 4 1 6])))
    )
 
@@ -391,5 +393,5 @@
 
 (deftest nil-select-one-test
   (is (= nil (s/select-one! s/ALL [nil])))
-  (is (thrown? Exception (s/select-one! s/ALL [])))
+  (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
   )
