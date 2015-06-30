@@ -1,3 +1,6 @@
+## 0.5.7
+* Fix bug in select-one! which wouldn't allow nil result
+
 ## 0.5.6
 * Add multi-path implementation
 * change FIRST/LAST to select nothing on an empty sequence
