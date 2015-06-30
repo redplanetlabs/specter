@@ -25,9 +25,3 @@
    (fn [rnd _size]
      (gen rnd (if (< _size n) _size n)))))
 
-
-(defn gen-tuple+ [& inputs]
-  (->> inputs
-       (map #(if (gen/generator? %) % (gen/return %)))
-       (apply gen/tuple)
-       ))
