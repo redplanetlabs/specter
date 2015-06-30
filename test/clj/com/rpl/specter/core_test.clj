@@ -378,3 +378,8 @@
      v (gen/vector (gen/elements [k1 k2 k3]))]
     (= (filter #{k1 k2} v) (select [ALL #{k1 k2}] v))
     ))
+
+(deftest nil-select-one-test
+  (is (= nil (select-one! ALL [nil])))
+  (is (thrown? Exception (select-one! ALL [])))
+  )
