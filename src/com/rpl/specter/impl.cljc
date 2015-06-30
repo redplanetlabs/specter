@@ -102,13 +102,15 @@
 
 :cljs
 (defn obj-extends? [prot-sym obj]
-  ;; this requires that prot-sym be fully qualified
-  (let [props (->> obj type .-prototype (.getOwnPropertyNames js/Object) seq)
-        ns (namespace prot-sym)
-        n (name prot-sym)
-        lookup (str (s/replace ns "." "$") "$" n "$")]
-    (seq-contains? props lookup)
-    ))
+  (if (nil? obj)
+    (= prot-sym `p/StructurePath)
+    ;; this requires that prot-sym be fully qualified
+    (let [props (->> obj type .-prototype (.getOwnPropertyNames js/Object) seq)
+          ns (namespace prot-sym)
+          n (name prot-sym)
+          lookup (str (s/replace ns "." "$") "$" n "$")]
+      (seq-contains? props lookup)
+      )))
 )
 
 #?(:clj
