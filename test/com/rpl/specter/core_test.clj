@@ -25,7 +25,7 @@
 (defspec select-all-keyword-filter
   (for-all+
     [kw gen/keyword
-     v (gen/vector (max-size 5
+     v (gen/vector (limit-size 5
                      (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
     (= (select [ALL kw pred] v)
@@ -43,7 +43,7 @@
 
 (defspec select-all-on-map
   (for-all+
-    [m (max-size 5 (gen/map gen/keyword gen/int))]
+    [m (limit-size 5 (gen/map gen/keyword gen/int))]
     (= (select [ALL LAST] m)
        (for [[k v] m] v))
     ))
@@ -60,7 +60,7 @@
 
 (defspec transform-all-on-map
   (for-all+
-    [m (max-size 5 (gen/map gen/keyword gen/int))]
+    [m (limit-size 5 (gen/map gen/keyword gen/int))]
     (= (transform [ALL LAST] inc m)
        (into {} (for [[k v] m] [k (inc v)]))
        )))
@@ -118,7 +118,7 @@
   (for-all+
     [kw1 gen/keyword
      kw2 gen/keyword
-     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
+     m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
      pred (gen/elements [odd? even?])]
     (= (transform [(collect-one kw2) kw1 pred] + m)
        (if (pred (kw1 m))
@@ -147,9 +147,9 @@
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
 (defspec transform-keyword
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m1 (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m1 (limit-size 5
                  (gen-map-with-keys
                   gen/keyword
                   (gen-map-with-keys gen/keyword gen/int k2)
@@ -244,7 +244,7 @@
 (defspec putval-test
   (for-all+
    [kw gen/keyword
-    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
+    m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw))
     c gen/int]
    (= (transform [(putval c) kw] + m)
       (transform [kw (putval c)] + m)
@@ -265,7 +265,7 @@
 (defspec empty-selector-transform-test
   (for-all+
    [kw gen/keyword
-    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
+    m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
    (and (= m
            (transform nil identity m)
            (transform [] identity m)
@@ -287,9 +287,9 @@
 
 (defspec mixed-selector-test
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  (gen-map-with-keys gen/keyword gen/int k2)
@@ -324,10 +324,10 @@
 
 (defspec cond-path-selector-test
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    k3 (max-size 3 gen/keyword)
-    m (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    k3 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  gen/int
@@ -347,9 +347,9 @@
 
 (defspec multi-path-test
   (for-all+
-    [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m (max-size 5
+    [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  gen/int

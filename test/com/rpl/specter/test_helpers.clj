@@ -7,6 +7,7 @@
             [clojure.test.check :as qc]
             [clojure.pprint :as pp]))
 
+
 ;; it seems like gen/bind and gen/return are a monad (hence the names)
 (defmacro for-all+ [bindings & body]
   (let [parts (partition 2 bindings)
@@ -19,8 +20,8 @@
     `(prop/for-all [~vars ~genned]
                    ~@body )))
 
-(defn max-size [n {gen :gen}]
-  (gen/make-gen
+(defn limit-size [n {gen :gen}]
+  (gen/->Generator
    (fn [rnd _size]
      (gen rnd (if (< _size n) _size n)))))
 

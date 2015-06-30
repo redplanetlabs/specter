@@ -8,7 +8,7 @@
   :source-paths ["src"]
   :test-paths ["test"]
   :profiles {:dev {:dependencies
-                   [[org.clojure/test.check "0.5.9"]]}
+                   [[org.clojure/test.check "0.7.0"]]}
              }
   :cljsbuild {
     :builds [{
