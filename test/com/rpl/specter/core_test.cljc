@@ -1,22 +1,29 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
-             [cljs.test :refer (is deftest)]
-             [cljs.test.check.cljs-test :refer (defspec)]))
+             [cljs.test :refer [is deftest]]
+             [cljs.test.check.cljs-test :refer [defspec]]
+             [com.rpl.specter.test-helpers :refer [for-all+]]))
   (:use 
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
-        [com.rpl.specter.protocols :only [comp-paths*]]
-        [com.rpl.specter.test-helpers :only [limit-size for-all+]])
-  (:require [clojure.test.check
-             [generators :as gen]
-             [properties :as prop #?@(:cljs [:include-macros true])]]
-            [com.rpl [specter :as s]]
-            [clojure.test.check :as qc]))
+    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
+        [com.rpl.specter.protocols :only [comp-paths*]])
+  (:require #?@(:clj [[clojure.test.check.generators :as gen]
+                      [clojure.test.check.properties :as prop]]
+                :cljs [[cljs.test.check.generators :as gen]
+                       [cljs.test.check.properties :as prop]]
+                )
+            [com.rpl.specter :as s]))
 
 ;;TODO:
 ;; test walk, codewalk
 ;; test keypath
 ;; test comp-structure-paths
+
+(defn limit-size [n {gen :gen}]
+  (gen/->Generator
+   (fn [rnd _size]
+     (gen rnd (if (< _size n) _size n)))))
 
 (defn gen-map-with-keys [key-gen val-gen & keys]
   (gen/bind (gen/map key-gen val-gen)

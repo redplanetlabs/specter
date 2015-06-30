@@ -19,9 +19,3 @@
                 (reverse parts))]
     `(prop/for-all [~vars ~genned]
                    ~@body )))
-
-(defn limit-size [n {gen :gen}]
-  (gen/->Generator
-   (fn [rnd _size]
-     (gen rnd (if (< _size n) _size n)))))
-
