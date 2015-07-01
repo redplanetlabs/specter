@@ -1,18 +1,31 @@
 (ns com.rpl.specter.core-test
-  (:use [clojure.test]
-        [clojure.test.check.clojure-test]
-        [com.rpl specter]
-        [com.rpl.specter protocols]
-        [com.rpl.specter test-helpers])
-  (:require [clojure.test.check
-             [generators :as gen]
-             [properties :as prop]]
-            [clojure.test.check :as qc]))
+  #?(:cljs (:require-macros
+             [cljs.test :refer [is deftest]]
+             [cljs.test.check.cljs-test :refer [defspec]]
+             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]))
+  (:use 
+    #?(:clj [clojure.test :only [deftest is]])
+    #?(:clj [clojure.test.check.clojure-test :only [defspec]])
+    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
+        [com.rpl.specter.protocols :only [comp-paths*]])
+  (:require #?@(:clj [[clojure.test.check.generators :as gen]
+                      [clojure.test.check.properties :as prop]]
+                :cljs [[cljs.test.check :as tc]
+                       [cljs.test.check.generators :as gen]
+                       [cljs.test.check.properties :as prop :include-macros true]]
+                )
+            [com.rpl.specter :as s]))
 
 ;;TODO:
 ;; test walk, codewalk
 ;; test keypath
 ;; test comp-structure-paths
+
+
+(defn limit-size [n {gen :gen}]
+  (gen/->Generator
+   (fn [rnd _size]
+     (gen rnd (if (< _size n) _size n)))))
 
 (defn gen-map-with-keys [key-gen val-gen & keys]
   (gen/bind (gen/map key-gen val-gen)
@@ -25,10 +38,10 @@
 (defspec select-all-keyword-filter
   (for-all+
     [kw gen/keyword
-     v (gen/vector (max-size 5
+     v (gen/vector (limit-size 5
                      (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
-    (= (select [ALL kw pred] v)
+    (= (s/select [s/ALL kw pred] v)
        (->> v (map kw) (filter pred))
        )))
 
@@ -36,46 +49,46 @@
   (for-all+
    [v (gen/vector gen/int)
     pred (gen/elements [odd? even?])
-    pos (gen/elements [[FIRST first] [LAST last]])]
-   (= (select-one [(filterer pred) (first pos)] v)
+    pos (gen/elements [[s/FIRST first] [s/LAST last]])]
+   (= (s/select-one [(s/filterer pred) (first pos)] v)
       (->> v (filter pred) ((last pos)))
       )))
 
 (defspec select-all-on-map
   (for-all+
-    [m (max-size 5 (gen/map gen/keyword gen/int))]
-    (= (select [ALL LAST] m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))]
+    (= (s/select [s/ALL s/LAST] m)
        (for [[k v] m] v))
     ))
 
 (deftest select-one-test
-   (is (thrown? Exception (select-one [ALL even?] [1 2 3 4])))
-   (is (= 1 (select-one [ALL odd?] [2 4 1 6])))
+   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one [s/ALL even?] [1 2 3 4])))
+   (is (= 1 (s/select-one [s/ALL odd?] [2 4 1 6])))
    )
 
 (deftest select-first-test
-  (is (= 7 (select-first [(filterer odd?) ALL #(> % 4)] [3 4 2 3 7 5 9 8])))
-  (is (nil? (select-first [ALL even?] [1 3 5 9])))
+  (is (= 7 (s/select-first [(s/filterer odd?) s/ALL #(> % 4)] [3 4 2 3 7 5 9 8])))
+  (is (nil? (s/select-first [s/ALL even?] [1 3 5 9])))
   )
 
 (defspec transform-all-on-map
   (for-all+
-    [m (max-size 5 (gen/map gen/keyword gen/int))]
-    (= (transform [ALL LAST] inc m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))]
+    (= (s/transform [s/ALL s/LAST] inc m)
        (into {} (for [[k v] m] [k (inc v)]))
        )))
 
 (defspec transform-all
   (for-all+
    [v (gen/vector gen/int)]
-   (let [v2 (transform [ALL] inc v)]
+   (let [v2 (s/transform [s/ALL] inc v)]
     (and (vector? v2) (= v2 (map inc v)))
     )))
 
 (defspec transform-all-list
   (for-all+
    [v (gen/list gen/int)]
-   (let [v2 (transform [ALL] inc v)]
+   (let [v2 (s/transform [s/ALL] inc v)]
      (and (seq? v2) (= v2 (map inc v)))
      )))
 
@@ -84,7 +97,7 @@
    [v (gen/vector gen/int)
     pred (gen/elements [odd? even?])
     action (gen/elements [inc dec])]
-   (let [v2 (transform [ALL pred] action v)]
+   (let [v2 (s/transform [s/ALL pred] action v)]
      (= v2 (map (fn [v] (if (pred v) (action v) v)) v))
      )))
 
@@ -92,7 +105,7 @@
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
-   (let [v2 (transform [LAST] pred v)]
+   (let [v2 (s/transform [s/LAST] pred v)]
      (= v2 (concat (butlast v) [(pred (last v))]))
      )))
 
@@ -100,7 +113,7 @@
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
-   (let [v2 (transform [FIRST] pred v)]
+   (let [v2 (s/transform [s/FIRST] pred v)]
      (= v2 (concat [(pred (first v))] (rest v) ))
      )))
 
@@ -109,8 +122,8 @@
    [v (gen/vector gen/int)
     pred (gen/elements [even? odd?])
     updater (gen/elements [inc dec])]
-   (let [v2 (transform [(filterer pred) ALL] updater v)
-         v3 (transform [ALL pred] updater v)]
+   (let [v2 (s/transform [(s/filterer pred) s/ALL] updater v)
+         v3 (s/transform [s/ALL pred] updater v)]
      (= v2 v3))
      ))
 
@@ -118,9 +131,9 @@
   (for-all+
     [kw1 gen/keyword
      kw2 gen/keyword
-     m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
+     m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw1 kw2))
      pred (gen/elements [odd? even?])]
-    (= (transform [(collect-one kw2) kw1 pred] + m)
+    (= (s/transform [(s/collect-one kw2) kw1 pred] + m)
        (if (pred (kw1 m))
           (assoc m kw1 (+ (kw1 m) (kw2 m)))
           m
@@ -137,7 +150,7 @@
   (for-all+
    [pred (gen/elements [odd? even?])
     v (gen/such-that #(some pred %) (gen/vector gen/int))]
-   (let [v2 (transform [(filterer pred) LAST] inc v)
+   (let [v2 (s/transform [(s/filterer pred) s/LAST] inc v)
          differing-elems (differing-elements v v2)]
      (and (= (count v2) (count v))
           (= (count differing-elems) 1)
@@ -147,15 +160,15 @@
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
 (defspec transform-keyword
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m1 (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m1 (limit-size 5
                  (gen-map-with-keys
                   gen/keyword
                   (gen-map-with-keys gen/keyword gen/int k2)
                   k1))
     pred (gen/elements [inc dec])]
-   (let [m2 (transform [k1 k2] pred m1)]
+   (let [m2 (s/transform [k1 k2] pred m1)]
      (= (assoc-in m1 [k1 k2] nil) (assoc-in m2 [k1 k2] nil))
      (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2]))
      )))
@@ -169,7 +182,7 @@
                         (map (fn [v] [v v]))
                         (apply concat))
           user-ret (if (empty? user-ret) nil user-ret)]
-      (= (replace-in [ALL even?] (fn [v] [(inc v) [v v]]) v)
+      (= (s/replace-in [s/ALL even?] (fn [v] [(inc v) [v v]]) v)
          [res user-ret]
          ))))
 
@@ -179,8 +192,8 @@
     (let [res (->> v (map (fn [v] (if (even? v) (inc v) v))))
           last-even (->> v (filter even?) last)
           user-ret (if last-even {:a last-even})]
-      (= (replace-in [ALL even?] (fn [v] [(inc v) v]) v :merge-fn (fn [curr new]
-                                                                      (assoc curr :a new)))
+      (= (s/replace-in [s/ALL even?] (fn [v] [(inc v) v]) v :merge-fn (fn [curr new]
+                                                                        (assoc curr :a new)))
          [res user-ret]
          ))))
 
@@ -188,8 +201,8 @@
   (for-all+
    [v (gen/vector gen/int)
     v2 (gen/vector gen/int)]
-   (let [b (setval START v2 v)
-         e (setval END v2 v)]
+   (let [b (s/setval s/BEGINNING v2 v)
+         e (s/setval s/END v2 v)]
      (and (= b (concat v2 v))
           (= e (concat v v2)))
      )))
@@ -204,30 +217,29 @@
          predcount (fn [pred v] (->> v (filter pred) count))
          even-count (partial predcount even?)
          odd-count (partial predcount odd?)
-         b (transform (srange b e) (fn [r] (filter odd? r)) v)]
+         b (s/transform (s/srange b e) (fn [r] (filter odd? r)) v)]
      (and (= (odd-count v) (odd-count b))
           (= (+ (even-count b) (even-count sv))
              (even-count v)))
      )))
 
 (deftest structure-path-directly-test
-  (is (= 3 (select-one :b {:a 1 :b 3})))
-  (is (= 5 (select-one (comp-paths :a :b) {:a {:b 5}})))
+  (is (= 3 (s/select-one :b {:a 1 :b 3})))
+  (is (= 5 (s/select-one (s/comp-paths :a :b) {:a {:b 5}})))
   )
 
 (defspec view-test
   (for-all+
     [i gen/int
      afn (gen/elements [inc dec])]
-    (= (first (select (view afn) i))
-       (first (select (viewfn [i] (afn i)) i))
+    (= (first (s/select (s/view afn) i))
        (afn i)
-       (transform (view afn) identity i)
+       (s/transform (s/view afn) identity i)
        )))
 
 (deftest selected?-test
   (is (= [[1 3 5] [2 :a] [7 11 4 2 :a] [10 1 :a] []]
-         (setval [ALL (selected? ALL even?) END]
+         (s/setval [s/ALL (s/selected? s/ALL even?) s/END]
                  [:a]
                  [[1 3 5] [2] [7 11 4 2] [10 1] []]
                  ))))
@@ -236,19 +248,19 @@
   (for-all+
     [i gen/int
      afn (gen/elements [inc dec])]
-    (and (= [i] (select nil i))
-         (= (afn i) (transform nil afn i)))))
+    (and (= [i] (s/select nil i))
+         (= (afn i) (s/transform nil afn i)))))
 
 (deftest nil-comp-test
-  (is (= [5] (select (comp-paths* nil) 5))))
+  (is (= [5] (s/select (comp-paths* nil) 5))))
 
 (defspec putval-test
   (for-all+
    [kw gen/keyword
-    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))
+    m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw))
     c gen/int]
-   (= (transform [(putval c) kw] + m)
-      (transform [kw (putval c)] + m)
+   (= (s/transform [(s/putval c) kw] + m)
+      (s/transform [kw (s/putval c)] + m)
       (assoc m kw (+ c (get m kw)))
       )))
 
@@ -256,79 +268,79 @@
   (for-all+
    [v (gen/vector gen/int)]
    (= [v]
-      (select [] v)
-      (select nil v)
-      (select (comp-paths) v)
-      (select (comp-paths nil) v)
-      (select [nil nil nil] v)
+      (s/select [] v)
+      (s/select nil v)
+      (s/select (s/comp-paths) v)
+      (s/select (s/comp-paths nil) v)
+      (s/select [nil nil nil] v)
       )))
 
 (defspec empty-selector-transform-test
   (for-all+
    [kw gen/keyword
-    m (max-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
+    m (limit-size 10 (gen-map-with-keys gen/keyword gen/int kw))]
    (and (= m
-           (transform nil identity m)
-           (transform [] identity m)
-           (transform (comp-paths []) identity m)
-           (transform (comp-paths nil nil) identity m)
+           (s/transform nil identity m)
+           (s/transform [] identity m)
+           (s/transform (s/comp-paths []) identity m)
+           (s/transform (s/comp-paths nil nil) identity m)
            )
-        (= (transform kw inc m)
-           (transform [nil kw] inc m)
-           (transform (comp-paths kw nil) inc m)
-           (transform (comp-paths nil kw nil) inc m)
+        (= (s/transform kw inc m)
+           (s/transform [nil kw] inc m)
+           (s/transform (s/comp-paths kw nil) inc m)
+           (s/transform (s/comp-paths nil kw nil) inc m)
            ))))
 
 (deftest compose-empty-comp-path-test
   (let [m {:a 1}]
     (is (= [1]
-           (select [:a (comp-paths)] m)
-           (select [(comp-paths) :a] m)
+           (s/select [:a (s/comp-paths)] m)
+           (s/select [(s/comp-paths) :a] m)
            ))))
 
 (defspec mixed-selector-test
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  (gen-map-with-keys gen/keyword gen/int k2)
                  k1))]
    (= [(-> m k1 k2)]
-      (select [k1 (comp-paths k2)] m)
-      (select [(comp-paths k1) k2] m)
-      (select [(comp-paths k1 k2) nil] m)
-      (select [(comp-paths) k1 k2] m)
-      (select [k1 (comp-paths) k2] m)
+      (s/select [k1 (s/comp-paths k2)] m)
+      (s/select [(s/comp-paths k1) k2] m)
+      (s/select [(s/comp-paths k1 k2) nil] m)
+      (s/select [(s/comp-paths) k1 k2] m)
+      (s/select [k1 (s/comp-paths) k2] m)
       )))
 
 (deftest cond-path-test
   (is (= [4 2 6 8 10]
-         (select [ALL (cond-path even? [(view inc) (view inc)]
-                                 #(= 3 %) (view dec))]
+         (s/select [s/ALL (s/cond-path even? [(s/view inc) (s/view inc)]
+                                 #(= 3 %) (s/view dec))]
                  [1 2 3 4 5 6 7 8])))
-  (is (empty? (select (if-path odd? (view inc)) 2)))
+  (is (empty? (s/select (s/if-path odd? (s/view inc)) 2)))
   (is (= [6 2 10 6 14] 
-         (transform [(putval 2)
-                  ALL
-                  (if-path odd? [(view inc) (view inc)] (view dec))]
+         (s/transform [(s/putval 2)
+                  s/ALL
+                  (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
                   *
                   [1 2 3 4 5]
                      )))
   (is (= 2
-         (transform [(putval 2)
-                  (if-path odd? (view inc))]
+         (s/transform [(s/putval 2)
+                  (s/if-path odd? (s/view inc))]
                   *
                   2)))
   )
 
 (defspec cond-path-selector-test
   (for-all+
-   [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    k3 (max-size 3 gen/keyword)
-    m (max-size 5
+   [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    k3 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  gen/int
@@ -340,34 +352,34 @@
    (let [v1 (get m k1)
          k (if (pred v1) k2 k3)]
      (and
-       (= (transform (if-path [k1 pred] k2 k3) inc m)
-          (transform k inc m)) 
-       (= (select (if-path [k1 pred] k2 k3) m)
-          (select k m)) 
+       (= (s/transform (s/if-path [k1 pred] k2 k3) inc m)
+          (s/transform k inc m)) 
+       (= (s/select (s/if-path [k1 pred] k2 k3) m)
+          (s/select k m)) 
        ))))
 
 (defspec multi-path-test
   (for-all+
-    [k1 (max-size 3 gen/keyword)
-    k2 (max-size 3 gen/keyword)
-    m (max-size 5
+    [k1 (limit-size 3 gen/keyword)
+    k2 (limit-size 3 gen/keyword)
+    m (limit-size 5
                 (gen-map-with-keys
                  gen/keyword
                  gen/int
                  k1
                  k2))
     ]
-    (= (transform (multi-path k1 k2) inc m)
+    (= (s/transform (s/multi-path k1 k2) inc m)
        (->> m
-            (transform k1 inc)
-            (transform k2 inc)))
+            (s/transform k1 inc)
+            (s/transform k2 inc)))
     ))
 
 (deftest empty-pos-transform
-  (is (empty? (select FIRST [])))
-  (is (empty? (select LAST [])))
-  (is (= [] (transform FIRST inc [])))
-  (is (= [] (transform LAST inc [])))
+  (is (empty? (s/select s/FIRST [])))
+  (is (empty? (s/select s/LAST [])))
+  (is (= [] (s/transform s/FIRST inc [])))
+  (is (= [] (s/transform s/LAST inc [])))
   )
 
 (defspec set-filter-test
@@ -376,10 +388,10 @@
      k2 (gen/such-that #(not= k1 %) gen/keyword)
      k3 (gen/such-that (complement #{k1 k2}) gen/keyword)
      v (gen/vector (gen/elements [k1 k2 k3]))]
-    (= (filter #{k1 k2} v) (select [ALL #{k1 k2}] v))
+    (= (filter #{k1 k2} v) (s/select [s/ALL #{k1 k2}] v))
     ))
 
 (deftest nil-select-one-test
-  (is (= nil (select-one! ALL [nil])))
-  (is (thrown? Exception (select-one! ALL [])))
+  (is (= nil (s/select-one! s/ALL [nil])))
+  (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
   )

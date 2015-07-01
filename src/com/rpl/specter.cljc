@@ -1,5 +1,6 @@
 (ns com.rpl.specter
-  (:use [com.rpl.specter impl protocols])
+  (:use [com.rpl.specter.protocols :only [StructurePath comp-paths*]])
+  (:require [com.rpl.specter.impl :as i])
   )
 
 ;;TODO: can make usage of vals much more efficient by determining during composition how many vals
@@ -12,12 +13,12 @@
 ;; Selector functions
 
 (def ^{:doc "Version of select that takes in a selector pre-compiled with comp-paths"}
-  compiled-select compiled-select*)
+  compiled-select i/compiled-select*)
 
 (defn select
   "Navigates to and returns a sequence of all the elements specified by the selector."
   [selector structure]
-  (compiled-select (comp-unoptimal selector)
+  (compiled-select (i/comp-unoptimal selector)
                    structure))
 
 (defn compiled-select-one
@@ -25,27 +26,27 @@
   [selector structure]
   (let [res (compiled-select selector structure)]
     (when (> (count res) 1)
-      (throw-illegal "More than one element found for params: " selector structure))
+      (i/throw-illegal "More than one element found for params: " selector structure))
     (first res)
     ))
 
 (defn select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
-  (compiled-select-one (comp-unoptimal selector) structure))
+  (compiled-select-one (i/comp-unoptimal selector) structure))
 
 (defn compiled-select-one!
   "Version of select-one! that takes in a selector pre-compiled with comp-paths"
   [selector structure]
   (let [res (compiled-select selector structure)]
-    (when (not= 1 (count res)) (throw-illegal "Expected exactly one element for params: " selector structure))
+    (when (not= 1 (count res)) (i/throw-illegal "Expected exactly one element for params: " selector structure))
     (first res)
     ))
 
 (defn select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found"
   [selector structure]
-  (compiled-select-one! (comp-unoptimal selector) structure))
+  (compiled-select-one! (i/comp-unoptimal selector) structure))
 
 (defn compiled-select-first
   "Version of select-first that takes in a selector pre-compiled with comp-paths"
@@ -55,19 +56,19 @@
 (defn select-first
   "Returns first element found. Not any more efficient than select, just a convenience"
   [selector structure]
-  (compiled-select-first (comp-unoptimal selector) structure))
+  (compiled-select-first (i/comp-unoptimal selector) structure))
 
 ;; Transformfunctions
 
 
 (def ^{:doc "Version of transform that takes in a selector pre-compiled with comp-paths"}
-  compiled-transform compiled-transform*)
+  compiled-transform i/compiled-transform*)
 
 (defn transform
   "Navigates to each value specified by the selector and replaces it by the result of running
   the transform-fn on it"
   [selector transform-fn structure]
-  (compiled-transform (comp-unoptimal selector) transform-fn structure))
+  (compiled-transform (i/comp-unoptimal selector) transform-fn structure))
 
 (defn compiled-setval
   "Version of setval that takes in a selector pre-compiled with comp-paths"
@@ -77,25 +78,25 @@
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
   [selector val structure]
-  (compiled-setval (comp-unoptimal selector) val structure))
+  (compiled-setval (i/comp-unoptimal selector) val structure))
 
 (defn compiled-replace-in
   "Version of replace-in that takes in a selector pre-compiled with comp-paths"
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (let [state (mutable-cell nil)]
+  (let [state (i/mutable-cell nil)]
     [(compiled-transform selector
              (fn [e]
                (let [res (transform-fn e)]
                  (if res
                    (let [[ret user-ret] res]
                      (->> user-ret
-                          (merge-fn (get-cell state))
-                          (set-cell! state))
+                          (merge-fn (i/get-cell state))
+                          (i/set-cell! state))
                      ret)
                    e
                    )))
              structure)
-     (get-cell state)]
+     (i/get-cell state)]
     ))
 
 (defn replace-in
@@ -105,38 +106,35 @@
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was transformd in the data structure."
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (compiled-replace-in (comp-unoptimal selector) transform-fn structure :merge-fn merge-fn))
+  (compiled-replace-in (i/comp-unoptimal selector) transform-fn structure :merge-fn merge-fn))
 
 ;; Built-in pathing and context operations
 
-(def ALL (->AllStructurePath))
+(def ALL (i/->AllStructurePath))
 
-(def VAL (->ValCollect))
+(def VAL (i/->ValCollect))
 
-(def LAST (->PosStructurePath last set-last))
+(def LAST (i/->PosStructurePath last i/set-last))
 
-(def FIRST (->PosStructurePath first set-first))
+(def FIRST (i/->PosStructurePath first i/set-first))
 
-(defn srange-dynamic [start-fn end-fn] (->SRangePath start-fn end-fn))
+(defn srange-dynamic [start-fn end-fn] (i/->SRangePath start-fn end-fn))
 
 (defn srange [start end] (srange-dynamic (fn [_] start) (fn [_] end)))
 
-(def START (srange 0 0))
+(def BEGINNING (srange 0 0))
 
 (def END (srange-dynamic count count))
 
-(defn walker [afn] (->WalkerStructurePath afn))
+(defn walker [afn] (i/->WalkerStructurePath afn))
 
-(defn codewalker [afn] (->CodeWalkerStructurePath afn))
+(defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
-(defn filterer [& path] (->FilterStructurePath (comp-paths* path)))
+(defn filterer [& path] (i/->FilterStructurePath (comp-paths* path)))
 
-(defn keypath [akey] (->KeyPath akey))
+(defn keypath [akey] (i/->KeyPath akey))
 
-(defn view [afn] (->ViewPath afn))
-
-(defmacro viewfn [& args]
-  `(view (fn ~@args)))
+(defn view [afn] (i/->ViewPath afn))
 
 (defn selected?
   "Filters the current value based on whether a selector finds anything.
@@ -150,7 +148,7 @@
            empty?
            not))))
 
-(extend-type clojure.lang.Keyword
+(extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   StructurePath
   (select* [kw structure next-fn]
     (next-fn (get structure kw)))
@@ -158,25 +156,25 @@
     (assoc structure kw (next-fn (get structure kw)))
     ))
 
-(extend-type clojure.lang.AFn
+(extend-type #?(:clj clojure.lang.AFn :cljs js/Function)
   StructurePath
   (select* [afn structure next-fn]
-    (filter-select afn structure next-fn))
+    (i/filter-select afn structure next-fn))
   (transform* [afn structure next-fn]
-    (filter-transform afn structure next-fn)))
+    (i/filter-transform afn structure next-fn)))
 
-(extend-protocol StructurePath
-  clojure.lang.PersistentHashSet
+(extend-type #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
+  StructurePath
   (select* [aset structure next-fn]
-    (filter-select aset structure next-fn))
+    (i/filter-select aset structure next-fn))
   (transform* [aset structure next-fn]
-    (filter-transform aset structure next-fn)))
+    (i/filter-transform aset structure next-fn)))
 
 (defn collect [& selector]
-  (->SelectCollector select (comp-paths* selector)))
+  (i/->SelectCollector select (comp-paths* selector)))
 
 (defn collect-one [& selector]
-  (->SelectCollector select-one (comp-paths* selector)))
+  (i/->SelectCollector select-one (comp-paths* selector)))
 
 (defn putval
   "Adds an external value to the collected vals. Useful when additional arguments
@@ -186,7 +184,7 @@
   e.g., incrementing val at path [:a :b] by 3:
   (transform [:a :b (putval 3)] + some-map)"
   [val]
-  (->PutValCollector val))
+  (i/->PutValCollector val))
 
 (defn cond-path
   "Takes in alternating cond-path selector cond-path selector...
@@ -199,7 +197,7 @@
        (partition 2)
        (map (fn [[c p]] [(comp-paths* c) (comp-paths* p)]))
        doall
-       ->ConditionalPath
+       i/->ConditionalPath
        ))
 
 (defn if-path
@@ -212,4 +210,4 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (->MultiPath (->> paths (map comp-paths*) doall)))
+  (i/->MultiPath (->> paths (map comp-paths*) doall)))
