@@ -124,17 +124,17 @@
 #?(:cljs
 (do
 (defn structure-path-impl [_]
-  {:select* (fn [this structure next-fn] (select* this structure next-fn))
-   :transform* (fn [this structure next-fn] (transform* this structure next-fn))
+  {:select* select*
+   :transform* transform*
    })
 
 (defn collector-impl [_]
-  {:collect-val (fn [this structure] (collect-val this structure))
+  {:collect-val collect-val
    })
 
 (defn structure-vals-path-impl [_]
-  {:select-full* (fn [this structure next-fn] (select-full* this structure next-fn))
-   :transform-full* (fn [this structure next-fn] (transform-full* this structure next-fn))
+  {:select-full* select-full*
+   :transform-full* transform-full*
    })
 ))
 
