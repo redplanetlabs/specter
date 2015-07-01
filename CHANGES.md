@@ -1,3 +1,6 @@
+## 0.6.1
+* Huge speedup to ClojureScript implementation by optimizing field access
+
 ## 0.6.0
 * Added ClojureScript compatibility
 
