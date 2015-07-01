@@ -198,6 +198,7 @@ user> (transform [ALL (if-path [:a even?] [:c ALL] :d)]
 ```
 
 # Future work
+- Integrate Specter with other kinds of data structures, such as graphs
 - Make it possible to parallelize selects/transforms
 - Any connection to transducers?
 
