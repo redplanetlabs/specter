@@ -1,3 +1,6 @@
+## 0.6.0
+* Added ClojureScript compatibility
+
 ## 0.5.7
 * Fix bug in select-one! which wouldn't allow nil result
 

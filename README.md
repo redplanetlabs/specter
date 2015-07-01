@@ -2,7 +2,7 @@
 
 Most of Clojure programming involves creating, manipulating, and transforming immutable values. However, as soon as your values become more complicated than a simple map or list – like a list of maps of maps – transforming these data structures becomes extremely cumbersome. 
 
-Specter is a library for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
+Specter is a library (for both Clojure and ClojureScript) for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
 
 Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
@@ -200,7 +200,6 @@ user> (transform [ALL (if-path [:a even?] [:c ALL] :d)]
 # Future work
 - Make it possible to parallelize selects/transforms
 - Any connection to transducers?
-- Add Clojurescript compatibility
 
 # License
 
