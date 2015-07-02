@@ -1,3 +1,7 @@
+## 0.6.2 (unreleased)
+* Added not-selected? selector
+* Added transformed selector
+
 ## 0.6.1
 * Huge speedup to ClojureScript implementation by optimizing field access
 
