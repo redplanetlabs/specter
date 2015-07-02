@@ -148,6 +148,19 @@
            empty?
            not))))
 
+(defn not-selected? [& path]
+  (complement (selected? (comp-paths* path))))
+
+(defn transformed
+  "Navigates to a view of the current value by transforming it with the
+   specified selector and update-fn."
+  [selector update-fn]
+  (let [compiled (comp-paths* selector)]
+    (view
+      (fn [elem]
+        (compiled-transform compiled update-fn elem)
+        ))))
+
 (extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   StructurePath
   (select* [kw structure next-fn]

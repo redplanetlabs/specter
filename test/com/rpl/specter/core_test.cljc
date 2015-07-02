@@ -395,3 +395,12 @@
   (is (= nil (s/select-one! s/ALL [nil])))
   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
   )
+
+(defspec transformed-test
+  (for-all+
+    [v (gen/vector gen/int)
+     pred (gen/elements [even? odd?]
+     op   (gen/elements [inc dec]))]
+    (= (select-one (transformed [ALL pred] op) v)
+       (transform [ALL pred] op v))
+    ))
