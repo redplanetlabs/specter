@@ -1,4 +1,6 @@
 (ns com.rpl.specter.impl
+  #?(:cljs (:require-macros [com.rpl.specter.prot-opt-invoke
+              :refer [mk-optimized-invocation]]))
   (:use [com.rpl.specter.protocols :only
     [comp-paths*
      select* transform* collect-val select-full* transform-full*]])
@@ -100,20 +102,21 @@
   (find-protocol-impl! p/StructureValsPath this))
 ))
 
+
 #?(:cljs
 (do
-(defn structure-path-impl [_]
-  {:select* select*
-   :transform* transform*
+(defn structure-path-impl [obj]
+  {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
+   :transform* (mk-optimized-invocation p/StructurePath obj transform* 2)
    })
 
-(defn collector-impl [_]
-  {:collect-val collect-val
+(defn collector-impl [obj]
+  {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
    })
 
-(defn structure-vals-path-impl [_]
-  {:select-full* select-full*
-   :transform-full* transform-full*
+(defn structure-vals-path-impl [obj]
+  {:select-full* (mk-optimized-invocation p/StructureValsPath obj select-full* 3)
+   :transform-full* (mk-optimized-invocation p/StructureValsPath obj transform-full* 3)
    })
 ))
 
