@@ -3,7 +3,7 @@
              [cljs.test :refer [is deftest]]
              [cljs.test.check.cljs-test :refer [defspec]]
              [com.rpl.specter.cljs-test-helpers :refer [for-all+]]))
-  (:use 
+  (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
     #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
@@ -321,7 +321,7 @@
                                  #(= 3 %) (s/view dec))]
                  [1 2 3 4 5 6 7 8])))
   (is (empty? (s/select (s/if-path odd? (s/view inc)) 2)))
-  (is (= [6 2 10 6 14] 
+  (is (= [6 2 10 6 14]
          (s/transform [(s/putval 2)
                   s/ALL
                   (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
@@ -353,9 +353,9 @@
          k (if (pred v1) k2 k3)]
      (and
        (= (s/transform (s/if-path [k1 pred] k2 k3) inc m)
-          (s/transform k inc m)) 
+          (s/transform k inc m))
        (= (s/select (s/if-path [k1 pred] k2 k3) m)
-          (s/select k m)) 
+          (s/select k m))
        ))))
 
 (defspec multi-path-test
@@ -396,11 +396,12 @@
   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
   )
 
+
 (defspec transformed-test
   (for-all+
     [v (gen/vector gen/int)
-     pred (gen/elements [even? odd?]
-     op   (gen/elements [inc dec]))]
-    (= (select-one (transformed [ALL pred] op) v)
-       (transform [ALL pred] op v))
+     pred (gen/elements [even? odd?])
+     op   (gen/elements [inc dec])]
+    (= (s/select-one (s/transformed [s/ALL pred] op) v)
+       (s/transform [s/ALL pred] op v))
     ))
