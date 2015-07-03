@@ -214,7 +214,7 @@
       (coerce-path (vec this)))
     ])
   
-  #?(:clj Object :cljs js/Object)
+  #?(:clj Object :cljs object)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
           (obj-extends? `p/Collector this) (coerce-collector this)
@@ -273,7 +273,7 @@
   nil
   (comp-paths* [sp]
     (coerce-path sp))
-  #?(:clj Object :cljs js/Object)
+  #?(:clj Object :cljs object)
   (comp-paths* [sp]
     (coerce-path sp))
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
@@ -353,7 +353,7 @@
     (assoc v 0 val))
   (set-last [v val]
     (assoc v (-> v count dec) val))
-  #?(:clj Object :cljs js/Object)
+  #?(:clj Object :cljs object)
   (set-first [l val]
     (set-first-list l val))
   (set-last [l val]

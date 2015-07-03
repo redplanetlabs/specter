@@ -169,7 +169,7 @@
     (assoc structure kw (next-fn (get structure kw)))
     ))
 
-(extend-type #?(:clj clojure.lang.AFn :cljs js/Function)
+(extend-type #?(:clj clojure.lang.AFn :cljs function)
   StructurePath
   (select* [afn structure next-fn]
     (i/filter-select afn structure next-fn))
