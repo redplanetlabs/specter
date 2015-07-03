@@ -1,6 +1,10 @@
-## 0.6.2 (unreleased)
+## 0.6.2
 * Added not-selected? selector
 * Added transformed selector
+* Sped up CLJS implementation for comp-paths by replacing obj-extends? call with satisfies? 
+* Fixed CLJS implementation to extend core types appropriately
+* Used not-native hint to enable direct method invocation to speed up CLJS implementation
+
 
 ## 0.6.1
 * Huge speedup to ClojureScript implementation by optimizing field access
