@@ -8,4 +8,5 @@
 
 (cljs.repl/repl (cljs.repl.node/repl-env)
   :watch "src"
-  :output-dir "out")
+  :output-dir "out"
+  :static-fns true)
