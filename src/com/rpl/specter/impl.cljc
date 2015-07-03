@@ -88,24 +88,6 @@
       )))
 )
 
-#?(
-:clj
-(defmacro obj-extends? [quoted-prot-sym obj]
-  `(->> ~obj (find-protocol-impl ~(second quoted-prot-sym)) nil? not))
-
-:cljs
-(defn obj-extends? [prot-sym obj]
-  (if (nil? obj)
-    (= prot-sym `p/StructurePath)
-    ;; this requires that prot-sym be fully qualified
-    (let [props (->> obj type .-prototype (.getOwnPropertyNames js/Object) seq)
-          ns (namespace prot-sym)
-          n (name prot-sym)
-          lookup (str (s/replace ns "." "$") "$" n "$")]
-      (seq-contains? props lookup)
-      )))
-)
-
 #?(:clj
 (do
 (defn structure-path-impl [this]
@@ -186,7 +168,7 @@
     )))
 
 (defn structure-path? [obj]
-  (or (fn? obj) (obj-extends? `p/StructurePath obj)))
+  (or (fn? obj) (satisfies? p/StructurePath obj)))
 
 (extend-protocol CoerceTransformFunctions
   nil ; needs its own path because it doesn't count as an Object
@@ -214,11 +196,11 @@
       (coerce-path (vec this)))
     ])
   
-  #?(:clj Object :cljs object)
+  #?(:clj Object :cljs default)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
-          (obj-extends? `p/Collector this) (coerce-collector this)
-          (obj-extends? `p/StructureValsPath this) (coerce-structure-vals-path this)
+          (satisfies? p/Collector this) (coerce-collector this)
+          (satisfies? p/StructureValsPath this) (coerce-structure-vals-path this)
           :else (throw-illegal (no-prot-error-str this))
       )))
 
@@ -273,7 +255,7 @@
   nil
   (comp-paths* [sp]
     (coerce-path sp))
-  #?(:clj Object :cljs object)
+  #?(:clj Object :cljs default)
   (comp-paths* [sp]
     (coerce-path sp))
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
@@ -292,8 +274,8 @@
 
 (defn coerce-structure-vals-direct [this]
   (cond (structure-path? this) (coerce-structure-path-direct this)
-        (obj-extends? `p/Collector this) (coerce-collector this)
-        (obj-extends? `p/StructureValsPath this) (coerce-structure-vals-path this)
+        (satisfies? p/Collector this) (coerce-collector this)
+        (satisfies? p/StructureValsPath this) (coerce-structure-vals-path this)
         (instance? TransformFunctions this) (coerce-structure-vals this)
         :else (throw-illegal (no-prot-error-str this))
   ))
@@ -353,7 +335,7 @@
     (assoc v 0 val))
   (set-last [v val]
     (assoc v (-> v count dec) val))
-  #?(:clj Object :cljs object)
+  #?(:clj Object :cljs default)
   (set-first [l val]
     (set-first-list l val))
   (set-last [l val]
