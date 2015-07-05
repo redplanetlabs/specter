@@ -169,8 +169,8 @@
                   k1))
     pred (gen/elements [inc dec])]
    (let [m2 (s/transform [k1 k2] pred m1)]
-     (= (assoc-in m1 [k1 k2] nil) (assoc-in m2 [k1 k2] nil))
-     (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2]))
+     (and (= (assoc-in m1 [k1 k2] nil) (assoc-in m2 [k1 k2] nil))
+          (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2])))
      )))
 
 (defspec replace-in-test
