@@ -18,7 +18,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
 ```clojure
-user> (use 'com.rpl.specter)
+user> (use '(com.rpl.specter))
 nil
 user> (select [ALL :a even?]
               [{:a 1} {:a 2} {:a 4} {:a 3}])
@@ -30,7 +30,7 @@ user> (select [ALL :a even?]
 If you had a map with a sequence as the value for the :a key, here's how to get all odd numbers in that sequence:
 
 ```clojure
-user> (use 'com.rpl.specter)
+user> (use '(com.rpl.specter))
 nil
 user> (select [:a ALL odd?]
               {:a [1 2 3 5] :b :c})
@@ -49,7 +49,7 @@ user> (transform [ALL :a even?]
 Here's another example of transform:
 
 ```clojure
-user> (use 'com.rpl.specter)
+user> (use '(com.rpl.specter))
 nil
 user> (transform [:a ALL odd?]
               dec
