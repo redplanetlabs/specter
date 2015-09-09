@@ -2,13 +2,15 @@
   #?(:cljs (:require-macros [com.rpl.specter.prot-opt-invoke
               :refer [mk-optimized-invocation]]))
   (:use [com.rpl.specter.protocols :only
-    [comp-paths*
-     select* transform* collect-val select-full* transform-full*]])
+    [select* transform* collect-val]])
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
             [clojure.core.reducers :as r]
             [clojure.string :as s])
   )
+
+(defprotocol StructureValsPathComposer
+  (comp-paths* [paths]))
 
 #?(
 :clj
@@ -97,9 +99,6 @@
 
 (defn collector-impl [this]
   (find-protocol-impl! p/Collector this))
-
-(defn structure-vals-path-impl [this]
-  (find-protocol-impl! p/StructureValsPath this))
 ))
 
 
@@ -113,24 +112,7 @@
 (defn collector-impl [obj]
   {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
    })
-
-(defn structure-vals-path-impl [obj]
-  {:select-full* (mk-optimized-invocation p/StructureValsPath obj select-full* 3)
-   :transform-full* (mk-optimized-invocation p/StructureValsPath obj transform-full* 3)
-   })
 ))
-
-(defn coerce-structure-vals-path [this]
-  (let [pimpl (structure-vals-path-impl this)
-        selector (:select-full* pimpl)
-        transformer (:transform-full* pimpl)]
-    (->TransformFunctions
-      StructureValsPathExecutor
-      (fn [vals structure next-fn]
-        (selector this vals structure next-fn))
-      (fn [vals structure next-fn]
-        (transformer this vals structure next-fn)))
-    ))
 
 (defn coerce-collector [this]
   (let [cfn (->> this
@@ -200,7 +182,6 @@
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
           (satisfies? p/Collector this) (coerce-collector this)
-          (satisfies? p/StructureValsPath this) (coerce-structure-vals-path this)
           :else (throw-illegal (no-prot-error-str this))
       )))
 
@@ -251,7 +232,7 @@
           (transformer structure (fn [structure] (next-fn vals structure))))
         ))))
 
-(extend-protocol p/StructureValsPathComposer
+(extend-protocol StructureValsPathComposer
   nil
   (comp-paths* [sp]
     (coerce-path sp))
@@ -275,7 +256,6 @@
 (defn coerce-structure-vals-direct [this]
   (cond (structure-path? this) (coerce-structure-path-direct this)
         (satisfies? p/Collector this) (coerce-collector this)
-        (satisfies? p/StructureValsPath this) (coerce-structure-vals-path this)
         (instance? TransformFunctions this) (coerce-structure-vals this)
         :else (throw-illegal (no-prot-error-str this))
   ))

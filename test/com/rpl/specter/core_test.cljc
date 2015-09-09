@@ -6,8 +6,7 @@
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
-    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
-        [com.rpl.specter.protocols :only [comp-paths*]])
+    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]]))
   (:require #?@(:clj [[clojure.test.check.generators :as gen]
                       [clojure.test.check.properties :as prop]]
                 :cljs [[cljs.test.check :as tc]
@@ -252,7 +251,7 @@
          (= (afn i) (s/transform nil afn i)))))
 
 (deftest nil-comp-test
-  (is (= [5] (s/select (comp-paths* nil) 5))))
+  (is (= [5] (s/select (com.rpl.specter.impl/comp-paths* nil) 5))))
 
 (defspec putval-test
   (for-all+

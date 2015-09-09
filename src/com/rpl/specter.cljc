@@ -1,5 +1,5 @@
 (ns com.rpl.specter
-  (:use [com.rpl.specter.protocols :only [StructurePath comp-paths*]])
+  (:use [com.rpl.specter.protocols :only [StructurePath]])
   (:require [com.rpl.specter.impl :as i])
   )
 
@@ -8,7 +8,7 @@
 ;;all over the place. The apply to the vals + structure can also be avoided since the number of vals is known
 ;;beforehand
 (defn comp-paths [& paths]
-  (comp-paths* (vec paths)))
+  (i/comp-paths* (vec paths)))
 
 ;; Selector functions
 
@@ -130,7 +130,7 @@
 
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
-(defn filterer [& path] (i/->FilterStructurePath (comp-paths* path)))
+(defn filterer [& path] (i/->FilterStructurePath (i/comp-paths* path)))
 
 (defn keypath [akey] (i/->KeyPath akey))
 
@@ -141,7 +141,7 @@
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key"
   [& selectors]
-  (let [s (comp-paths* selectors)]
+  (let [s (i/comp-paths* selectors)]
     (fn [structure]
       (->> structure
            (select s)
@@ -149,13 +149,13 @@
            not))))
 
 (defn not-selected? [& path]
-  (complement (selected? (comp-paths* path))))
+  (complement (selected? (i/comp-paths* path))))
 
 (defn transformed
   "Navigates to a view of the current value by transforming it with the
    specified selector and update-fn."
   [selector update-fn]
-  (let [compiled (comp-paths* selector)]
+  (let [compiled (i/comp-paths* selector)]
     (view
       (fn [elem]
         (compiled-transform compiled update-fn elem)
@@ -184,10 +184,10 @@
     (i/filter-transform aset structure next-fn)))
 
 (defn collect [& selector]
-  (i/->SelectCollector select (comp-paths* selector)))
+  (i/->SelectCollector select (i/comp-paths* selector)))
 
 (defn collect-one [& selector]
-  (i/->SelectCollector select-one (comp-paths* selector)))
+  (i/->SelectCollector select-one (i/comp-paths* selector)))
 
 (defn putval
   "Adds an external value to the collected vals. Useful when additional arguments
@@ -208,7 +208,7 @@
   [& conds]
   (->> conds
        (partition 2)
-       (map (fn [[c p]] [(comp-paths* c) (comp-paths* p)]))
+       (map (fn [[c p]] [(i/comp-paths* c) (i/comp-paths* p)]))
        doall
        i/->ConditionalPath
        ))
@@ -223,4 +223,4 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (i/->MultiPath (->> paths (map comp-paths*) doall)))
+  (i/->MultiPath (->> paths (map i/comp-paths*) doall)))
