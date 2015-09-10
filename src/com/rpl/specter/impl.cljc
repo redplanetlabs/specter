@@ -388,7 +388,6 @@
                              ])
                             num-params-seq)
                      (apply concat))
-        _ (println "CLOSURE:" closure)
         params-needed-path (closed-code closure (paramspath* make-paths num-params impls))]
     (if (= num-params 0)
       (bind-params params-needed-path nil 0)
