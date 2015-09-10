@@ -9,7 +9,7 @@
             [clojure.string :as s])
   )
 
-(defprotocol StructureValsPathComposer
+(defprotocol PathComposer
   (comp-paths* [paths]))
 
 #?(
@@ -232,7 +232,7 @@
           (transformer structure (fn [structure] (next-fn vals structure))))
         ))))
 
-(extend-protocol StructureValsPathComposer
+(extend-protocol PathComposer
   nil
   (comp-paths* [sp]
     (coerce-path sp))
