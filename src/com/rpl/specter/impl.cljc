@@ -381,7 +381,7 @@
                                           ))
                               )))
                         []))
-        binding-decls (mapcat (fn [b] [(:path-sym b) (:path b)]) bindings)
+        binding-decls (mapcat (fn [b] [(:path-sym b) `(comp-paths* ~(:path b))]) bindings)
         offset-decls (mapcat (fn [b] [(:offset-sym b) (:offset b)]) bindings)
         needed-params (map (fn [b] `(num-needed-params ~(:path-sym b))) bindings)
         latefn-decls (mapcat

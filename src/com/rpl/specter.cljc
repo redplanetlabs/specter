@@ -162,7 +162,7 @@
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
 (defn filterer [& path]
-  (params-paramspath [late (i/comp-paths* path)]
+  (params-paramspath [late path]
     (select* [this structure next-fn]
       (->> structure (filter #(i/selected?* late %)) doall next-fn))
     (transform* [this structure next-fn]
