@@ -108,6 +108,55 @@
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
 
+(def bind-params i/bind-params)
+
+;; paramspath* [bindings num-params-sym [impl1 impl2]]
+
+(defmacro paramspath [params & impls]
+  (let [num-params (count params)
+        retrieve-params (->> params
+                          (map-indexed
+                            (fn [i p]
+                              [p `(aget ~i/PARAMS-SYM
+                                        (+ ~i/PARAMS-IDX-SYM ~i))]
+                              ))
+                          (apply concat))]
+    (i/paramspath* retrieve-params num-params impls)
+    ))
+
+(defmacro defparamspath [name & body]
+  `(def ~name (paramspath ~@body)))
+
+(defmacro params-paramspath [bindings & impls]
+  (let [quoted-bindings (->> bindings
+                             (partition 2)
+                             (map (fn [[sym path-sym]]
+                                    [`(quote ~sym) `(quote ~(gensym "path")) path-sym]
+                                  )))]
+  `(i/params-paramspath* ~quoted-bindings (quote ~impls))
+  ))
+
+
+(defn filterer [& path]
+  (let [path (i/comp-paths* path)]
+    (params-paramspath [late path]
+      (select* [this structure next-fn]
+        ;; same code
+        )
+      (transform* [this structure next-fn]
+        ;; same code
+        ))))
+
+
+;;TODO: figure out how to express higher order selectors like filterer, selected?, cond-path
+;;     - if keep params-idx in compiledpath too, then:
+;;        - needs to emit paramsneeded if it needs params
+;;        - at runtime, it converts internal selector into CompiledPath with
+;;          the current params/params-idx
+;;TODO: figure out how to express srange in terms of srange-dynamic
+;;     - will need selector and transformer to call into shared functions
+;;TODO: get rid of KeyPath
+
 ;; Built-in pathing and context operations
 
 (def ALL (i/->AllStructurePath))
@@ -118,8 +167,10 @@
 
 (def FIRST (i/->PosStructurePath first i/set-first))
 
+;;TODO: should be parameterized
 (defn srange-dynamic [start-fn end-fn] (i/->SRangePath start-fn end-fn))
 
+;;TODO: should be parameterized
 (defn srange [start end] (srange-dynamic (fn [_] start) (fn [_] end)))
 
 (def BEGINNING (srange 0 0))
@@ -130,9 +181,33 @@
 
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
+;;TODO: needs to parameterize if necessary according to its path
+;; same for selected?, not-selected?, transformed, collect, collect-one,
+;; cond-path, multi-path
+;; TODO: but should only become a late bound object if its internal path
+;; is parameterized
+;; want an interface that gives regular structure path interface but 
+;; creates the right thing
+
+; (higherorderparamspath [late1 path1
+;                         late2 path2
+;                         late3 path3]
+;   (select* [this structure next-fn]
+;     (compiled-select late1 ...)
+;     ;;TODO: if its multiple paths... where to do the index manipulation...?
+;     ;;could take in another arg of "latebound paths" that can then be used internally...
+;     ;; but if nothing was higher order, then its just direct
+;     ;; this never directly accesses params
+;     ))
+
 (defn filterer [& path] (i/->FilterStructurePath (i/comp-paths* path)))
 
-(defn keypath [akey] (i/->KeyPath akey))
+(defparamspath keypath [key]
+  (select* [this structure next-fn]
+    (next-fn (get structure key)))
+  (transform* [this structure next-fn]
+    (assoc structure key (next-fn (get structure key)))
+    ))
 
 (defn view [afn] (i/->ViewPath afn))
 

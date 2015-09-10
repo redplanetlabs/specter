@@ -9,6 +9,13 @@
             [clojure.string :as s])
   )
 
+(def ^:dynamic *tmp-closure*)
+(defn closed-code [closure body]
+  (let [lv (mapcat #(vector % `(*tmp-closure* '~%))
+                   (keys closure))]
+    (binding [*tmp-closure* closure]
+      (eval `(let [~@lv] ~body)))))
+
 (defprotocol PathComposer
   (comp-paths* [paths]))
 
@@ -38,13 +45,13 @@
 (def RichPathExecutor
   (->ExecutorFunctions
     :richpath
-    (fn [params selector structure]
-      (selector params 0 [] structure
-        (fn [params params-idx vals structure]
+    (fn [params params-idx selector structure]
+      (selector params params-idx [] structure
+        (fn [_ _ vals structure]
           (if-not (empty? vals) [(conj vals structure)] [structure]))))
-    (fn [params transformer transform-fn structure]
-      (transformer params 0 [] structure
-        (fn [params params-idx vals structure]
+    (fn [params params-idx transformer transform-fn structure]
+      (transformer params params-idx [] structure
+        (fn [_ _ vals structure]
           (if (empty? vals)
             (transform-fn structure)
             (apply transform-fn (conj vals structure))))))
@@ -53,18 +60,29 @@
 (def StructurePathExecutor
   (->ExecutorFunctions
     :spath
-    (fn [params selector structure]
+    (fn [params params-idx selector structure]
       (selector structure (fn [structure] [structure])))
-    (fn [params transformer transform-fn structure]
+    (fn [params params-idx transformer transform-fn structure]
       (transformer structure transform-fn))
     ))
 
 (defrecord TransformFunctions [executors selector transformer])
 
-(defrecord CompiledPath [transform-fns params])
+(defrecord CompiledPath [transform-fns params params-idx])
+
+(defn no-params-compiled-path [transform-fns]
+  (->CompiledPath transform-fns nil 0))
 
 ;;TODO: this must implement IFn so it can be transformed to CompiledPath
+;; (just calls bind-params)
 (defrecord ParamsNeededPath [transform-fns num-needed-params])
+
+
+(defn bind-params [^ParamsNeededPath params-needed-path params idx]
+  (->CompiledPath
+    (.-transform-fns params-needed-path)
+    params
+    idx))
 
 (defn- seq-contains? [aseq val]
   (->> aseq
@@ -123,9 +141,8 @@
         afn (fn [params params-idx vals structure next-fn]
               (next-fn params params-idx (conj vals (cfn this structure)) structure)
               )]
-    (->CompiledPath
+    (no-params-compiled-path
       (->TransformFunctions RichPathExecutor afn afn)
-      nil
       )))
 
 
@@ -133,28 +150,26 @@
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         transformer (:transform* pimpl)]
-    (->CompiledPath
+    (no-params-compiled-path
       (->TransformFunctions
         StructurePathExecutor
         (fn [structure next-fn]
           (selector this structure next-fn))
         (fn [structure next-fn]
           (transformer this structure next-fn)))
-      nil
       )))
 
 (defn coerce-structure-path-rich [this]
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         transformer (:transform* pimpl)]
-    (->CompiledPath
+    (no-params-compiled-path
       (->TransformFunctions
         RichPathExecutor
         (fn [params params-idx vals structure next-fn]
           (selector this structure (fn [structure] (next-fn params params-idx vals structure))))
         (fn [params params-idx vals structure next-fn]
           (transformer this structure (fn [structure] (next-fn params params-idx vals structure)))))
-      nil
       )))
 
 (defn structure-path? [obj]
@@ -264,8 +279,10 @@
               (transformer params 0 vals structure
                 (fn [_ _ vals-next structure-next]
                   (next-fn x-params params-idx vals-next structure-next)
-                  )))
-            ))))))
+                  ))))
+          params
+          0
+          )))))
 
 (extend-protocol PathComposer
   nil
@@ -294,7 +311,7 @@
                          )
             needs-params-paths (filter #(instance? ParamsNeededPath %) coerced)]
         (if (empty? needs-params-paths)
-          (->CompiledPath result-tfn nil)
+          (no-params-compiled-path result-tfn)
           (->ParamsNeededPath
             (coerce-tfns-rich result-tfn)
             (->> needs-params-paths
@@ -302,6 +319,81 @@
                  (reduce +))
             ))
         ))))
+
+
+;; parameterized path helpers
+
+(defn determine-params-impls [[name1 & impl1] [name2 & impl2]]
+  (if (= name1 'select*)
+    [impl1 impl2]
+    [impl2 impl1]))
+
+
+(def PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
+(def PARAMS-IDX-SYM (gensym "params-idx"))
+
+(defn paramspath* [bindings num-params [impl1 impl2]]
+  (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
+         [[_ t-structure-sym t-next-fn-sym] & transform-body]]
+         (determine-params-impls impl1 impl2)
+
+        params-sym (gensym "params")
+        params-idx-sym (gensym "params-idx")]
+    `(->ParamsNeededPath
+       (->TransformFunctions
+         RichPathExecutor
+         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
+           (let [~s-next-fn-sym (fn [structure#]
+                                  (next-fn#                                    
+                                    ~PARAMS-SYM
+                                    (+ ~PARAMS-IDX-SYM ~num-params)
+                                    vals#
+                                    structure#))
+                 ~@bindings]
+             ~@select-body
+             ))
+         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
+           (let [~t-next-fn-sym (fn [structure#]
+                                  (next-fn#
+                                    ~PARAMS-SYM
+                                    (+ ~PARAMS-IDX-SYM ~num-params)
+                                    vals#                                    
+                                    structure#))
+                 ~@bindings]
+             ~@transform-body
+             )))
+       ~num-params
+       )))
+
+(defn num-needed-params [path]
+  (if (instance? CompiledPath path)
+    0
+    (:num-needed-params path)))
+
+(defn params-paramspath* [bindings impls]
+  (let [num-params-seq (->> bindings
+                           (map last)
+                           (map num-needed-params)
+                           (reductions +)
+                           (cons 0))
+        num-params (last num-params-seq)
+        closure (->> bindings (map rest) (into {}))
+        make-paths (->> bindings
+                     (map (fn [offset [late-sym path-sym path]]
+                            [late-sym
+                             (if (instance? CompiledPath path)
+                              path-sym
+                              `(bind-params ~path-sym ~PARAMS-SYM (+ ~PARAMS-IDX-SYM ~offset))
+                              )
+                             ])
+                            num-params-seq)
+                     (apply concat))
+        _ (println "CLOSURE:" closure)
+        params-needed-path (closed-code closure (paramspath* make-paths num-params impls))]
+    (if (= num-params 0)
+      (bind-params params-needed-path nil 0)
+      params-needed-path)
+    ))
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
@@ -382,14 +474,14 @@
   [^com.rpl.specter.impl.CompiledPath path structure]
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
         ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-select-executor ex) (.-params path) (.-selector tfns) structure)
+    ((.-select-executor ex) (.-params path) (.-params-idx path) (.-selector tfns) structure)
     ))
 
 (defn compiled-transform*
   [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
         ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-transform-executor ex) (.-params path) (.-transformer tfns) transform-fn structure)
+    ((.-transform-executor ex) (.-params path) (.-params-idx path) (.-transformer tfns) transform-fn structure)
     ))
 
 (defn selected?*
