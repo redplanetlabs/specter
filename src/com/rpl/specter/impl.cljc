@@ -35,9 +35,9 @@
 
 (deftype ExecutorFunctions [type select-executor transform-executor])
 
-(def StructureValsPathExecutor
+(def RichPathExecutor
   (->ExecutorFunctions
-    :svalspath
+    :richpath
     (fn [selector structure]
       (selector [] structure
         (fn [vals structure]
@@ -122,7 +122,7 @@
         afn (fn [vals structure next-fn]
               (next-fn (conj vals (cfn this structure)) structure)
               )]
-    (->TransformFunctions StructureValsPathExecutor afn afn)))
+    (->TransformFunctions RichPathExecutor afn afn)))
 
 
 (defn coerce-structure-path [this]
@@ -142,7 +142,7 @@
         selector (:select* pimpl)
         transformer (:transform* pimpl)]
     (->TransformFunctions
-      StructureValsPathExecutor
+      RichPathExecutor
       (fn [vals structure next-fn]
         (selector this structure (fn [structure] (next-fn vals structure))))
       (fn [vals structure next-fn]
@@ -199,7 +199,7 @@
           t (.-type exs)
 
           combiner
-          (if (= t :svalspath)
+          (if (= t :richpath)
             (fn [curr next]
               (fn [vals structure next-fn]
                 (curr vals structure
@@ -220,12 +220,12 @@
               all))))
 
 (defn coerce-structure-vals [^TransformFunctions tfns]
-  (if (= (extype tfns) :svalspath)
+  (if (= (extype tfns) :richpath)
     tfns
     (let [selector (.-selector tfns)
           transformer (.-transformer tfns)]
       (->TransformFunctions
-        StructureValsPathExecutor
+        RichPathExecutor
         (fn [vals structure next-fn]
           (selector structure (fn [structure] (next-fn vals structure))))
         (fn [vals structure next-fn]
