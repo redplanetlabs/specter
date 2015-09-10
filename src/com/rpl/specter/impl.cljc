@@ -38,13 +38,13 @@
 (def RichPathExecutor
   (->ExecutorFunctions
     :richpath
-    (fn [selector structure]
-      (selector [] structure
-        (fn [vals structure]
+    (fn [params selector structure]
+      (selector params 0 [] structure
+        (fn [params params-idx vals structure]
           (if-not (empty? vals) [(conj vals structure)] [structure]))))
-    (fn [transformer transform-fn structure]
-      (transformer [] structure
-        (fn [vals structure]
+    (fn [params transformer transform-fn structure]
+      (transformer params 0 [] structure
+        (fn [params params-idx vals structure]
           (if (empty? vals)
             (transform-fn structure)
             (apply transform-fn (conj vals structure))))))
@@ -53,17 +53,18 @@
 (def StructurePathExecutor
   (->ExecutorFunctions
     :spath
-    (fn [selector structure]
+    (fn [params selector structure]
       (selector structure (fn [structure] [structure])))
-    (fn [transformer transform-fn structure]
+    (fn [params transformer transform-fn structure]
       (transformer structure transform-fn))
     ))
 
-(deftype TransformFunctions [executors selector transformer])
+(defrecord TransformFunctions [executors selector transformer])
 
+(defrecord CompiledPath [transform-fns params])
 
-(defprotocol CoerceTransformFunctions
-  (coerce-path [this]))
+;;TODO: this must implement IFn so it can be transformed to CompiledPath
+(defrecord ParamsNeededPath [transform-fns num-needed-params])
 
 (defn- seq-contains? [aseq val]
   (->> aseq
@@ -119,48 +120,61 @@
                  collector-impl
                  :collect-val
                  )
-        afn (fn [vals structure next-fn]
-              (next-fn (conj vals (cfn this structure)) structure)
+        afn (fn [params params-idx vals structure next-fn]
+              (next-fn params params-idx (conj vals (cfn this structure)) structure)
               )]
-    (->TransformFunctions RichPathExecutor afn afn)))
+    (->CompiledPath
+      (->TransformFunctions RichPathExecutor afn afn)
+      nil
+      )))
 
 
 (defn coerce-structure-path [this]
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         transformer (:transform* pimpl)]
-    (->TransformFunctions
-      StructurePathExecutor
-      (fn [structure next-fn]
-        (selector this structure next-fn))
-      (fn [structure next-fn]
-        (transformer this structure next-fn))
-    )))
+    (->CompiledPath
+      (->TransformFunctions
+        StructurePathExecutor
+        (fn [structure next-fn]
+          (selector this structure next-fn))
+        (fn [structure next-fn]
+          (transformer this structure next-fn)))
+      nil
+      )))
 
-(defn coerce-structure-path-direct [this]
+(defn coerce-structure-path-rich [this]
   (let [pimpl (structure-path-impl this)
         selector (:select* pimpl)
         transformer (:transform* pimpl)]
-    (->TransformFunctions
-      RichPathExecutor
-      (fn [vals structure next-fn]
-        (selector this structure (fn [structure] (next-fn vals structure))))
-      (fn [vals structure next-fn]
-        (transformer this structure (fn [structure] (next-fn vals structure))))
-    )))
+    (->CompiledPath
+      (->TransformFunctions
+        RichPathExecutor
+        (fn [params params-idx vals structure next-fn]
+          (selector this structure (fn [structure] (next-fn params params-idx vals structure))))
+        (fn [params params-idx vals structure next-fn]
+          (transformer this structure (fn [structure] (next-fn params params-idx vals structure)))))
+      nil
+      )))
 
 (defn structure-path? [obj]
   (or (fn? obj) (satisfies? p/StructurePath obj)))
 
-(extend-protocol CoerceTransformFunctions
+(defprotocol CoercePath
+  (coerce-path [this]))
+
+(extend-protocol CoercePath
   nil ; needs its own path because it doesn't count as an Object
   (coerce-path [this]
     (coerce-structure-path nil))
 
-  TransformFunctions
+  CompiledPath
   (coerce-path [this]
     this)
 
+  ParamsNeededPath
+  (coerce-path [this]
+    this)
   
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (coerce-path [this]
@@ -192,45 +206,66 @@
     ))
 
 (defn- combine-same-types [[^TransformFunctions f & _ :as all]]
-  (if (empty? all)
-    (coerce-path nil)
-    (let [^ExecutorFunctions exs (.-executors f)
+  (let [^ExecutorFunctions exs (.-executors f)
 
-          t (.-type exs)
+        t (.-type exs)
 
-          combiner
-          (if (= t :richpath)
-            (fn [curr next]
-              (fn [vals structure next-fn]
-                (curr vals structure
-                      (fn [vals-next structure-next]
-                        (next vals-next structure-next next-fn)
-                        ))))
-            (fn [curr next]
-              (fn [structure next-fn]
-                (curr structure (fn [structure] (next structure next-fn)))))
-            )]
+        combiner
+        (if (= t :richpath)
+          (fn [curr next]
+            (fn [params params-idx vals structure next-fn]
+              (curr params params-idx vals structure
+                    (fn [params-next params-idx-next vals-next structure-next]
+                      (next params-next params-idx-next vals-next structure-next next-fn)
+                      ))))
+          (fn [curr next]
+            (fn [structure next-fn]
+              (curr structure (fn [structure] (next structure next-fn)))))
+          )]
 
-      (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
-                (->TransformFunctions
-                 exs
-                 (combiner (.-selector curr) (.-selector next))
-                 (combiner (.-transformer curr) (.-transformer next))
-                 ))
-              all))))
+    (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
+              (->TransformFunctions
+               exs
+               (combiner (.-selector curr) (.-selector next))
+               (combiner (.-transformer curr) (.-transformer next))
+               ))
+            all)))
 
-(defn coerce-structure-vals [^TransformFunctions tfns]
+(defn coerce-tfns-rich [^TransformFunctions tfns]
   (if (= (extype tfns) :richpath)
     tfns
     (let [selector (.-selector tfns)
           transformer (.-transformer tfns)]
       (->TransformFunctions
         RichPathExecutor
-        (fn [vals structure next-fn]
-          (selector structure (fn [structure] (next-fn vals structure))))
-        (fn [vals structure next-fn]
-          (transformer structure (fn [structure] (next-fn vals structure))))
+        (fn [params params-idx vals structure next-fn]
+          (selector structure (fn [structure] (next-fn params params-idx vals structure))))
+        (fn [params params-idx vals structure next-fn]
+          (transformer structure (fn [structure] (next-fn params params-idx vals structure))))
         ))))
+
+(defn capture-params-internally [path]
+  (if-not (instance? CompiledPath path)
+    path
+    (let [params (:params path)
+          selector (-> path :transform-fns :selector)
+          transformer (-> path :transform-fns :transformer)]
+      (if (empty? params)
+        path
+        (->CompiledPath
+          (->TransformFunctions
+            RichPathExecutor
+            (fn [x-params params-idx vals structure next-fn]
+              (selector params 0 vals structure
+                (fn [_ _ vals-next structure-next]
+                  (next-fn x-params params-idx vals-next structure-next)
+                  )))
+            (fn [x-params params-idx vals structure next-fn]
+              (transformer params 0 vals structure
+                (fn [_ _ vals-next structure-next]
+                  (next-fn x-params params-idx vals-next structure-next)
+                  )))
+            ))))))
 
 (extend-protocol PathComposer
   nil
@@ -241,34 +276,32 @@
     (coerce-path sp))
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (comp-paths* [structure-paths]
-    (let [combined (->> structure-paths
-                        (map coerce-path)
-                        (partition-by extype)
-                        (map combine-same-types)
-                        )]
-      (if (= 1 (count combined))
-        (first combined)
-        (->> combined
-             (map coerce-structure-vals)
-             combine-same-types)
+    (if (empty? structure-paths)
+      (coerce-path nil)
+      (let [coerced (->> structure-paths
+                         (map coerce-path)
+                         (map capture-params-internally))
+            combined (->> coerced
+                          (map :transform-fns)
+                          (partition-by extype)
+                          (map combine-same-types)
+                          )
+            result-tfn (if (= 1 (count combined))
+                         (first combined)
+                         (->> combined
+                              (map coerce-tfns-rich)
+                              combine-same-types)
+                         )
+            needs-params-paths (filter #(instance? ParamsNeededPath %) coerced)]
+        (if (empty? needs-params-paths)
+          (->CompiledPath result-tfn nil)
+          (->ParamsNeededPath
+            (coerce-tfns-rich result-tfn)
+            (->> needs-params-paths
+                 (map :num-needed-params)
+                 (reduce +))
+            ))
         ))))
-
-(defn coerce-structure-vals-direct [this]
-  (cond (structure-path? this) (coerce-structure-path-direct this)
-        (satisfies? p/Collector this) (coerce-collector this)
-        (instance? TransformFunctions this) (coerce-structure-vals this)
-        :else (throw-illegal (no-prot-error-str this))
-  ))
-
-;;this composes paths together much faster than comp-paths* but the resulting composition
-;;won't execute as fast. Useful for when select/transform are used without pre-compiled paths
-;;(where cost of compiling dominates execution time)
-(defn comp-unoptimal [sp]
-  (if (instance? #?(:clj java.util.List :cljs cljs.core/PersistentVector) sp)
-    (->> sp
-         (map coerce-structure-vals-direct)
-         combine-same-types)
-    (coerce-path sp)))
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
@@ -346,15 +379,17 @@
   (set-cell! cell (concat (get-cell cell) elems)))
 
 (defn compiled-select*
-  [^com.rpl.specter.impl.TransformFunctions tfns structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-select-executor ex) (.-selector tfns) structure)
+  [^com.rpl.specter.impl.CompiledPath path structure]
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
+        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
+    ((.-select-executor ex) (.-params path) (.-selector tfns) structure)
     ))
 
 (defn compiled-transform*
-  [^com.rpl.specter.impl.TransformFunctions tfns transform-fn structure]
-  (let [^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-transform-executor ex) (.-transformer tfns) transform-fn structure)
+  [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
+        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
+    ((.-transform-executor ex) (.-params path) (.-transformer tfns) transform-fn structure)
     ))
 
 (defn selected?*

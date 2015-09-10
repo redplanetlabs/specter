@@ -18,7 +18,7 @@
 (defn select
   "Navigates to and returns a sequence of all the elements specified by the selector."
   [selector structure]
-  (compiled-select (i/comp-unoptimal selector)
+  (compiled-select (i/comp-paths* selector)
                    structure))
 
 (defn compiled-select-one
@@ -33,7 +33,7 @@
 (defn select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [selector structure]
-  (compiled-select-one (i/comp-unoptimal selector) structure))
+  (compiled-select-one (i/comp-paths* selector) structure))
 
 (defn compiled-select-one!
   "Version of select-one! that takes in a selector pre-compiled with comp-paths"
@@ -46,7 +46,7 @@
 (defn select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found"
   [selector structure]
-  (compiled-select-one! (i/comp-unoptimal selector) structure))
+  (compiled-select-one! (i/comp-paths* selector) structure))
 
 (defn compiled-select-first
   "Version of select-first that takes in a selector pre-compiled with comp-paths"
@@ -56,7 +56,7 @@
 (defn select-first
   "Returns first element found. Not any more efficient than select, just a convenience"
   [selector structure]
-  (compiled-select-first (i/comp-unoptimal selector) structure))
+  (compiled-select-first (i/comp-paths* selector) structure))
 
 ;; Transformfunctions
 
@@ -68,7 +68,7 @@
   "Navigates to each value specified by the selector and replaces it by the result of running
   the transform-fn on it"
   [selector transform-fn structure]
-  (compiled-transform (i/comp-unoptimal selector) transform-fn structure))
+  (compiled-transform (i/comp-paths* selector) transform-fn structure))
 
 (defn compiled-setval
   "Version of setval that takes in a selector pre-compiled with comp-paths"
@@ -78,7 +78,7 @@
 (defn setval
   "Navigates to each value specified by the selector and replaces it by val"
   [selector val structure]
-  (compiled-setval (i/comp-unoptimal selector) val structure))
+  (compiled-setval (i/comp-paths* selector) val structure))
 
 (defn compiled-replace-in
   "Version of replace-in that takes in a selector pre-compiled with comp-paths"
@@ -106,7 +106,7 @@
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was transformd in the data structure."
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (compiled-replace-in (i/comp-unoptimal selector) transform-fn structure :merge-fn merge-fn))
+  (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
 
 ;; Built-in pathing and context operations
 
