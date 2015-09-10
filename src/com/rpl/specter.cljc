@@ -128,31 +128,11 @@
   `(def ~name (paramspath ~@body)))
 
 (defmacro params-paramspath [bindings & impls]
-  (let [quoted-bindings (->> bindings
-                             (partition 2)
-                             (map (fn [[sym path-sym]]
-                                    [`(quote ~sym) `(quote ~(gensym "path")) path-sym]
-                                  )))]
-  `(i/params-paramspath* ~quoted-bindings (quote ~impls))
-  ))
+  (i/params-paramspath* (partition 2 bindings) impls))
 
-
-(defn filterer [& path]
-  (let [path (i/comp-paths* path)]
-    (params-paramspath [late path]
-      (select* [this structure next-fn]
-        ;; same code
-        )
-      (transform* [this structure next-fn]
-        ;; same code
-        ))))
-
-
-;;TODO: figure out how to express higher order selectors like filterer, selected?, cond-path
-;;     - if keep params-idx in compiledpath too, then:
-;;        - needs to emit paramsneeded if it needs params
-;;        - at runtime, it converts internal selector into CompiledPath with
-;;          the current params/params-idx
+;;TODO: needs to parameterize if necessary according to its path
+;; same for selected?, not-selected?, transformed, collect, collect-one,
+;; cond-path, multi-path
 ;;TODO: figure out how to express srange in terms of srange-dynamic
 ;;     - will need selector and transformer to call into shared functions
 ;;TODO: get rid of KeyPath
@@ -181,26 +161,21 @@
 
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
-;;TODO: needs to parameterize if necessary according to its path
-;; same for selected?, not-selected?, transformed, collect, collect-one,
-;; cond-path, multi-path
-;; TODO: but should only become a late bound object if its internal path
-;; is parameterized
-;; want an interface that gives regular structure path interface but 
-;; creates the right thing
+(defn filterer [& path]
+  (params-paramspath [late (i/comp-paths* path)]
+    (select* [this structure next-fn]
+      (->> structure (filter #(i/selected?* late %)) doall next-fn))
+    (transform* [this structure next-fn]
+      (let [[filtered ancestry] (i/filter+ancestry late structure)
+            ;; the vec is necessary so that we can get by index later
+            ;; (can't get by index for cons'd lists)
+            next (vec (next-fn filtered))]
+        (reduce (fn [curr [newi oldi]]
+                  (assoc curr oldi (get next newi)))
+                (vec structure)
+                ancestry))
+      )))
 
-; (higherorderparamspath [late1 path1
-;                         late2 path2
-;                         late3 path3]
-;   (select* [this structure next-fn]
-;     (compiled-select late1 ...)
-;     ;;TODO: if its multiple paths... where to do the index manipulation...?
-;     ;;could take in another arg of "latebound paths" that can then be used internally...
-;     ;; but if nothing was higher order, then its just direct
-;     ;; this never directly accesses params
-;     ))
-
-(defn filterer [& path] (i/->FilterStructurePath (i/comp-paths* path)))
 
 (defparamspath keypath [key]
   (select* [this structure next-fn]

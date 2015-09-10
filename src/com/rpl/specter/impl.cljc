@@ -9,13 +9,6 @@
             [clojure.string :as s])
   )
 
-(def ^:dynamic *tmp-closure*)
-(defn closed-code [closure body]
-  (let [lv (mapcat #(vector % `(*tmp-closure* '~%))
-                   (keys closure))]
-    (binding [*tmp-closure* closure]
-      (eval `(let [~@lv] ~body)))))
-
 (defprotocol PathComposer
   (comp-paths* [paths]))
 
@@ -335,10 +328,7 @@
 (defn paramspath* [bindings num-params [impl1 impl2]]
   (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
-         (determine-params-impls impl1 impl2)
-
-        params-sym (gensym "params")
-        params-idx-sym (gensym "params-idx")]
+         (determine-params-impls impl1 impl2)]
     `(->ParamsNeededPath
        (->TransformFunctions
          RichPathExecutor
@@ -371,28 +361,57 @@
     (:num-needed-params path)))
 
 (defn params-paramspath* [bindings impls]
-  (let [num-params-seq (->> bindings
-                           (map last)
-                           (map num-needed-params)
-                           (reductions +)
-                           (cons 0))
-        num-params (last num-params-seq)
-        closure (->> bindings (map rest) (into {}))
-        make-paths (->> bindings
-                     (map (fn [offset [late-sym path-sym path]]
-                            [late-sym
-                             (if (instance? CompiledPath path)
-                              path-sym
-                              `(bind-params ~path-sym ~PARAMS-SYM (+ ~PARAMS-IDX-SYM ~offset))
-                              )
-                             ])
-                            num-params-seq)
-                     (apply concat))
-        params-needed-path (closed-code closure (paramspath* make-paths num-params impls))]
-    (if (= num-params 0)
-      (bind-params params-needed-path nil 0)
-      params-needed-path)
-    ))
+  (let [bindings (->> bindings
+                      (map (fn [[late-sym path]]
+                             {:late-sym late-sym
+                              :path path
+                              :path-sym (gensym "path")
+                              :offset-sym (gensym "offset")
+                              :latebind-sym (gensym "latebind")}))
+                      (reduce
+                        (fn [bindings binding]
+                          (if (empty? bindings)
+                            [(assoc binding :offset 0)]
+                            (let [last-binding (last bindings)]
+                              (conj bindings
+                                   (assoc binding
+                                          :offset
+                                          `(+ ~(:offset-sym last-binding)
+                                              (num-needed-params ~(:path-sym last-binding)))
+                                          ))
+                              )))
+                        []))
+        binding-decls (mapcat (fn [b] [(:path-sym b) (:path b)]) bindings)
+        offset-decls (mapcat (fn [b] [(:offset-sym b) (:offset b)]) bindings)
+        needed-params (map (fn [b] `(num-needed-params ~(:path-sym b))) bindings)
+        latefn-decls (mapcat
+                       (fn [b]
+                        [(:latebind-sym b)
+                         `(if (instance? CompiledPath ~(:path-sym b))
+                            (fn [params# params-idx#] ~(:path-sym b))
+                            (fn [params# params-idx#]
+                              (bind-params ~(:path-sym b)
+                                           params#
+                                           (+ params-idx#
+                                              ~(:offset-sym b)))
+                              ))
+                         ])
+                       bindings)
+
+        num-params-sym (gensym "num-params")
+        latebindings (mapcat
+                       (fn [b]
+                         [(:late-sym b) `(~(:latebind-sym b) ~PARAMS-SYM ~PARAMS-IDX-SYM)])
+                       bindings)]
+    `(let [~@binding-decls
+           ~@offset-decls
+           ~num-params-sym (+ ~@needed-params)
+           ~@latefn-decls
+           ret# ~(paramspath* latebindings num-params-sym impls)]
+      (if (= 0 ~num-params-sym)
+        (bind-params ret# nil 0)
+        ret#
+        ))))
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
@@ -502,7 +521,7 @@
     (get-cell ret)
     ))
 
-(defn- filter+ancestry [path aseq]
+(defn filter+ancestry [path aseq]
   (let [aseq (vec aseq)]
     (reduce (fn [[s m :as orig] i]
               (let [e (get aseq i)
@@ -572,23 +591,6 @@
     (walk-select (.-afn this) next-fn structure))
   (transform* [^CodeWalkerStructurePath this structure next-fn]
     (codewalk-until (.-afn this) next-fn structure)))
-
-
-(deftype FilterStructurePath [path])
-
-(extend-protocol p/StructurePath
-  FilterStructurePath
-  (select* [^FilterStructurePath this structure next-fn]
-    (->> structure (filter #(selected?* (.-path this) %)) doall next-fn))
-  (transform* [^FilterStructurePath this structure next-fn]
-    (let [[filtered ancestry] (filter+ancestry (.-path this) structure)
-          ;; the vec is necessary so that we can get by index later
-          ;; (can't get by index for cons'd lists)
-          next (vec (next-fn filtered))]
-      (reduce (fn [curr [newi oldi]]
-                (assoc curr oldi (get next newi)))
-              (vec structure)
-              ancestry))))
 
 (deftype SelectCollector [sel-fn selector])
 
