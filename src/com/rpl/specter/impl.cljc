@@ -590,16 +590,6 @@
               (vec structure)
               ancestry))))
 
-(deftype KeyPath [akey])
-
-(extend-protocol p/StructurePath
-  KeyPath
-  (select* [^KeyPath this structure next-fn]
-    (key-select (.-akey this) structure next-fn))
-  (transform* [^KeyPath this structure next-fn]
-    (key-transform (.-akey this) structure next-fn)
-    ))
-
 (deftype SelectCollector [sel-fn selector])
 
 (extend-protocol p/Collector
