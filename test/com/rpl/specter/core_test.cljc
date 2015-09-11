@@ -420,7 +420,7 @@
         (= (s/compiled-transform (p k1 k2) pred m1) (s/transform [k1 k2] pred m1))
         ))))
 
-(defspec various-orders-comp
+(defspec various-orders-comp-test
   (for-all+
     [k1 (limit-size 3 gen/keyword)
      k2 (limit-size 3 gen/keyword)
@@ -451,6 +451,31 @@
         (apply = (for [p paths] (s/compiled-select p m1)))
         (apply = (for [p paths] (s/compiled-transform p pred m1)))
         ))))
+
+(defspec filterer-param-test
+  (for-all+
+    [k gen/keyword
+     k2 gen/keyword
+     v (gen/vector
+         (limit-size 5
+           (gen-map-with-keys
+                        gen/keyword
+                        gen/int
+                        k
+                        k2
+                        )))
+     pred (gen/elements [odd? even?])
+     updater (gen/elements [inc dec])]
+    (and
+      (= (s/compiled-select ((s/filterer s/keypath pred) k) v)
+         (s/compiled-select (s/filterer k pred) v))
+      (= (s/compiled-transform ((s/comp-paths (s/filterer s/keypath pred) s/ALL k2) k)
+           updater
+           v)
+         (s/compiled-transform (s/comp-paths (s/filterer k pred) s/ALL k2)
+           updater
+           v))
+      )))
 
 ;;TODO: test using params path
 ;; using filterer, transformed, selected? with parameterized paths
