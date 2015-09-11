@@ -108,7 +108,7 @@
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
 
-(def bind-params i/bind-params)
+(def bind-params* i/bind-params*)
 
 ;; paramspath* [bindings num-params-sym [impl1 impl2]]
 
@@ -161,11 +161,19 @@
 
 (def FIRST (i/->PosStructurePath first i/set-first))
 
-;;TODO: should be parameterized
-(defn srange-dynamic [start-fn end-fn] (i/->SRangePath start-fn end-fn))
+(defparamspath srange-dynamic [start-fn end-fn]
+  (select* [this structure next-fn]
+    (i/srange-select structure (start-fn structure) (end-fn structure) next-fn))
+  (transform* [this structure next-fn]
+    (i/srange-transform structure (start-fn structure) (end-fn structure) next-fn)
+    ))
 
-;;TODO: should be parameterized
-(defn srange [start end] (srange-dynamic (fn [_] start) (fn [_] end)))
+(defparamspath srange [start end]
+  (select* [this structure next-fn]
+    (i/srange-select structure start end next-fn))
+  (transform* [this structure next-fn]
+    (i/srange-transform structure start end next-fn)
+    ))
 
 (def BEGINNING (srange 0 0))
 

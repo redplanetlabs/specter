@@ -9,6 +9,10 @@
             [clojure.string :as s])
   )
 
+(defn spy [e]
+  (println e)
+  e)
+
 (defn gensyms [amt]
   (vec (repeatedly amt gensym)))
 
@@ -69,12 +73,31 @@
 (defn no-params-compiled-path [transform-fns]
   (->CompiledPath transform-fns nil 0))
 
-;;TODO: this must implement IFn so it can be transformed to CompiledPath
-;; (just calls bind-params)
-(defrecord ParamsNeededPath [transform-fns num-needed-params])
+
+(declare bind-params*)
+
+(defmacro define-ParamsNeededPath []
+  (let [a (with-meta (gensym "array") {:tag 'objects})
+        impls (for [i (range 21)
+                    :let [args (vec (gensyms i))
+                          setters (for [j (range i)] `(aset ~a ~j ~(get args j)))]]
+                `(~'invoke [this# ~@args]
+                  (let [~a (object-array ~i)]
+                    ~@setters
+                    (bind-params* this# ~a 0)
+                    )))]
+    `(defrecord ~'ParamsNeededPath [~'transform-fns ~'num-needed-params]
+       clojure.lang.IFn
+       ~@impls
+       (~'applyTo [this# args#]
+         (let [a# (object-array args#)]
+           (bind-params* this# a# 0))))))
 
 
-(defn bind-params [^ParamsNeededPath params-needed-path params idx]
+(define-ParamsNeededPath)
+
+
+(defn bind-params* [^ParamsNeededPath params-needed-path params idx]
   (->CompiledPath
     (.-transform-fns params-needed-path)
     params
@@ -375,7 +398,7 @@
                               (fn [params# params-idx#]
                                 p# )
                               (fn [params# params-idx#]
-                                (bind-params p# params# (+ params-idx# o#))
+                                (bind-params* p# params# (+ params-idx# o#))
                                 )))
                           offsets#
                           paths#)
@@ -383,7 +406,7 @@
            ret# ~(paramspath* post-bindings num-params-sym impls)
            ]
     (if (= 0 ~num-params-sym)
-      (bind-params ret# nil 0)
+      (bind-params* ret# nil 0)
       ret#
       ))))
 
@@ -576,27 +599,19 @@
   (collect-val [^SelectCollector this structure]
     ((.-sel-fn this) (.-selector this) structure)))
 
-(deftype SRangePath [start-fn end-fn])
+(defn srange-select [structure start end next-fn]
+  (next-fn (-> structure vec (subvec start end))))
 
-(extend-protocol p/StructurePath
-  SRangePath
-  (select* [^SRangePath this structure next-fn]
-    (let [start ((.-start-fn this) structure)
-          end ((.-end-fn this) structure)]
-      (next-fn (-> structure vec (subvec start end)))
-      ))
-  (transform* [^SRangePath this structure next-fn]
-    (let [start ((.-start-fn this) structure)
-          end ((.-end-fn this) structure)
-          structurev (vec structure)
-          newpart (next-fn (-> structurev (subvec start end)))
-          res (concat (subvec structurev 0 start)
-                      newpart
-                      (subvec structurev end (count structure)))]
-      (if (vector? structure)
-        (vec res)
-        res
-        ))))
+(defn srange-transform [structure start end next-fn]
+  (let [structurev (vec structure)
+        newpart (next-fn (-> structurev (subvec start end)))
+        res (concat (subvec structurev 0 start)
+                    newpart
+                    (subvec structurev end (count structure)))]
+    (if (vector? structure)
+      (vec res)
+      res
+      )))
 
 (deftype ViewPath [view-fn])
 
