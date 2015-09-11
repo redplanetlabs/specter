@@ -134,13 +134,13 @@
 
 ;; Built-in pathing and context operations
 
-(def ALL (i/->AllStructurePath))
+(def ALL (comp-paths (i/->AllStructurePath)))
 
 (def VAL (i/->ValCollect))
 
-(def LAST (i/->PosStructurePath last i/set-last))
+(def LAST (comp-paths (i/->PosStructurePath last i/set-last)))
 
-(def FIRST (i/->PosStructurePath first i/set-first))
+(def FIRST (comp-paths (i/->PosStructurePath first i/set-first)))
 
 (defparamspath
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
