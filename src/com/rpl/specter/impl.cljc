@@ -363,7 +363,7 @@
     0
     (:num-needed-params path)))
 
-(defn params-paramspath* [paths-seq latefns-sym pre-bindings post-bindings impls]
+(defn pathed-path* [paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
     `(let [paths# (map comp-paths* ~paths-seq)
            needed-params# (map num-needed-params paths#)

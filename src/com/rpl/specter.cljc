@@ -127,22 +127,22 @@
 (defmacro defparamspath [name & body]
   `(def ~name (paramspath ~@body)))
 
-(defmacro params-paramspath [bindings & impls]
+(defmacro fixed-pathed-path [bindings & impls]
   (let [bindings (partition 2 bindings)
         paths (mapv second bindings)
         names (mapv first bindings)
         latefns-sym (gensym "latefns")
         latefn-syms (vec (i/gensyms (count paths)))]
-    (i/params-paramspath*
+    (i/pathed-path*
       paths
       latefns-sym
       [latefn-syms latefns-sym]
       (mapcat (fn [n l] [n `(~l ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]) names latefn-syms)
       impls)))
 
-(defmacro params-varparamspath [[latepaths-seq-sym paths-seq] & impls]
+(defmacro variable-pathed-path [[latepaths-seq-sym paths-seq] & impls]
   (let [latefns-sym (gensym "latefns")]
-    (i/params-paramspath*
+    (i/pathed-path*
       paths-seq
       latefns-sym
       []
@@ -176,7 +176,7 @@
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
 (defn filterer [& path]
-  (params-paramspath [late path]
+  (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (->> structure (filter #(i/selected?* late %)) doall next-fn))
     (transform* [this structure next-fn]
@@ -205,7 +205,7 @@
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key"
   [& path]
-  (params-paramspath [late path]
+  (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (i/filter-select
         #(i/selected?* late %)
@@ -218,7 +218,7 @@
         next-fn))))
 
 (defn not-selected? [& path]
-  (params-paramspath [late path]
+  (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (i/filter-select
         #(i/not-selected?* late %)
@@ -234,7 +234,7 @@
   "Navigates to a view of the current value by transforming it with the
    specified selector and update-fn."
   [path update-fn]
-  (params-paramspath [late path]
+  (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))
     (transform* [this structure next-fn]
@@ -287,7 +287,7 @@
    Otherwise, it tries the next cond-path. If nothing matches, then the structure
    is not selected."
   [& conds]
-  (params-varparamspath [compiled-paths conds]
+  (variable-pathed-path [compiled-paths conds]
     (select* [this structure next-fn]
       (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
         (->> (compiled-select selector structure)
@@ -309,7 +309,7 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (params-varparamspath [compiled-paths paths]
+  (variable-pathed-path [compiled-paths paths]
     (select* [this structure next-fn]
       (->> compiled-paths
            (mapcat #(compiled-select % structure))
