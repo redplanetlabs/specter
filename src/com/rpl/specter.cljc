@@ -132,8 +132,6 @@
              params. The return value is an executable selector."}
   bind-params* i/bind-params*)
 
-
-
 ;; Built-in pathing and context operations
 
 (def ALL (i/->AllStructurePath))
