@@ -106,15 +106,29 @@
 
 ;; Helpers for defining selectors and collectors with late-bound params
 
-(def bind-params* i/bind-params*)
+(def ^{:doc "Takes a compiled selector that needs late-bound params and supplies it with
+             an array of params and a position in the array from which to begin reading
+             params. The return value is an executable selector."}
+  bind-params* i/bind-params*)
 
-(defmacro paramspath [params & impls]
+(defmacro paramspath
+  "Defines a StructurePath with late bound parameters. This path can be precompiled
+  with other selectors without knowing the parameters. When precompiled with other
+  selectors, the resulting selector takes in parameters for all selectors in the path
+  that needed parameters (in the order in which they were declared)."
+  [params & impls]
   (let [num-params (count params)
         retrieve-params (i/make-param-retrievers params)]
     (i/paramspath* retrieve-params num-params impls)
     ))
 
-(defmacro paramscollector [params impl]
+(defmacro paramscollector
+  "Defines a Collector with late bound parameters. This collector can be precompiled
+  with other selectors without knowing the parameters. When precompiled with other
+  selectors, the resulting selector takes in parameters for all selectors in the path
+  that needed parameters (in the order in which they were declared).
+   "
+  [params impl]
   (let [num-params (count params)
         retrieve-params (i/make-param-retrievers params)]
     (i/paramscollector* retrieve-params num-params impl)
@@ -126,7 +140,12 @@
 (defmacro defparamscollector [name & body]
   `(def ~name (paramscollector ~@body)))
 
-(defmacro fixed-pathed-path [bindings & impls]
+(defmacro fixed-pathed-path
+  "This helper is used to define selectors that take in a fixed number of other selector
+   paths as input. Those selector paths may require late-bound params, so this helper
+   will create a parameterized selector if that is the case. If no late-bound params
+   are required, then the result is executable."
+  [bindings & impls]
   (let [bindings (partition 2 bindings)
         paths (mapv second bindings)
         names (mapv first bindings)
@@ -140,7 +159,12 @@
       (mapcat (fn [n l] [n `(~l ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]) names latefn-syms)
       impls)))
 
-(defmacro variable-pathed-path [[latepaths-seq-sym paths-seq] & impls]
+(defmacro variable-pathed-path
+  "This helper is used to define selectors that take in a variable number of other selector
+   paths as input. Those selector paths may require late-bound params, so this helper
+   will create a parameterized selector if that is the case. If no late-bound params
+   are required, then the result is executable."
+  [[latepaths-seq-sym paths-seq] & impls]
   (let [latefns-sym (gensym "latefns")]
     (i/pathed-path*
       i/paramspath*
@@ -152,7 +176,12 @@
       impls
       )))
 
-(defmacro pathed-collector [[name path] impl]
+(defmacro pathed-collector
+  "This helper is used to define collectors that take in a single selector
+   paths as input. That path may require late-bound params, so this helper
+   will create a parameterized selector if that is the case. If no late-bound params
+   are required, then the result is executable."
+  [[name path] impl]
   (let [latefns-sym (gensym "latefns")
         latefn (gensym "latefn")]
     (i/pathed-path*
@@ -175,14 +204,22 @@
 
 (def FIRST (i/->PosStructurePath first i/set-first))
 
-(defparamspath srange-dynamic [start-fn end-fn]
+(defparamspath
+  ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
+          to select when navigating. Each function takes in the structure as input."}
+  srange-dynamic
+  [start-fn end-fn]
   (select* [this structure next-fn]
     (i/srange-select structure (start-fn structure) (end-fn structure) next-fn))
   (transform* [this structure next-fn]
     (i/srange-transform structure (start-fn structure) (end-fn structure) next-fn)
     ))
 
-(defparamspath srange [start end]
+(defparamspath
+  ^{:doc "Navigates to the subsequence bound by the indexes start (inclusive)
+          and end (exclusive)"}
+  srange
+  [start end]
   (select* [this structure next-fn]
     (i/srange-select structure start end next-fn))
   (transform* [this structure next-fn]
@@ -197,7 +234,15 @@
 
 (defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
 
-(defn filterer [& path]
+(defn filterer
+  "Navigates to a view of the current sequence that only contains elements that
+  match the given selector path. An element matches the selector path if calling select
+  on that element with the selector path yields anything other than an empty sequence.
+
+   The input path may be parameterized, in which case the result of filterer
+   will be parameterized in the order of which the parameterized selectors
+   were declared."
+  [& path]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (->> structure (filter #(i/selected?* late %)) doall next-fn))
@@ -225,7 +270,11 @@
 (defn selected?
   "Filters the current value based on whether a selector finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
-  even number exists for the :vals key"
+  even number exists for the :vals key.
+
+  The input path may be parameterized, in which case the result of selected?
+  will be parameterized in the order of which the parameterized selectors
+  were declared."
   [& path]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
@@ -254,7 +303,11 @@
 
 (defn transformed
   "Navigates to a view of the current value by transforming it with the
-   specified selector and update-fn."
+   specified selector and update-fn.
+
+   The input path may be parameterized, in which case the result of transformed
+   will be parameterized in the order of which the parameterized selectors
+   were declared."
   [path update-fn]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
@@ -314,7 +367,11 @@
    Tests the structure if selecting with cond-path returns anything.
    If so, it uses the following selector for this portion of the navigation.
    Otherwise, it tries the next cond-path. If nothing matches, then the structure
-   is not selected."
+   is not selected.
+
+   The input paths may be parameterized, in which case the result of cond-path
+   will be parameterized in the order of which the parameterized selectors
+   were declared."
   [& conds]
   (variable-pathed-path [compiled-paths conds]
     (select* [this structure next-fn]
