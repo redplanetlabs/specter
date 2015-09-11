@@ -160,7 +160,7 @@ You can even precompile selectors that require parameters! For example, `keypath
   (select [(keypath k) ALL odd?] data))
 ```
 
-Without precompilation this code will execute significantly slower. But it seems like it requires precompilation because the selector path is dependent on an argument to the function. Specter gets around this by allowing you to precompile and bind the parameters to the selector later, like so:
+It seems difficult to precompile this path because it is dependent on an argument to the function it is within. Specter gets around this by allowing you to precompile a path without its parameters and bind the parameters to the selector later, like so:
 
 ```clojure
 (def foo-path (comp-paths keypath ALL odd?))
