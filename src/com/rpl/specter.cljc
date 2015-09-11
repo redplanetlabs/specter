@@ -1,8 +1,27 @@
 (ns com.rpl.specter
+  #?(:cljs (:require-macros
+              [com.rpl.specter.macros
+                :refer
+                [pathed-collector
+                 variable-pathed-path
+                 fixed-pathed-path
+                 defparamscollector
+                 defparamspath
+                 paramscollector
+                 paramspath
+                ]]
+              ))
   (:use [com.rpl.specter.protocols :only [StructurePath]]
+    #?(:clj [com.rpl.specter.macros :only
+              [pathed-collector
+               variable-pathed-path
+               fixed-pathed-path
+               defparamscollector
+               defparamspath
+               paramscollector
+               paramspath]])
     )
-  (:require [com.rpl.specter.impl :as i]
-            [com.rpl.specter.macros :as m])
+  (:require [com.rpl.specter.impl :as i])
   )
 
 (defn comp-paths [& paths]
@@ -113,88 +132,7 @@
              params. The return value is an executable selector."}
   bind-params* i/bind-params*)
 
-(defmacro paramspath
-  "Defines a StructurePath with late bound parameters. This path can be precompiled
-  with other selectors without knowing the parameters. When precompiled with other
-  selectors, the resulting selector takes in parameters for all selectors in the path
-  that needed parameters (in the order in which they were declared)."
-  [params & impls]
-  (let [num-params (count params)
-        retrieve-params (m/make-param-retrievers params)]
-    (m/paramspath* retrieve-params num-params impls)
-    ))
 
-(defmacro paramscollector
-  "Defines a Collector with late bound parameters. This collector can be precompiled
-  with other selectors without knowing the parameters. When precompiled with other
-  selectors, the resulting selector takes in parameters for all selectors in the path
-  that needed parameters (in the order in which they were declared).
-   "
-  [params impl]
-  (let [num-params (count params)
-        retrieve-params (m/make-param-retrievers params)]
-    (m/paramscollector* retrieve-params num-params impl)
-    ))
-
-(defmacro defparamspath [name & body]
-  `(def ~name (paramspath ~@body)))
-
-(defmacro defparamscollector [name & body]
-  `(def ~name (paramscollector ~@body)))
-
-(defmacro fixed-pathed-path
-  "This helper is used to define selectors that take in a fixed number of other selector
-   paths as input. Those selector paths may require late-bound params, so this helper
-   will create a parameterized selector if that is the case. If no late-bound params
-   are required, then the result is executable."
-  [bindings & impls]
-  (let [bindings (partition 2 bindings)
-        paths (mapv second bindings)
-        names (mapv first bindings)
-        latefns-sym (gensym "latefns")
-        latefn-syms (vec (m/gensyms (count paths)))]
-    (m/pathed-path*
-      m/paramspath*
-      paths
-      latefns-sym
-      [latefn-syms latefns-sym]
-      (mapcat (fn [n l] [n `(~l ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM)]) names latefn-syms)
-      impls)))
-
-(defmacro variable-pathed-path
-  "This helper is used to define selectors that take in a variable number of other selector
-   paths as input. Those selector paths may require late-bound params, so this helper
-   will create a parameterized selector if that is the case. If no late-bound params
-   are required, then the result is executable."
-  [[latepaths-seq-sym paths-seq] & impls]
-  (let [latefns-sym (gensym "latefns")]
-    (m/pathed-path*
-      m/paramspath*
-      paths-seq
-      latefns-sym
-      []
-      [latepaths-seq-sym `(map (fn [l#] (l# ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM))
-                               ~latefns-sym)]
-      impls
-      )))
-
-(defmacro pathed-collector
-  "This helper is used to define collectors that take in a single selector
-   paths as input. That path may require late-bound params, so this helper
-   will create a parameterized selector if that is the case. If no late-bound params
-   are required, then the result is executable."
-  [[name path] impl]
-  (let [latefns-sym (gensym "latefns")
-        latefn (gensym "latefn")]
-    (m/pathed-path*
-      m/paramscollector*
-      [path]
-      latefns-sym
-      [[latefn] latefns-sym]
-      [name `(~latefn ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM)]
-      impl
-      )
-    ))
 
 ;; Built-in pathing and context operations
 
