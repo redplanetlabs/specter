@@ -18,7 +18,6 @@
 ;;TODO:
 ;; test walk, codewalk
 ;; test keypath
-;; test comp-structure-paths
 
 
 (defn limit-size [n {gen :gen}]
@@ -404,3 +403,58 @@
     (= (s/select-one (s/transformed [s/ALL pred] op) v)
        (s/transform [s/ALL pred] op v))
     ))
+
+(defspec basic-parameterized-composition-test
+  (for-all+
+    [k1 (limit-size 3 gen/keyword)
+     k2 (limit-size 3 gen/keyword)
+     m1 (limit-size 5
+                 (gen-map-with-keys
+                  gen/keyword
+                  (gen-map-with-keys gen/keyword gen/int k2)
+                  k1))
+    pred (gen/elements [inc dec])]
+    (let [p (s/comp-paths s/keypath s/keypath)]
+      (and
+        (= (s/compiled-select (p k1 k2) m1) (s/select [k1 k2] m1))
+        (= (s/compiled-transform (p k1 k2) pred m1) (s/transform [k1 k2] pred m1))
+        ))))
+
+(defspec various-orders-comp
+  (for-all+
+    [k1 (limit-size 3 gen/keyword)
+     k2 (limit-size 3 gen/keyword)
+     k3 (limit-size 3 gen/keyword)
+     m1 (limit-size 5
+                 (gen-map-with-keys
+                  gen/keyword
+                  (gen-map-with-keys
+                    gen/keyword
+                    (gen-map-with-keys
+                      gen/keyword
+                      gen/int
+                      k3
+                      )
+                    k2)
+                  k1))
+    pred (gen/elements [inc dec])]
+    (let [paths [((s/comp-paths s/keypath s/keypath k3) k1 k2)
+                 (s/comp-paths k1 k2 k3)
+                 ((s/comp-paths s/keypath k2 s/keypath) k1 k3)
+                 ((s/comp-paths k1 s/keypath k3) k2)
+                 (s/comp-paths k1 (s/keypath k2) k3)
+                 ((s/comp-paths (s/keypath k1) s/keypath (s/keypath k3)) k2)
+                 ((s/comp-paths s/keypath (s/keypath k2) s/keypath) k1 k3)
+                 ]
+          ]
+      (and
+        (apply = (for [p paths] (s/compiled-select p m1)))
+        (apply = (for [p paths] (s/compiled-transform p pred m1)))
+        ))))
+
+;;TODO: test using params path
+;; using filterer, transformed, selected? with parameterized paths
+;; using cond-path parameterized paths
+;; parameterized filterer can be composed with other parmaterized paths
+;; parameterized cond-path can be composed with other parammed paths
+;; nested selected? takes params correctly
