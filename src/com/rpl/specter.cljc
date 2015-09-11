@@ -128,14 +128,28 @@
   `(def ~name (paramspath ~@body)))
 
 (defmacro params-paramspath [bindings & impls]
-  (i/params-paramspath* (partition 2 bindings) impls))
+  (let [bindings (partition 2 bindings)
+        paths (mapv second bindings)
+        names (mapv first bindings)
+        latefns-sym (gensym "latefns")
+        latefn-syms (vec (i/gensyms (count paths)))]
+    (i/params-paramspath*
+      paths
+      latefns-sym
+      [latefn-syms latefns-sym]
+      (mapcat (fn [n l] [n `(~l ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]) names latefn-syms)
+      impls)))
 
-;;TODO: needs to parameterize if necessary according to its path
-;; same for selected?, not-selected?, transformed, collect, collect-one,
-;; cond-path, multi-path
-;;TODO: figure out how to express srange in terms of srange-dynamic
-;;     - will need selector and transformer to call into shared functions
-;;TODO: get rid of KeyPath
+(defmacro params-varparamspath [[latepaths-seq-sym paths-seq] & impls]
+  (let [latefns-sym (gensym "latefns")]
+    (i/params-paramspath*
+      paths-seq
+      latefns-sym
+      []
+      [latepaths-seq-sym `(map (fn [l#] (l# ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM))
+                               ~latefns-sym)]
+      impls
+      )))
 
 ;; Built-in pathing and context operations
 
@@ -190,26 +204,41 @@
   "Filters the current value based on whether a selector finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key"
-  [& selectors]
-  (let [s (i/comp-paths* selectors)]
-    (fn [structure]
-      (->> structure
-           (select s)
-           empty?
-           not))))
+  [& path]
+  (params-paramspath [late path]
+    (select* [this structure next-fn]
+      (i/filter-select
+        #(i/selected?* late %)
+        structure
+        next-fn))
+    (transform* [this structure next-fn]
+      (i/filter-transform
+        #(i/selected?* late %)
+        structure
+        next-fn))))
 
 (defn not-selected? [& path]
-  (complement (selected? (i/comp-paths* path))))
+  (params-paramspath [late path]
+    (select* [this structure next-fn]
+      (i/filter-select
+        #(i/not-selected?* late %)
+        structure
+        next-fn))
+    (transform* [this structure next-fn]
+      (i/filter-transform
+        #(i/not-selected?* late %)
+        structure
+        next-fn))))
 
 (defn transformed
   "Navigates to a view of the current value by transforming it with the
    specified selector and update-fn."
-  [selector update-fn]
-  (let [compiled (i/comp-paths* selector)]
-    (view
-      (fn [elem]
-        (compiled-transform compiled update-fn elem)
-        ))))
+  [path update-fn]
+  (params-paramspath [late path]
+    (select* [this structure next-fn]
+      (next-fn (compiled-transform late update-fn structure)))
+    (transform* [this structure next-fn]
+      (next-fn (compiled-transform late update-fn structure)))))
 
 (extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   StructurePath
@@ -249,6 +278,8 @@
   [val]
   (i/->PutValCollector val))
 
+
+;;TODO: test nothing matches case
 (defn cond-path
   "Takes in alternating cond-path selector cond-path selector...
    Tests the structure if selecting with cond-path returns anything.
@@ -256,21 +287,39 @@
    Otherwise, it tries the next cond-path. If nothing matches, then the structure
    is not selected."
   [& conds]
-  (->> conds
-       (partition 2)
-       (map (fn [[c p]] [(i/comp-paths* c) (i/comp-paths* p)]))
-       doall
-       i/->ConditionalPath
-       ))
+  (params-varparamspath [compiled-paths conds]
+    (select* [this structure next-fn]
+      (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
+        (->> (compiled-select selector structure)
+             (mapcat next-fn)
+             doall)))
+    (transform* [this structure next-fn]
+      (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
+        (compiled-transform selector next-fn structure)
+        structure
+        ))))
 
 (defn if-path
   "Like cond-path, but with if semantics."
-  ([cond-fn if-path] (cond-path cond-fn if-path))
-  ([cond-fn if-path else-path]
-    (cond-path cond-fn if-path nil else-path)))
+  ([cond-p if-path] (cond-path cond-p if-path))
+  ([cond-p if-path else-path]
+    (cond-path cond-p if-path nil else-path)))
 
 (defn multi-path
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (i/->MultiPath (->> paths (map i/comp-paths*) doall)))
+  (params-varparamspath [compiled-paths paths]
+    (select* [this structure next-fn]
+      (->> compiled-paths
+           (mapcat #(compiled-select % structure))
+           (mapcat next-fn)
+           doall
+           ))
+    (transform* [this structure next-fn]
+      (reduce
+        (fn [structure selector]
+          (compiled-transform selector next-fn structure))
+        structure
+        compiled-paths
+        ))))

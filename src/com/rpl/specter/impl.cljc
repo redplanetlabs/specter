@@ -9,6 +9,9 @@
             [clojure.string :as s])
   )
 
+(defn gensyms [amt]
+  (vec (repeatedly amt gensym)))
+
 (defprotocol PathComposer
   (comp-paths* [paths]))
 
@@ -360,58 +363,29 @@
     0
     (:num-needed-params path)))
 
-(defn params-paramspath* [bindings impls]
-  (let [bindings (->> bindings
-                      (map (fn [[late-sym path]]
-                             {:late-sym late-sym
-                              :path path
-                              :path-sym (gensym "path")
-                              :offset-sym (gensym "offset")
-                              :latebind-sym (gensym "latebind")}))
-                      (reduce
-                        (fn [bindings binding]
-                          (if (empty? bindings)
-                            [(assoc binding :offset 0)]
-                            (let [last-binding (last bindings)]
-                              (conj bindings
-                                   (assoc binding
-                                          :offset
-                                          `(+ ~(:offset-sym last-binding)
-                                              (num-needed-params ~(:path-sym last-binding)))
-                                          ))
-                              )))
-                        []))
-        binding-decls (mapcat (fn [b] [(:path-sym b) `(comp-paths* ~(:path b))]) bindings)
-        offset-decls (mapcat (fn [b] [(:offset-sym b) (:offset b)]) bindings)
-        needed-params (map (fn [b] `(num-needed-params ~(:path-sym b))) bindings)
-        latefn-decls (mapcat
-                       (fn [b]
-                        [(:latebind-sym b)
-                         `(if (instance? CompiledPath ~(:path-sym b))
-                            (fn [params# params-idx#] ~(:path-sym b))
-                            (fn [params# params-idx#]
-                              (bind-params ~(:path-sym b)
-                                           params#
-                                           (+ params-idx#
-                                              ~(:offset-sym b)))
-                              ))
-                         ])
-                       bindings)
-
-        num-params-sym (gensym "num-params")
-        latebindings (mapcat
-                       (fn [b]
-                         [(:late-sym b) `(~(:latebind-sym b) ~PARAMS-SYM ~PARAMS-IDX-SYM)])
-                       bindings)]
-    `(let [~@binding-decls
-           ~@offset-decls
-           ~num-params-sym (+ ~@needed-params)
-           ~@latefn-decls
-           ret# ~(paramspath* latebindings num-params-sym impls)]
-      (if (= 0 ~num-params-sym)
-        (bind-params ret# nil 0)
-        ret#
-        ))))
+(defn params-paramspath* [paths-seq latefns-sym pre-bindings post-bindings impls]
+  (let [num-params-sym (gensym "num-params")]
+    `(let [paths# (map comp-paths* ~paths-seq)
+           needed-params# (map num-needed-params paths#)
+           offsets# (cons 0 (reductions + needed-params#))
+           ~num-params-sym (last offsets#)
+           ~latefns-sym (map
+                          (fn [o# p#]
+                            (if (instance? CompiledPath p#)
+                              (fn [params# params-idx#]
+                                p# )
+                              (fn [params# params-idx#]
+                                (bind-params p# params# (+ params-idx# o#))
+                                )))
+                          offsets#
+                          paths#)
+           ~@pre-bindings
+           ret# ~(paramspath* post-bindings num-params-sym impls)
+           ]
+    (if (= 0 ~num-params-sym)
+      (bind-params ret# nil 0)
+      ret#
+      ))))
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
@@ -502,12 +476,15 @@
     ((.-transform-executor ex) (.-params path) (.-params-idx path) (.-transformer tfns) transform-fn structure)
     ))
 
-(defn selected?*
+(defn not-selected?*
   [compiled-path structure]
   (->> structure
        (compiled-select* compiled-path)
-       empty?
-       not))
+       empty?))
+
+(defn selected?*
+  [compiled-path structure]
+  (not (not-selected?* compiled-path structure)))
 
 ;; returns vector of all results
 (defn- walk-select [pred continue-fn structure]
@@ -648,11 +625,9 @@
     (next-fn structure)
     ))
 
-
-(deftype ConditionalPath [cond-pairs])
-
-(defn- retrieve-selector [cond-pairs structure]
-  (->> cond-pairs
+(defn retrieve-cond-selector [cond-paths structure]
+  (->> cond-paths
+       (partition 2)
        (drop-while (fn [[c-selector _]]
                      (->> structure
                           (compiled-select* c-selector)
@@ -660,38 +635,6 @@
        first
        second
        ))
-
-;;TODO: test nothing matches case
-(extend-protocol p/StructurePath
-  ConditionalPath
-  (select* [this structure next-fn]
-    (if-let [selector (retrieve-selector (.-cond-pairs this) structure)]
-      (->> (compiled-select* selector structure)
-           (mapcat next-fn)
-           doall)))
-  (transform* [this structure next-fn]
-    (if-let [selector (retrieve-selector (.-cond-pairs this) structure)]
-      (compiled-transform* selector next-fn structure)
-      structure
-      )))
-
-(deftype MultiPath [paths])
-
-(extend-protocol p/StructurePath
-  MultiPath
-  (select* [this structure next-fn]
-    (->> (.-paths this)
-         (mapcat #(compiled-select* % structure))
-         (mapcat next-fn)
-         doall
-         ))
-  (transform* [this structure next-fn]
-    (reduce
-      (fn [structure selector]
-        (compiled-transform* selector next-fn structure))
-      structure
-      (.-paths this))
-    ))
 
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
