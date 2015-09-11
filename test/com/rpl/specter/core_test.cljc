@@ -17,8 +17,6 @@
 
 ;;TODO:
 ;; test walk, codewalk
-;; test keypath
-
 
 (defn limit-size [n {gen :gen}]
   (gen/->Generator
@@ -477,9 +475,19 @@
            v))
       )))
 
-;;TODO: test using params path
-;; using filterer, transformed, selected? with parameterized paths
-;; using cond-path parameterized paths
-;; parameterized filterer can be composed with other parmaterized paths
-;; parameterized cond-path can be composed with other parammed paths
-;; nested selected? takes params correctly
+(deftest nested-param-paths
+  (let [p (s/filterer s/keypath (s/selected? s/ALL s/keypath (s/filterer s/keypath even?) s/ALL))
+        p2 (p :a :b :c)
+        p3 (s/filterer :a (s/selected? s/ALL :b (s/filterer :c even?) s/ALL))
+        data [{:a [{:b [{:c 4 :d 5}]}]}
+              {:a [{:c 3}]}
+              {:a [{:b [{:c 7}] :e [1]}]}]
+        ]
+    (is (= (s/select p2 data)
+           (s/select p3 data)
+           [[{:a [{:b [{:c 4 :d 5}]}]}]]
+           ))
+    ))
+
+;; TODO: test multi-path with params
+
