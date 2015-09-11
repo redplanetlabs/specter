@@ -619,13 +619,6 @@
   (transform* [^CodeWalkerStructurePath this structure next-fn]
     (codewalk-until (.-afn this) next-fn structure)))
 
-(deftype SelectCollector [sel-fn selector])
-
-(extend-protocol p/Collector
-  SelectCollector
-  (collect-val [^SelectCollector this structure]
-    ((.-sel-fn this) (.-selector this) structure)))
-
 (defn srange-select [structure start end next-fn]
   (next-fn (-> structure vec (subvec start end))))
 
