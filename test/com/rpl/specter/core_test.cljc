@@ -523,3 +523,12 @@
             ))
         ))))
 
+(deftest large-params-test
+  (let [path (apply s/comp-paths (repeat 25 s/keypath))
+        m (reduce 
+            (fn [m k]
+              {k m})
+            :a 
+            (reverse (range 25)))]
+    (is (= :a (s/select-one (apply path (range 25)) m)))
+    ))
