@@ -137,6 +137,7 @@
         latefns-sym (gensym "latefns")
         latefn-syms (vec (i/gensyms (count paths)))]
     (i/pathed-path*
+      i/paramspath*
       paths
       latefns-sym
       [latefn-syms latefns-sym]
@@ -146,6 +147,7 @@
 (defmacro variable-pathed-path [[latepaths-seq-sym paths-seq] & impls]
   (let [latefns-sym (gensym "latefns")]
     (i/pathed-path*
+      i/paramspath*
       paths-seq
       latefns-sym
       []
@@ -153,6 +155,19 @@
                                ~latefns-sym)]
       impls
       )))
+
+(defmacro pathed-collector [[name path] impl]
+  (let [latefns-sym (gensym "latefns")
+        latefn (gensym "latefn")]
+    (i/pathed-path*
+      i/paramscollector*
+      [path]
+      latefns-sym
+      [[latefn] latefns-sym]
+      [name `(~latefn ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]
+      impl
+      )
+    ))
 
 ;; Built-in pathing and context operations
 
@@ -273,11 +288,17 @@
   (transform* [aset structure next-fn]
     (i/filter-transform aset structure next-fn)))
 
-(defn collect [& selector]
-  (i/->SelectCollector select (i/comp-paths* selector)))
+(defn collect [& path]
+  (pathed-collector [late path]
+    (collect* [this structure]
+      (compiled-select late structure)
+      )))
 
-(defn collect-one [& selector]
-  (i/->SelectCollector select-one (i/comp-paths* selector)))
+(defn collect-one [& path]
+  (pathed-collector [late path]
+    (collect* [this structure]
+      (compiled-select-one late structure)
+      )))
 
 
 ;;TODO: add this comment:

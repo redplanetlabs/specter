@@ -381,12 +381,30 @@
        ~num-params
        )))
 
+(defn paramscollector* [post-bindings num-params [_ [_ structure-sym] & body]]
+  `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+                      (let [~@post-bindings ~@[] ; to avoid syntax highlighting issues
+                            c# (do ~@body)]
+                        (next-fn#                                    
+                          ~PARAMS-SYM
+                          (+ ~PARAMS-IDX-SYM ~num-params)
+                          (conj vals# c#)
+                          ~structure-sym)                     
+                        ))]
+     (->ParamsNeededPath
+       (->TransformFunctions
+         RichPathExecutor
+         collector#
+         collector# )
+       ~num-params
+       )))
+
 (defn num-needed-params [path]
   (if (instance? CompiledPath path)
     0
     (:num-needed-params path)))
 
-(defn pathed-path* [paths-seq latefns-sym pre-bindings post-bindings impls]
+(defn pathed-path* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
     `(let [paths# (map comp-paths* ~paths-seq)
            needed-params# (map num-needed-params paths#)
@@ -403,31 +421,12 @@
                           offsets#
                           paths#)
            ~@pre-bindings
-           ret# ~(paramspath* post-bindings num-params-sym impls)
+           ret# ~(builder post-bindings num-params-sym impls)
            ]
     (if (= 0 ~num-params-sym)
       (bind-params* ret# nil 0)
       ret#
       ))))
-
-
-(defn paramscollector* [bindings num-params [_ [_ structure-sym] & body]]
-  `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
-                      (let [~@bindings ~@[] ; to avoid syntax highlighting issues
-                            c# (do ~@body)]
-                        (next-fn#                                    
-                          ~PARAMS-SYM
-                          (+ ~PARAMS-IDX-SYM ~num-params)
-                          (conj vals# c#)
-                          ~structure-sym)                     
-                        ))]
-     (->ParamsNeededPath
-       (->TransformFunctions
-         RichPathExecutor
-         collector#
-         collector# )
-       ~num-params
-       )))
 
 (defn make-param-retrievers [params]
   (->> params
