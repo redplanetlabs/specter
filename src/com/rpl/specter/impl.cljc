@@ -1,20 +1,22 @@
 (ns com.rpl.specter.impl
-  #?(:cljs (:require-macros [com.rpl.specter.prot-opt-invoke
-              :refer [mk-optimized-invocation]]))
+  #?(:cljs (:require-macros
+              [com.rpl.specter.prot-opt-invoke
+                :refer [mk-optimized-invocation]]
+              [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
+              ))
   (:use [com.rpl.specter.protocols :only
     [select* transform* collect-val]])
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
             [clojure.core.reducers :as r]
-            [clojure.string :as s])
+            [clojure.string :as s]
+            #?(:clj [com.rpl.specter.defhelpers :as dh])
+            )
   )
 
 (defn spy [e]
   (println e)
   e)
-
-(defn gensyms [amt]
-  (vec (repeatedly amt gensym)))
 
 (defprotocol PathComposer
   (comp-paths* [paths]))
@@ -70,31 +72,22 @@
 
 (defrecord CompiledPath [transform-fns params params-idx])
 
+(defn compiled-path? [o]
+  (instance? CompiledPath o))
+
 (defn no-params-compiled-path [transform-fns]
   (->CompiledPath transform-fns nil 0))
 
 
 (declare bind-params*)
 
-(defmacro define-ParamsNeededPath []
-  (let [a (with-meta (gensym "array") {:tag 'objects})
-        impls (for [i (range 21)
-                    :let [args (vec (gensyms i))
-                          setters (for [j (range i)] `(aset ~a ~j ~(get args j)))]]
-                `(~'invoke [this# ~@args]
-                  (let [~a (object-array ~i)]
-                    ~@setters
-                    (bind-params* this# ~a 0)
-                    )))]
-    `(defrecord ~'ParamsNeededPath [~'transform-fns ~'num-needed-params]
-       clojure.lang.IFn
-       ~@impls
-       (~'applyTo [this# args#]
-         (let [a# (object-array args#)]
-           (bind-params* this# a# 0))))))
+#?(
+:clj
+(dh/define-ParamsNeededPath clojure.lang.IFn)
 
-
-(define-ParamsNeededPath)
+:cljs
+(dh/define-ParamsNeededPath cljs.core/IFn)
+)
 
 
 (defn bind-params* [^ParamsNeededPath params-needed-path params idx]
@@ -340,102 +333,11 @@
         ))))
 
 
-;; parameterized path helpers
-
-(defn determine-params-impls [[name1 & impl1] [name2 & impl2]]
-  (if (= name1 'select*)
-    [impl1 impl2]
-    [impl2 impl1]))
-
-
-(def PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
-(def PARAMS-IDX-SYM (gensym "params-idx"))
-
-(defn paramspath* [bindings num-params [impl1 impl2]]
-  (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
-         [[_ t-structure-sym t-next-fn-sym] & transform-body]]
-         (determine-params-impls impl1 impl2)]
-    `(->ParamsNeededPath
-       (->TransformFunctions
-         RichPathExecutor
-         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
-           (let [~s-next-fn-sym (fn [structure#]
-                                  (next-fn#                                    
-                                    ~PARAMS-SYM
-                                    (+ ~PARAMS-IDX-SYM ~num-params)
-                                    vals#
-                                    structure#))
-                 ~@bindings]
-             ~@select-body
-             ))
-         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
-           (let [~t-next-fn-sym (fn [structure#]
-                                  (next-fn#
-                                    ~PARAMS-SYM
-                                    (+ ~PARAMS-IDX-SYM ~num-params)
-                                    vals#                                    
-                                    structure#))
-                 ~@bindings]
-             ~@transform-body
-             )))
-       ~num-params
-       )))
-
-(defn paramscollector* [post-bindings num-params [_ [_ structure-sym] & body]]
-  `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
-                      (let [~@post-bindings ~@[] ; to avoid syntax highlighting issues
-                            c# (do ~@body)]
-                        (next-fn#                                    
-                          ~PARAMS-SYM
-                          (+ ~PARAMS-IDX-SYM ~num-params)
-                          (conj vals# c#)
-                          ~structure-sym)                     
-                        ))]
-     (->ParamsNeededPath
-       (->TransformFunctions
-         RichPathExecutor
-         collector#
-         collector# )
-       ~num-params
-       )))
-
 (defn num-needed-params [path]
   (if (instance? CompiledPath path)
     0
     (:num-needed-params path)))
 
-(defn pathed-path* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
-  (let [num-params-sym (gensym "num-params")]
-    `(let [paths# (map comp-paths* ~paths-seq)
-           needed-params# (map num-needed-params paths#)
-           offsets# (cons 0 (reductions + needed-params#))
-           ~num-params-sym (last offsets#)
-           ~latefns-sym (map
-                          (fn [o# p#]
-                            (if (instance? CompiledPath p#)
-                              (fn [params# params-idx#]
-                                p# )
-                              (fn [params# params-idx#]
-                                (bind-params* p# params# (+ params-idx# o#))
-                                )))
-                          offsets#
-                          paths#)
-           ~@pre-bindings
-           ret# ~(builder post-bindings num-params-sym impls)
-           ]
-    (if (= 0 ~num-params-sym)
-      (bind-params* ret# nil 0)
-      ret#
-      ))))
-
-(defn make-param-retrievers [params]
-  (->> params
-       (map-indexed
-         (fn [i p]
-           [p `(aget ~PARAMS-SYM
-                     (+ ~PARAMS-IDX-SYM ~i))]
-           ))
-       (apply concat)))
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell

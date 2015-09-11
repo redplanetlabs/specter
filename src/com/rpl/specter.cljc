@@ -1,6 +1,8 @@
 (ns com.rpl.specter
-  (:use [com.rpl.specter.protocols :only [StructurePath]])
-  (:require [com.rpl.specter.impl :as i])
+  (:use [com.rpl.specter.protocols :only [StructurePath]]
+    )
+  (:require [com.rpl.specter.impl :as i]
+            [com.rpl.specter.macros :as m])
   )
 
 (defn comp-paths [& paths]
@@ -118,8 +120,8 @@
   that needed parameters (in the order in which they were declared)."
   [params & impls]
   (let [num-params (count params)
-        retrieve-params (i/make-param-retrievers params)]
-    (i/paramspath* retrieve-params num-params impls)
+        retrieve-params (m/make-param-retrievers params)]
+    (m/paramspath* retrieve-params num-params impls)
     ))
 
 (defmacro paramscollector
@@ -130,8 +132,8 @@
    "
   [params impl]
   (let [num-params (count params)
-        retrieve-params (i/make-param-retrievers params)]
-    (i/paramscollector* retrieve-params num-params impl)
+        retrieve-params (m/make-param-retrievers params)]
+    (m/paramscollector* retrieve-params num-params impl)
     ))
 
 (defmacro defparamspath [name & body]
@@ -150,13 +152,13 @@
         paths (mapv second bindings)
         names (mapv first bindings)
         latefns-sym (gensym "latefns")
-        latefn-syms (vec (i/gensyms (count paths)))]
-    (i/pathed-path*
-      i/paramspath*
+        latefn-syms (vec (m/gensyms (count paths)))]
+    (m/pathed-path*
+      m/paramspath*
       paths
       latefns-sym
       [latefn-syms latefns-sym]
-      (mapcat (fn [n l] [n `(~l ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]) names latefn-syms)
+      (mapcat (fn [n l] [n `(~l ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM)]) names latefn-syms)
       impls)))
 
 (defmacro variable-pathed-path
@@ -166,12 +168,12 @@
    are required, then the result is executable."
   [[latepaths-seq-sym paths-seq] & impls]
   (let [latefns-sym (gensym "latefns")]
-    (i/pathed-path*
-      i/paramspath*
+    (m/pathed-path*
+      m/paramspath*
       paths-seq
       latefns-sym
       []
-      [latepaths-seq-sym `(map (fn [l#] (l# ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM))
+      [latepaths-seq-sym `(map (fn [l#] (l# ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM))
                                ~latefns-sym)]
       impls
       )))
@@ -184,12 +186,12 @@
   [[name path] impl]
   (let [latefns-sym (gensym "latefns")
         latefn (gensym "latefn")]
-    (i/pathed-path*
-      i/paramscollector*
+    (m/pathed-path*
+      m/paramscollector*
       [path]
       latefns-sym
       [[latefn] latefns-sym]
-      [name `(~latefn ~i/PARAMS-SYM ~i/PARAMS-IDX-SYM)]
+      [name `(~latefn ~m/PARAMS-SYM ~m/PARAMS-IDX-SYM)]
       impl
       )
     ))
