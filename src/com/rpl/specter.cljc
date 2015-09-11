@@ -3,10 +3,6 @@
   (:require [com.rpl.specter.impl :as i])
   )
 
-;;TODO: can make usage of vals much more efficient by determining during composition how many vals
-;;there are going to be. this should make it much easier to allocate space for vals without doing concats
-;;all over the place. The apply to the vals + structure can also be avoided since the number of vals is known
-;;beforehand
 (defn comp-paths [& paths]
   (i/comp-paths* (vec paths)))
 
@@ -108,9 +104,9 @@
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
 
-(def bind-params* i/bind-params*)
+;; Helpers for defining selectors and collectors with late-bound params
 
-;; paramspath* [bindings num-params-sym [impl1 impl2]]
+(def bind-params* i/bind-params*)
 
 (defmacro paramspath [params & impls]
   (let [num-params (count params)
@@ -290,13 +286,13 @@
 
 (defn collect [& path]
   (pathed-collector [late path]
-    (collect* [this structure]
+    (collect-val [this structure]
       (compiled-select late structure)
       )))
 
 (defn collect-one [& path]
   (pathed-collector [late path]
-    (collect* [this structure]
+    (collect-val [this structure]
       (compiled-select-one late structure)
       )))
 
@@ -309,7 +305,7 @@
 ;   e.g., incrementing val at path [:a :b] by 3:
 ;   (transform [:a :b (putval 3)] + some-map)"
 (defparamscollector putval [val]
-  (collect* [this structure]
+  (collect-val [this structure]
     val ))
 
 ;;TODO: test nothing matches case
