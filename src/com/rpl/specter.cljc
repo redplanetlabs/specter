@@ -349,19 +349,19 @@
       (compiled-select-one late structure)
       )))
 
-
-;;TODO: add this comment:
-; "Adds an external value to the collected vals. Useful when additional arguments
-;   are required to the transform function that would otherwise require partial
-;   application or a wrapper function.
-
-;   e.g., incrementing val at path [:a :b] by 3:
-;   (transform [:a :b (putval 3)] + some-map)"
-(defparamscollector putval [val]
+(defparamscollector
+  ^{:doc
+    "Adds an external value to the collected vals. Useful when additional arguments
+     are required to the transform function that would otherwise require partial
+     application or a wrapper function.
+    
+     e.g., incrementing val at path [:a :b] by 3:
+     (transform [:a :b (putval 3)] + some-map)"}
+  putval
+  [val]
   (collect-val [this structure]
     val ))
 
-;;TODO: test nothing matches case
 (defn cond-path
   "Takes in alternating cond-path selector cond-path selector...
    Tests the structure if selecting with cond-path returns anything.
