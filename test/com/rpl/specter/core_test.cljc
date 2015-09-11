@@ -489,5 +489,37 @@
            ))
     ))
 
-;; TODO: test multi-path with params
+(defspec param-multi-path-test
+  (for-all+
+    [k1 gen/keyword
+     k2 gen/keyword
+     k3 gen/keyword
+     m (limit-size 5
+         (gen-map-with-keys
+           gen/keyword
+           gen/int
+           k1
+           k2
+           k3
+           ))
+     pred1 (gen/elements [odd? even?])
+     pred2 (gen/elements [odd? even?])
+     updater (gen/elements [inc dec])
+     ]
+     (let [paths [((s/multi-path [s/keypath pred1] [s/keypath pred2] k3) k1 k2)
+                  ((s/multi-path [k1 pred1] [s/keypath pred2] s/keypath) k2 k3)
+                  ((s/multi-path [s/keypath pred1] [s/keypath pred2] s/keypath) k1 k2 k3)
+                  (s/multi-path [k1 pred1] [k2 pred2] k3)
+                  ((s/multi-path [k1 pred1] [s/keypath pred2] k3) k2)
+                  ]]
+      (and
+        (apply =
+          (for [p paths]
+            (s/select p m)
+            ))
+        (apply =
+          (for [p paths]
+            (s/transform p updater m)
+            ))
+        ))))
 
