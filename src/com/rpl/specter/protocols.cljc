@@ -6,4 +6,3 @@
 
 (defprotocol Collector
   (collect-val [this structure]))
-

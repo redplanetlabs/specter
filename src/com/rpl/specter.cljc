@@ -58,8 +58,8 @@
   [selector structure]
   (compiled-select-first (i/comp-paths* selector) structure))
 
-;; Transformfunctions
 
+;; Transform functions
 
 (def ^{:doc "Version of transform that takes in a selector pre-compiled with comp-paths"}
   compiled-transform i/compiled-transform*)
@@ -114,18 +114,21 @@
 
 (defmacro paramspath [params & impls]
   (let [num-params (count params)
-        retrieve-params (->> params
-                          (map-indexed
-                            (fn [i p]
-                              [p `(aget ~i/PARAMS-SYM
-                                        (+ ~i/PARAMS-IDX-SYM ~i))]
-                              ))
-                          (apply concat))]
+        retrieve-params (i/make-param-retrievers params)]
     (i/paramspath* retrieve-params num-params impls)
+    ))
+
+(defmacro paramscollector [params impl]
+  (let [num-params (count params)
+        retrieve-params (i/make-param-retrievers params)]
+    (i/paramscollector* retrieve-params num-params impl)
     ))
 
 (defmacro defparamspath [name & body]
   `(def ~name (paramspath ~@body)))
+
+(defmacro defparamscollector [name & body]
+  `(def ~name (paramscollector ~@body)))
 
 (defmacro fixed-pathed-path [bindings & impls]
   (let [bindings (partition 2 bindings)
@@ -276,16 +279,17 @@
 (defn collect-one [& selector]
   (i/->SelectCollector select-one (i/comp-paths* selector)))
 
-(defn putval
-  "Adds an external value to the collected vals. Useful when additional arguments
-  are required to the transform function that would otherwise require partial
-  application or a wrapper function.
 
-  e.g., incrementing val at path [:a :b] by 3:
-  (transform [:a :b (putval 3)] + some-map)"
-  [val]
-  (i/->PutValCollector val))
+;;TODO: add this comment:
+; "Adds an external value to the collected vals. Useful when additional arguments
+;   are required to the transform function that would otherwise require partial
+;   application or a wrapper function.
 
+;   e.g., incrementing val at path [:a :b] by 3:
+;   (transform [:a :b (putval 3)] + some-map)"
+(defparamscollector putval [val]
+  (collect* [this structure]
+    val ))
 
 ;;TODO: test nothing matches case
 (defn cond-path

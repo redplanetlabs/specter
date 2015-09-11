@@ -410,6 +410,34 @@
       ret#
       ))))
 
+
+(defn paramscollector* [bindings num-params [_ [_ structure-sym] & body]]
+  `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+                      (let [~@bindings ~@[] ; to avoid syntax highlighting issues
+                            c# (do ~@body)]
+                        (next-fn#                                    
+                          ~PARAMS-SYM
+                          (+ ~PARAMS-IDX-SYM ~num-params)
+                          (conj vals# c#)
+                          ~structure-sym)                     
+                        ))]
+     (->ParamsNeededPath
+       (->TransformFunctions
+         RichPathExecutor
+         collector#
+         collector# )
+       ~num-params
+       )))
+
+(defn make-param-retrievers [params]
+  (->> params
+       (map-indexed
+         (fn [i p]
+           [p `(aget ~PARAMS-SYM
+                     (+ ~PARAMS-IDX-SYM ~i))]
+           ))
+       (apply concat)))
+
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
   #?(:clj (get_cell [cell]))
