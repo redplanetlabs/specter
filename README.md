@@ -153,6 +153,27 @@ Finally, you can make `select` and `transform` work much faster by precompiling 
 
 Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup.
 
+You can even precompile selectors that require parameters! For example, `keypath` can be used to navigate into a map by any arbitrary key, such as numbers, strings, or your own types. One way to use `keypath` would be to parameterize it at the time you use it, like so:
+
+```clojure
+(defn foo [data k]
+  (select [(keypath k) ALL odd?] data))
+```
+
+Without precompilation this code will execute significantly slower. But it seems like it requires precompilation because the selector path is dependent on an argument to the function. Specter gets around this by allowing you to precompile and bind the parameters to the selector later, like so:
+
+```clojure
+(def foo-path (comp-paths keypath ALL odd?))
+(defn foo [data k]
+  (compiled-select (foo-path k) data))
+```
+
+This code will execute extremely efficiently. 
+
+When `comp-paths` is used on selectors that require parameters, the result of `comp-paths` will require parameters equal to the sum of the number of parameters required by each selector. It expects to receive those parameters in the order in which the selectors were declared. This feature, called "late-bound parameterization", also works on selectors which themselves take in selector paths, such as `selected?`, `filterer`, and `transformed`.
+
+To learn how to define your own selectors that can take advantage of late-bound parameterization, take a look at how Specter's built-in selectors [are implemented](https://github.com/nathanmarz/specter/blob/0.7.0/src/com/rpl/specter.cljc#L199). 
+
 Some more examples:
 
 Decrement every value in a map:
