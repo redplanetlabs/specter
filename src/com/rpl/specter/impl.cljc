@@ -551,25 +551,6 @@
       res
       )))
 
-(deftype ViewPath [view-fn])
-
-(extend-protocol p/StructurePath
-  ViewPath
-  (select* [^ViewPath this structure next-fn]
-    (->> structure ((.-view-fn this)) next-fn))
-  (transform* [^ViewPath this structure next-fn]
-    (->> structure ((.-view-fn this)) next-fn)
-    ))
-
-(deftype PutValCollector [val])
-
-(extend-protocol p/Collector
-  PutValCollector
-  (collect-val [^PutValCollector this structure]
-    (.-val this)
-    ))
-
-
 (extend-protocol p/StructurePath
   nil
   (select* [this structure next-fn]
