@@ -292,25 +292,24 @@
   (if-not (instance? CompiledPath path)
     path
     (let [params (:params path)
+          params-idx (:params-idx path)
           selector (-> path :transform-fns :selector)
           transformer (-> path :transform-fns :transformer)]
       (if (empty? params)
         path
-        (->CompiledPath
+        (no-params-compiled-path
           (->TransformFunctions
             RichPathExecutor
-            (fn [x-params params-idx vals structure next-fn]
-              (selector params 0 vals structure
+            (fn [x-params x-params-idx vals structure next-fn]
+              (selector params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
-                  (next-fn x-params params-idx vals-next structure-next)
+                  (next-fn x-params x-params-idx vals-next structure-next)
                   )))
-            (fn [x-params params-idx vals structure next-fn]
-              (transformer params 0 vals structure
+            (fn [x-params x-params-idx vals structure next-fn]
+              (transformer params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
-                  (next-fn x-params params-idx vals-next structure-next)
+                  (next-fn x-params x-params-idx vals-next structure-next)
                   ))))
-          params
-          0
           )))))
 
 (extend-protocol PathComposer
@@ -598,4 +597,3 @@
   (if (afn structure)
     (next-fn structure)
     structure))
-
