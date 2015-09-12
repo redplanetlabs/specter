@@ -1,3 +1,7 @@
+## 0.7.1 (unreleased)
+* view can now be late-bound parameterized
+* Added a late-bound parameterized version of using a function as a selector called "pred"
+
 ## 0.7.0
 * Added late-bound parameterization feauture: allows selectors that require params to be precompiled without the parameters, and the parameters are supplied later in bulk. This effectively enables Specter to be used in any situation with very high performance.
 * Converted Specter built-in selectors to use late-bound parameterization when appropriate
