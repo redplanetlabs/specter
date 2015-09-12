@@ -1,7 +1,7 @@
 # Running Clojure tests
 
 ```
-lein test com.rpl.specter.core-test
+lein test
 ```
 
 # Running ClojureScript tests

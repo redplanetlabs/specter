@@ -2,11 +2,11 @@
 
 Most of Clojure programming involves creating, manipulating, and transforming immutable values. However, as soon as your values become more complicated than a simple map or list – like a list of maps of maps – transforming these data structures becomes extremely cumbersome. 
 
-Specter is a library (for both Clojure and ClojureScript) for querying and updating nested data structures. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
+Specter is a library (for both Clojure and ClojureScript) for doing these queries and transformations extremely concisely and elegantly. One way to think of it is "get-in" and "assoc-in" on steroids, though Specter works on any data structure, not just maps. It is similar to the concept of a "lens" in functional programming, though it has some important extensions.
 
 Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
-Specter is a very high performance library. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
+Specter does not sacrifice performance to achieve its elegance. Actually, Specter is faster than the limited facilities Clojure provides for doing nested operations. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
 
 # Latest Version
 
@@ -17,6 +17,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 # How to use
 
 The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
+
 ```clojure
 user> (use 'com.rpl.specter)
 nil
@@ -66,9 +67,9 @@ user> (transform [(filterer odd?) LAST]
 [2 1 3 6 10 4 8]
 ```
 
-`filterer` navigates you to a view of the sequence currently being looked at. `LAST` navigates you to the last element of whatever sequence you're looking at. But of course during transforms, the transforms are performed on the original data structure. 
+`filterer` navigates you to a view of the sequence currently being looked at whose elements match the provided predicate. `LAST` navigates you to the last element of whatever sequence you're looking at. But of course during transforms, the transforms are performed on the original data structure. 
 
-`srange` is a selector for looking at or replacing a subsequence of a sequence. For example, here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
+`srange` is a selector for manipulating subsequences. For example, here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
 
 ```clojure
 user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
@@ -96,7 +97,7 @@ user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
 [[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
-`END` is a wrapper around `srange-dynamic`, which takes in functions that return the start index and end index given the structure.
+`END` is a wrapper around `srange-dynamic`, which takes in functions that return the start index and end index given the structure. `END` selects the empty subsequence immediately after the last element.
 
 `walker` is another useful selector that walks the data structure until a predicate is matched. Here's how to get all the numbers out of a map:
 
@@ -160,7 +161,7 @@ You can even precompile selectors that require parameters! For example, `keypath
   (select [(keypath k) ALL odd?] data))
 ```
 
-It seems difficult to precompile this path because it is dependent on an argument to the function it is within. Specter gets around this by allowing you to precompile a path without its parameters and bind the parameters to the selector later, like so:
+It seems difficult to precompile the entire path because it is dependent on the argument `k` of `foo`. Specter gets around this by allowing you to precompile a path without its parameters and bind the parameters to the selector later, like so:
 
 ```clojure
 (def foo-path (comp-paths keypath ALL odd?))
@@ -175,6 +176,14 @@ When `comp-paths` is used on selectors that require parameters, the result of `c
 To learn how to define your own selectors that can take advantage of late-bound parameterization, take a look at how Specter's built-in selectors [are implemented](https://github.com/nathanmarz/specter/blob/0.7.0/src/com/rpl/specter.cljc#L199). 
 
 Some more examples:
+
+Reverse the positions of all even numbers between indexes 4 and 11:
+```clojure
+user> (transform [(srange 4 11) (filterer even?)]
+              reverse
+              [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15])
+[0 1 2 3 10 5 8 7 6 9 4 11 12 13 14 15]
+```
 
 Decrement every value in a map:
 ```clojure
