@@ -203,7 +203,12 @@
     (assoc structure key (next-fn (get structure key)))
     ))
 
-(defn view [afn] (i/->ViewPath afn))
+(defparamspath view [afn]
+  (select* [this structure next-fn]
+    (next-fn (afn structure)))
+  (transform* [this structure next-fn]
+    (next-fn (afn structure))
+    ))
 
 (defn selected?
   "Filters the current value based on whether a selector finds anything.
@@ -274,6 +279,16 @@
     (i/filter-select aset structure next-fn))
   (transform* [aset structure next-fn]
     (i/filter-transform aset structure next-fn)))
+
+(defparamspath
+  ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
+          late-bound parameterized version of using a function directly in a path."}
+  pred
+  [afn]
+  (select* [this structure next-fn]
+    (i/filter-select afn structure next-fn))
+  (transform* [this structure next-fn]
+    (i/filter-transform afn structure next-fn)))
 
 (defn collect [& path]
   (pathed-collector [late path]
