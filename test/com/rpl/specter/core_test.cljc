@@ -526,13 +526,13 @@
 #?(:clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))
-        m (reduce 
+        m (reduce
             (fn [m k]
               {k m})
-            :a 
+            :a
             (reverse (range 25)))]
     (is (= :a (s/select-one (apply path (range 25)) m)))
     ))
-;;TODO: there's a bug in clojurescript that won't allow 
+;;TODO: there's a bug in clojurescript that won't allow
 ;; non function implementations of IFn to have more than 20 arguments
 )

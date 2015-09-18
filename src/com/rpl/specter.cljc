@@ -117,7 +117,7 @@
     ))
 
 (defn replace-in
-  "Similar to transform, except returns a pair of [transformd-structure sequence-of-user-ret].
+  "Similar to transform, except returns a pair of [transformed-structure sequence-of-user-ret].
   The transform-fn in this case is expected to return [ret user-ret]. ret is
    what's used to transform the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
@@ -163,6 +163,7 @@
   (transform* [this structure next-fn]
     (i/srange-transform structure start end next-fn)
     ))
+
 
 (def BEGINNING (srange 0 0))
 
@@ -307,7 +308,7 @@
     "Adds an external value to the collected vals. Useful when additional arguments
      are required to the transform function that would otherwise require partial
      application or a wrapper function.
-    
+
      e.g., incrementing val at path [:a :b] by 3:
      (transform [:a :b (putval 3)] + some-map)"}
   putval
