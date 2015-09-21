@@ -13,6 +13,7 @@
                        [cljs.test.check.generators :as gen]
                        [cljs.test.check.properties :as prop :include-macros true]]
                 )
+            [com.rpl.specter.macros :as m]
             [com.rpl.specter :as s]))
 
 ;;TODO:
@@ -522,6 +523,17 @@
             (s/transform p updater m)
             ))
         ))))
+
+(defspec paramsfn-test
+  (for-all+
+    [v (gen/vector (gen/elements (range 10)))
+     val (gen/elements (range 10))
+     op (gen/elements [inc dec])
+     comparator (gen/elements [= > <])]
+    (let [path (s/comp-paths s/ALL (m/paramsfn [p] [v] (comparator v p)))]
+      (= (s/transform (path val) op v)
+         (s/transform [s/ALL #(comparator % val)] op v)))
+      ))
 
 #?(:clj
 (deftest large-params-test

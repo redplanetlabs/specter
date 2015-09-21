@@ -107,6 +107,17 @@
     (paramspath* retrieve-params num-params impls)
     ))
 
+(defmacro paramsfn [params [structure-sym] & impl]
+  `(paramspath ~params
+     (~'select* [this# structure# next-fn#]
+       (let [afn# (fn [~structure-sym] ~@impl)]
+         (filter-select afn# structure# next-fn#)
+         ))
+     (~'transform* [this# structure# next-fn#]
+       (let [afn# (fn [~structure-sym] ~@impl)]
+         (filter-transform afn# structure# next-fn#)
+         ))))
+
 (defmacro paramscollector
   "Defines a Collector with late bound parameters. This collector can be precompiled
   with other selectors without knowing the parameters. When precompiled with other
