@@ -107,6 +107,14 @@ user> (select (walker number?)
 [2 1 2 1 2 6 7 4]
 ```
 
+`keypath` can be used to navigate via non-keyword keys:
+
+```clojure
+user> (select [(keypath "a") (keypath "b")]
+              {"a" {"b" 10}})
+[10]
+```
+
 When doing more involved transformations, you often find you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the transform function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
 
 ```clojure
