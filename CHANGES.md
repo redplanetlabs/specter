@@ -1,4 +1,4 @@
-## 0.7.1 (unreleased)
+## 0.7.1
 * view can now be late-bound parameterized
 * Added a late-bound parameterized version of using a function as a selector called "pred"
 * Added paramsfn helper macro for defining filter functions that take late-bound parameters
