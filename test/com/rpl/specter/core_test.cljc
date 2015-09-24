@@ -2,18 +2,21 @@
   #?(:cljs (:require-macros
              [cljs.test :refer [is deftest]]
              [cljs.test.check.cljs-test :refer [defspec]]
-             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]))
+             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+             [com.rpl.specter.macros :refer [paramsfn]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
-    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]]))
+    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
+    #?(:clj [com.rpl.specter.macros :only [paramsfn]])
+
+    )
   (:require #?@(:clj [[clojure.test.check.generators :as gen]
                       [clojure.test.check.properties :as prop]]
                 :cljs [[cljs.test.check :as tc]
                        [cljs.test.check.generators :as gen]
                        [cljs.test.check.properties :as prop :include-macros true]]
                 )
-            [com.rpl.specter.macros :as m]
             [com.rpl.specter :as s]))
 
 ;;TODO:
@@ -530,7 +533,7 @@
      val (gen/elements (range 10))
      op (gen/elements [inc dec])
      comparator (gen/elements [= > <])]
-    (let [path (s/comp-paths s/ALL (m/paramsfn [p] [v] (comparator v p)))]
+    (let [path (s/comp-paths s/ALL (paramsfn [p] [v] (comparator v p)))]
       (= (s/transform (path val) op v)
          (s/transform [s/ALL #(comparator % val)] op v)))
       ))
