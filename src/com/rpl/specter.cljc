@@ -169,9 +169,21 @@
 
 (def END (srange-dynamic count count))
 
-(defn walker [afn] (i/->WalkerStructurePath afn))
+(defparamspath
+  walker
+  [afn]
+  (select* [this structure next-fn]
+    (i/walk-select afn next-fn structure))
+  (transform* [this structure next-fn]
+    (i/walk-until afn next-fn structure)))
 
-(defn codewalker [afn] (i/->CodeWalkerStructurePath afn))
+(defparamspath
+  codewalker
+  [afn]
+  (select* [this structure next-fn]
+    (i/walk-select afn next-fn structure))
+  (transform* [this structure next-fn]
+    (i/codewalk-until afn next-fn structure)))
 
 (defn filterer
   "Navigates to a view of the current sequence that only contains elements that

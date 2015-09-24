@@ -407,7 +407,7 @@
     (set-last-list l val)
     ))
 
-(defn- walk-until [pred on-match-fn structure]
+(defn walk-until [pred on-match-fn structure]
   (if (pred structure)
     (on-match-fn structure)
     (walk/walk (partial walk-until pred on-match-fn) identity structure)
@@ -418,7 +418,7 @@
       (instance? clojure.lang.LazySeq f)
       (list? f)))
 
-(defn- codewalk-until [pred on-match-fn structure]
+(defn codewalk-until [pred on-match-fn structure]
   (if (pred structure)
     (on-match-fn structure)
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
@@ -455,7 +455,7 @@
   (not (not-selected?* compiled-path structure)))
 
 ;; returns vector of all results
-(defn- walk-select [pred continue-fn structure]
+(defn walk-select [pred continue-fn structure]
   (let [ret (mutable-cell [])
         walker (fn this [structure]
                  (if (pred structure)
@@ -518,24 +518,6 @@
     (if (empty? structure)
       structure
       ((.-setter this) structure (next-fn ((.-getter this) structure))))))
-
-(deftype WalkerStructurePath [afn])
-
-(extend-protocol p/StructurePath
-  WalkerStructurePath
-  (select* [^WalkerStructurePath this structure next-fn]
-    (walk-select (.-afn this) next-fn structure))
-  (transform* [^WalkerStructurePath this structure next-fn]
-    (walk-until (.-afn this) next-fn structure)))
-
-(deftype CodeWalkerStructurePath [afn])
-
-(extend-protocol p/StructurePath
-  CodeWalkerStructurePath
-  (select* [^CodeWalkerStructurePath this structure next-fn]
-    (walk-select (.-afn this) next-fn structure))
-  (transform* [^CodeWalkerStructurePath this structure next-fn]
-    (codewalk-until (.-afn this) next-fn structure)))
 
 (defn srange-select [structure start end next-fn]
   (next-fn (-> structure vec (subvec start end))))
