@@ -22,5 +22,8 @@
                                     :rules :clj}
                                    {:source-paths ["test"]
                                     :output-path "target/test-classes"
-                                    :rules :cljs}]}}
+                                    :rules :cljs}]}
+                   :aliases {"cleantest" ["do" "clean,"
+                                               "cljx" "once,"
+                                               "test"]}}
              })
