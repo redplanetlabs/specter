@@ -22,12 +22,12 @@
   (comp-paths* [paths]))
 
 #+clj
-(do
 (defmacro throw* [etype & args]
   `(throw (new ~etype (pr-str ~@args))))
 
+#+clj
 (defmacro throw-illegal [& args]
-  `(throw* IllegalArgumentException ~@args)))
+  `(throw* IllegalArgumentException ~@args))
 
 
 #+cljs
@@ -132,29 +132,27 @@
       )))
 
 #+clj
-(do
 (defn structure-path-impl [this]
   (if (fn? this)
     ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
     (-> p/StructurePath :impls (get clojure.lang.AFn))
     (find-protocol-impl! p/StructurePath this)))
 
+#+clj
 (defn collector-impl [this]
   (find-protocol-impl! p/Collector this))
-)
 
 
 #+cljs
-(do
 (defn structure-path-impl [obj]
   {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
    :transform* (mk-optimized-invocation p/StructurePath obj transform* 2)
    })
 
+#+cljs
 (defn collector-impl [obj]
   {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
    })
-)
 
 (defn coerce-collector [this]
   (let [cfn (->> this
