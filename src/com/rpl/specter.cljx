@@ -1,25 +1,25 @@
 (ns com.rpl.specter
-  #?(:cljs (:require-macros
-              [com.rpl.specter.macros
-                :refer
-                [pathed-collector
-                 variable-pathed-path
-                 fixed-pathed-path
-                 defparamscollector
-                 defparamspath
-                 paramscollector
-                 paramspath
-                ]]
-              ))
-  (:use [com.rpl.specter.protocols :only [StructurePath]]
-    #?(:clj [com.rpl.specter.macros :only
+  #+cljs (:require-macros
+            [com.rpl.specter.macros
+              :refer
               [pathed-collector
                variable-pathed-path
                fixed-pathed-path
                defparamscollector
                defparamspath
                paramscollector
-               paramspath]])
+               paramspath
+              ]]
+            )
+  (:use [com.rpl.specter.protocols :only [StructurePath]]
+    #+clj [com.rpl.specter.macros :only
+            [pathed-collector
+             variable-pathed-path
+             fixed-pathed-path
+             defparamscollector
+             defparamspath
+             paramscollector
+             paramspath]]
     )
   (:require [com.rpl.specter.impl :as i])
   )
@@ -271,7 +271,7 @@
     (transform* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))))
 
-(extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
+(extend-type #+clj clojure.lang.Keyword #+cljs cljs.core/Keyword
   StructurePath
   (select* [kw structure next-fn]
     (next-fn (get structure kw)))
@@ -279,14 +279,14 @@
     (assoc structure kw (next-fn (get structure kw)))
     ))
 
-(extend-type #?(:clj clojure.lang.AFn :cljs function)
+(extend-type #+clj clojure.lang.AFn #+cljs function
   StructurePath
   (select* [afn structure next-fn]
     (i/filter-select afn structure next-fn))
   (transform* [afn structure next-fn]
     (i/filter-transform afn structure next-fn)))
 
-(extend-type #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
+(extend-type #+clj clojure.lang.PersistentHashSet #+cljs cljs.core/PersistentHashSet
   StructurePath
   (select* [aset structure next-fn]
     (i/filter-select aset structure next-fn))

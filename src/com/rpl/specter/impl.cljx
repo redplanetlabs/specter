@@ -1,16 +1,16 @@
 (ns com.rpl.specter.impl
-  #?(:cljs (:require-macros
-              [com.rpl.specter.prot-opt-invoke
-                :refer [mk-optimized-invocation]]
-              [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
-              ))
+  #+cljs (:require-macros
+            [com.rpl.specter.prot-opt-invoke
+              :refer [mk-optimized-invocation]]
+            [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
+            )
   (:use [com.rpl.specter.protocols :only
     [select* transform* collect-val]])
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
             [clojure.core.reducers :as r]
             [clojure.string :as s]
-            #?(:clj [com.rpl.specter.defhelpers :as dh])
+            #+clj [com.rpl.specter.defhelpers :as dh]
             )
   )
 
@@ -21,8 +21,7 @@
 (defprotocol PathComposer
   (comp-paths* [paths]))
 
-#?(
-:clj
+#+clj
 (do
 (defmacro throw* [etype & args]
   `(throw (new ~etype (pr-str ~@args))))
@@ -31,11 +30,10 @@
   `(throw* IllegalArgumentException ~@args)))
 
 
-:cljs
+#+cljs
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args)))
   )
-)
 
 (defn benchmark [iters afn]
   (time
@@ -81,8 +79,7 @@
 
 (declare bind-params*)
 
-#?(
-:clj
+#+clj
 (dh/define-ParamsNeededPath
   clojure.lang.IFn
   invoke
@@ -90,7 +87,7 @@
     (let [a (object-array args)]
       (com.rpl.specter.impl/bind-params* this a 0))))
 
-:cljs
+#+cljs
 (define-ParamsNeededPath
   cljs.core/IFn
   -invoke
@@ -104,7 +101,6 @@
                 rest))]
       (com.rpl.specter.impl/bind-params* this a 0))
     ))
-)
 
 
 (defn bind-params* [^ParamsNeededPath params-needed-path params idx]
@@ -126,8 +122,7 @@
         optimized performance. Instead, you should extend the protocols via an
         explicit extend-protocol call. \n" obj))
 
-#?(
-:clj
+#+clj
 
 (defn find-protocol-impl! [prot obj]
   (let [ret (find-protocol-impl prot obj)]
@@ -135,9 +130,8 @@
       (throw-illegal (no-prot-error-str obj))
       ret
       )))
-)
 
-#?(:clj
+#+clj
 (do
 (defn structure-path-impl [this]
   (if (fn? this)
@@ -147,10 +141,10 @@
 
 (defn collector-impl [this]
   (find-protocol-impl! p/Collector this))
-))
+)
 
 
-#?(:cljs
+#+cljs
 (do
 (defn structure-path-impl [obj]
   {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
@@ -160,7 +154,7 @@
 (defn collector-impl [obj]
   {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
    })
-))
+)
 
 (defn coerce-collector [this]
   (let [cfn (->> this
@@ -220,23 +214,21 @@
   (coerce-path [this]
     this)
   
-  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
+  #+clj java.util.List #+cljs cljs.core/PersistentVector
   (coerce-path [this]
     (comp-paths* this))
 
-  #?@(:cljs [
-    cljs.core/IndexedSeq
-    (coerce-path [this]
-      (coerce-path (vec this)))
-    cljs.core/EmptyList
-    (coerce-path [this]
-      (coerce-path (vec this)))
-    cljs.core/List
-    (coerce-path [this]
-      (coerce-path (vec this)))
-    ])
+  #+cljs cljs.core/IndexedSeq
+  #+cljs (coerce-path [this]
+           (coerce-path (vec this)))
+  #+cljs cljs.core/EmptyList
+  #+cljs (coerce-path [this]
+           (coerce-path (vec this)))
+  #+cljs cljs.core/List
+  #+cljs (coerce-path [this]
+           (coerce-path (vec this)))
   
-  #?(:clj Object :cljs default)
+  #+clj Object #+cljs default
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
           (satisfies? p/Collector this) (coerce-collector this)
@@ -316,10 +308,10 @@
   nil
   (comp-paths* [sp]
     (coerce-path sp))
-  #?(:clj Object :cljs default)
+  #+clj Object #+cljs default
   (comp-paths* [sp]
     (coerce-path sp))
-  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
+  #+clj java.util.List #+cljs cljs.core/PersistentVector
   (comp-paths* [structure-paths]
     (if (empty? structure-paths)
       (coerce-path nil)
@@ -357,12 +349,12 @@
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
-  #?(:clj (get_cell [cell]))
+  #+clj (get_cell [cell])
   (set_cell [cell x]))
 
 (deftype MutableCell [^:volatile-mutable q]
   PMutableCell
-  #?(:clj (get_cell [cell] q))
+  #+clj (get_cell [cell] q)
   (set_cell [this x] (set! q x)))
 
 (defn mutable-cell
@@ -373,7 +365,7 @@
   (set_cell cell val))
 
 (defn get-cell [cell]
-  #?(:clj (get_cell cell) :cljs (.-q cell))
+  #+clj (get_cell cell) #+cljs (.-q cell)
   )
 
 (defn update-cell! [cell afn]
@@ -395,12 +387,12 @@
   (append (butlast l) v))
 
 (extend-protocol SetExtremes
-  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
   (set-first [v val]
     (assoc v 0 val))
   (set-last [v val]
     (assoc v (-> v count dec) val))
-  #?(:clj Object :cljs default)
+  #+clj Object #+cljs default
   (set-first [l val]
     (set-first-list l val))
   (set-last [l val]

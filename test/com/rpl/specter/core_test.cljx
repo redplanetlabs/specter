@@ -1,22 +1,22 @@
 (ns com.rpl.specter.core-test
-  #?(:cljs (:require-macros
-             [cljs.test :refer [is deftest]]
-             [cljs.test.check.cljs-test :refer [defspec]]
-             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
-             [com.rpl.specter.macros :refer [paramsfn]]))
+  #+cljs (:require-macros
+           [cljs.test :refer [is deftest]]
+           [cljs.test.check.cljs-test :refer [defspec]]
+           [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+           [com.rpl.specter.macros :refer [paramsfn]])
   (:use
-    #?(:clj [clojure.test :only [deftest is]])
-    #?(:clj [clojure.test.check.clojure-test :only [defspec]])
-    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
-    #?(:clj [com.rpl.specter.macros :only [paramsfn]])
+    #+clj [clojure.test :only [deftest is]]
+    #+clj [clojure.test.check.clojure-test :only [defspec]]
+    #+clj [com.rpl.specter.test-helpers :only [for-all+]]
+    #+clj [com.rpl.specter.macros :only [paramsfn]]
 
     )
-  (:require #?@(:clj [[clojure.test.check.generators :as gen]
-                      [clojure.test.check.properties :as prop]]
-                :cljs [[cljs.test.check :as tc]
-                       [cljs.test.check.generators :as gen]
-                       [cljs.test.check.properties :as prop :include-macros true]]
-                )
+
+  (:require #+clj [clojure.test.check.generators :as gen]
+            #+clj [clojure.test.check.properties :as prop]
+            #+cljs [cljs.test.check :as tc]
+            #+cljs [cljs.test.check.generators :as gen]
+            #+cljs [cljs.test.check.properties :as prop :include-macros true]
             [com.rpl.specter :as s]))
 
 ;;TODO:
@@ -62,7 +62,7 @@
     ))
 
 (deftest select-one-test
-   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one [s/ALL even?] [1 2 3 4])))
+   (is (thrown? #+clj Exception #+cljs js/Error (s/select-one [s/ALL even?] [1 2 3 4])))
    (is (= 1 (s/select-one [s/ALL odd?] [2 4 1 6])))
    )
 
@@ -393,7 +393,7 @@
 
 (deftest nil-select-one-test
   (is (= nil (s/select-one! s/ALL [nil])))
-  (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
+  (is (thrown? #+clj Exception #+cljs js/Error (s/select-one! s/ALL [])))
   )
 
 
@@ -538,7 +538,7 @@
          (s/transform [s/ALL #(comparator % val)] op v)))
       ))
 
-#?(:clj
+#+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))
         m (reduce
@@ -550,4 +550,4 @@
     ))
 ;;TODO: there's a bug in clojurescript that won't allow
 ;; non function implementations of IFn to have more than 20 arguments
-)
+
