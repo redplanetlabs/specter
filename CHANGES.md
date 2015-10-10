@@ -1,5 +1,7 @@
 ## 0.8.0 (unreleased)
 * Now compatible with Clojure 1.6.0 and 1.5.1 by switching build to cljx (thanks @MerelyAPseudonym)
+* Added subset selector (like srange but for sets)
+* Added nil->val, NIL->SET, NIL->LIST, and NIL->VECTOR selectors to make it easier to manipulate maps (e.g. (setval [:akey NIL->SET (subset #{})] #{:a :b} amap) to conj that set into a value for a map, even if nothing was at that key at the start)
 
 ## 0.7.1
 * view can now be late-bound parameterized
