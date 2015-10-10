@@ -1,3 +1,6 @@
+## 0.8.0 (unreleased)
+* Now compatible with Clojure 1.6.0 and 1.5.1 by switching build to cljx (thanks @MerelyAPseudonym)
+
 ## 0.7.1
 * view can now be late-bound parameterized
 * Added a late-bound parameterized version of using a function as a selector called "pred"
