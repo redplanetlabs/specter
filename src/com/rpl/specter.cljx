@@ -21,7 +21,8 @@
              paramscollector
              paramspath]]
     )
-  (:require [com.rpl.specter.impl :as i])
+  (:require [com.rpl.specter.impl :as i]
+            [clojure.set :as set])
   )
 
 (defn comp-paths [& paths]
@@ -164,10 +165,25 @@
     (i/srange-transform structure start end next-fn)
     ))
 
-
 (def BEGINNING (srange 0 0))
 
 (def END (srange-dynamic count count))
+
+(defparamspath
+  ^{:doc "Navigates to the specified subset (by taking an intersection).
+          In a transform, that subset in the original set is changed to the
+          new value of the subset."}
+  subset
+  [aset]
+  (select* [this structure next-fn]
+    (next-fn (set/intersection structure aset)))
+  (transform* [this structure next-fn]
+    (let [subset  (set/intersection structure aset)
+          newset (next-fn subset)]
+      (-> structure
+          (set/difference subset)
+          (set/union newset))
+          )))
 
 (defparamspath
   walker
@@ -302,6 +318,20 @@
     (i/filter-select afn structure next-fn))
   (transform* [this structure next-fn]
     (i/filter-transform afn structure next-fn)))
+
+(defparamspath
+  ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
+          navigated at the structure."}
+  nil->val
+  [v]
+  (select* [this structure next-fn]
+    (next-fn (if structure structure v)))
+  (transform* [this structure next-fn]
+    (next-fn (if structure structure v))))
+
+(def NIL->SET (nil->val #{}))
+(def NIL->LIST (nil->val '()))
+(def NIL->VECTOR (nil->val []))
 
 (defn collect [& path]
   (pathed-collector [late path]
