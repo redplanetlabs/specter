@@ -7,6 +7,8 @@
   :jvm-opts ["-XX:-OmitStackTraceInFastThrow"] ; this prevents JVM from doing optimizations which can remove stack traces from NPE and other exceptions
   :source-paths ["src"]
   :test-paths ["test", "target/test-classes"]
+  :jar-exclusions [#"\.cljx"]
+  :auto-clean false
   :profiles {:dev {:dependencies
                    [[org.clojure/test.check "0.7.0"]]
                    :plugins
@@ -23,7 +25,9 @@
                                    {:source-paths ["test"]
                                     :output-path "target/test-classes"
                                     :rules :cljs}]}
-                   :aliases {"cleantest" ["do" "clean,"
-                                               "cljx" "once,"
-                                               "test"]}}
-             })
+                   }
+             }
+  :aliases {"cleantest" ["do" "clean,"
+                         "cljx" "once,"
+                         "test"]
+            "deploy" ["do" "clean," "cljx" "once," "deploy" "clojars"]})
