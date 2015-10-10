@@ -17,7 +17,8 @@
             #+cljs [cljs.test.check :as tc]
             #+cljs [cljs.test.check.generators :as gen]
             #+cljs [cljs.test.check.properties :as prop :include-macros true]
-            [com.rpl.specter :as s]))
+            [com.rpl.specter :as s]
+            [clojure.set :as set]))
 
 ;;TODO:
 ;; test walk, codewalk
@@ -537,6 +538,24 @@
       (= (s/transform (path val) op v)
          (s/transform [s/ALL #(comparator % val)] op v)))
       ))
+
+(defspec subset-test
+  (for-all+
+    [s1 (gen/vector (limit-size 5 gen/keyword))
+     s2 (gen/vector (limit-size 5 gen/keyword))
+     s3 (gen/vector (limit-size 5 gen/int))
+     s4 (gen/vector (limit-size 5 gen/keyword))]
+    (let [s1 (set s1)
+          s2 (set s1)
+          s3 (set s1)
+          s4 (set s1)
+          combined (set/union s1 s2)
+          ss (set/union s2 s3)]
+      (and
+        (= (s/transform (s/subset s3) identity combined) combined)
+        (= (s/setval (s/subset s3) #{} combined) (set/difference combined s2))
+        (= (s/setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))
+        ))))
 
 #+clj
 (deftest large-params-test
