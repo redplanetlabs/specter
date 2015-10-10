@@ -557,6 +557,15 @@
         (= (s/setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))
         ))))
 
+(deftest nil->val-test
+  (is (= {:a #{:b}}
+         (s/setval [:a s/NIL->SET (s/subset #{})] #{:b} nil)))
+  (is (= {:a #{:b :c :d}}
+         (s/setval [:a s/NIL->SET (s/subset #{})] #{:b} {:a #{:c :d}})))
+  (is (= {:a [:b]}
+         (s/setval [:a s/NIL->VECTOR s/END] [:b] nil)))
+  )
+
 #+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))
