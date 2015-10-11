@@ -14,31 +14,16 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 [![Current Version](https://clojars.org/com.rpl/specter/latest-version.svg)](https://clojars.org/com.rpl/specter)
 
-# How to use
+# Learn Specter
 
-The usage of Specter will be explained via example. Suppose you have a sequence of maps, and you want to extract all the even values for :a keys. Here's how you do it:
+- Introductory blog post: [Functional-navigational programming in Clojure(Script) with Specter](http://nathanmarz.com/blog/functional-navigational-programming-in-clojurescript-with-sp.html)
+- Talk about Specter: [Specter: Clojure's missing piece](https://www.youtube.com/watch?v=mXZxkpX5nt8)
 
-```clojure
-user> (use 'com.rpl.specter)
-nil
-user> (select [ALL :a even?]
-              [{:a 1} {:a 2} {:a 4} {:a 3}])
-[2 4]
-```
+Specter's API is contained in a single, well-documented file: [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/com/rpl/specter.cljx)
 
-`select` extracts a sequence of results from a data structure. It takes in a "selector", which is a sequence of steps on how to navigate into that data structure. In this case, `ALL` looks at every element in the sequence, `:a` looks at the :a key for each element currently navigated to, and `even?` filters out any elements that aren't an even value.
+# Examples
 
-If you had a map with a sequence as the value for the :a key, here's how to get all odd numbers in that sequence:
-
-```clojure
-user> (use 'com.rpl.specter)
-nil
-user> (select [:a ALL odd?]
-              {:a [1 2 3 5] :b :c})
-[1 3 5]
-```
-
-Another function called `transform` is used to perform a transformation on a data structure. In addition to a selector, it takes in an "transform function" which specifies what to do with each element navigated to. For example, here's how to increment all the even values for :a keys in a sequence of maps:
+Here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
 user> (transform [ALL :a even?]
@@ -47,18 +32,14 @@ user> (transform [ALL :a even?]
 [{:a 1} {:a 3} {:a 5} {:a 3}]
 ```
 
-Here's another example of transform:
-
+Here's how to retrieve every number divisible by 3 out of a sequence of sequences:
 ```clojure
-user> (use 'com.rpl.specter)
-nil
-user> (transform [:a ALL odd?]
-              dec
-              {:a [1 2 3 5] :b :c})
-{:b :c, :a [0 2 2 4]}
+user> (select [ALL ALL #(= 0 (mod % 3))]
+              [[1 2 3 4] [] [5 3 2 18] [2 4 6] [12]])
+[3 3 18 6 12]
 ```
 
-Specter comes with all sorts of built-in ways of navigating data structures. For example, here's how to increment the last odd number in a sequence:
+Here's how to increment the last odd number in a sequence:
 
 ```clojure
 user> (transform [(filterer odd?) LAST]
@@ -67,23 +48,14 @@ user> (transform [(filterer odd?) LAST]
 [2 1 3 6 10 4 8]
 ```
 
-`filterer` navigates you to a view of the sequence currently being looked at whose elements match the provided predicate. `LAST` navigates you to the last element of whatever sequence you're looking at. But of course during transforms, the transforms are performed on the original data structure. 
-
-`srange` is a selector for manipulating subsequences. For example, here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
+Here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
 
 ```clojure
 user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
 [0 2 2 4 4 5 6 7]
 ```
 
-`srange` can also be used to replace that subsequence entirely with a new sequence. For example, here's how to replace the subsequence from index 2 to 4 with [-1 -1 -1]:
-
-```clojure
-user> (transform (srange 2 4) (fn [_] [-1 -1 -1]) [0 1 2 3 4 5 6 7 8 9])
-[0 1 -1 -1 -1 4 5 6 7 8 9]
-```
-
-The above can be written more concisely using the `setval` function, which is a wrapper around `transform`:
+Here's how to replace the subsequence from index 2 to 4 with [-1 -1 -1]:
 
 ```clojure
 user> (setval (srange 2 4) [-1 -1 -1] [0 1 2 3 4 5 6 7 8 9])
@@ -97,9 +69,7 @@ user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
 [[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
-`END` is a wrapper around `srange-dynamic`, which takes in functions that return the start index and end index given the structure. `END` selects the empty subsequence immediately after the last element.
-
-`walker` is another useful selector that walks the data structure until a predicate is matched. Here's how to get all the numbers out of a map:
+Here's how to get all the numbers out of a map, no matter how they're nested:
 
 ```clojure
 user> (select (walker number?)
@@ -107,12 +77,40 @@ user> (select (walker number?)
 [2 1 2 1 2 6 7 4]
 ```
 
-`keypath` can be used to navigate via non-keyword keys:
+Here's now to navigate via non-keyword keys:
 
 ```clojure
 user> (select [(keypath "a") (keypath "b")]
               {"a" {"b" 10}})
 [10]
+```
+
+Here's how to reverse the positions of all even numbers between indexes 4 and 11:
+
+```clojure
+user> (transform [(srange 4 11) (filterer even?)]
+              reverse
+              [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15])
+[0 1 2 3 10 5 8 7 6 9 4 11 12 13 14 15]
+```
+
+Here's how to decrement every value in a map:
+
+```clojure
+user> (transform [ALL LAST]
+              dec
+              {:a 1 :b 3})
+{:b 2 :a 0}
+```
+
+Here's how to append [:c :d] to every subsequence that has at least two even numbers:
+```clojure
+user> (setval [ALL
+               (selected? (filterer even?) (view count) #(>= % 2))
+               END]
+              [:c :d]
+              [[1 2 3 4 5 6] [7 0 -1] [8 8] []])
+[[1 2 3 4 5 6 :c :d] [7 0 -1] [8 8 :c :d] []]
 ```
 
 When doing more involved transformations, you often find you lose context when navigating deep within a data structure and need information "up" the data structure to perform the transformation. Specter solves this problem by allowing you to collect values during navigation to use in the transform function. Here's an example which transforms a sequence of maps by adding the value of the :b key to the value of the :a key, but only if the :a key is even:
@@ -128,30 +126,26 @@ The transform function receives as arguments all the collected values followed b
 
 The four built-in ways for collecting values are `VAL`, `collect`, `collect-one`, and `putval`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value. Finally, `putval` adds an external value into the collected values list.
 
-To make your own selector, implement the `StructurePath` protocol which looks like:
 
+Here's how to increment the value for :a key by 10:
 ```clojure
-(defprotocol StructurePath
-  (select* [this structure next-fn])
-  (transform* [this structure next-fn])
-  )
+user> (transform [:a (putval 10)]
+              +
+              {:a 1 :b 3})
+{:b 3 :a 11}
 ```
 
-As an example, here is how Clojure keywords implement this protocol:
+
+For every map in a sequence, increment every number in :c's value if :a is even or increment :d if :a is odd:
 
 ```clojure
-(extend-type clojure.lang.Keyword
-  StructurePath
-  (select* [kw structure next-fn]
-    (next-fn (get structure kw)))
-  (transform* [kw structure next-fn]
-    (assoc structure kw (next-fn (get structure kw)))
-    ))
+user> (transform [ALL (if-path [:a even?] [:c ALL] :d)]
+              inc
+              [{:a 2 :c [1 2] :d 4} {:a 4 :c [0 10 -1]} {:a -1 :c [1 1 1] :d 1}])
+[{:c [2 3], :d 4, :a 2} {:c [1 11 0], :a 4} {:c [1 1 1], :d 2, :a -1}]
 ```
 
-`next-fn` represents the rest of the select or transform, respectively. As you can see, this implementation perfectly captures what it means to navigate via a keyword within a data structure. In the select case, it completes the select by calling `next-fn` on the value of the keyword. In the transform case, it transforms the nested data structure using next-fn and then replaces the current value of the keyword with that transformed data structure.
-
-Finally, you can make `select` and `transform` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of transform:
+You can make `select` and `transform` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of transform:
 
 ```clojure
 (def precompiled (comp-paths ALL :a even?))
@@ -181,59 +175,6 @@ This code will execute extremely efficiently.
 
 When `comp-paths` is used on selectors that require parameters, the result of `comp-paths` will require parameters equal to the sum of the number of parameters required by each selector. It expects to receive those parameters in the order in which the selectors were declared. This feature, called "late-bound parameterization", also works on selectors which themselves take in selector paths, such as `selected?`, `filterer`, and `transformed`.
 
-To learn how to define your own selectors that can take advantage of late-bound parameterization, take a look at how Specter's built-in selectors [are implemented](https://github.com/nathanmarz/specter/blob/0.7.0/src/com/rpl/specter.cljc#L199). 
-
-Some more examples:
-
-Reverse the positions of all even numbers between indexes 4 and 11:
-```clojure
-user> (transform [(srange 4 11) (filterer even?)]
-              reverse
-              [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15])
-[0 1 2 3 10 5 8 7 6 9 4 11 12 13 14 15]
-```
-
-Decrement every value in a map:
-```clojure
-user> (transform [ALL LAST]
-              dec
-              {:a 1 :b 3})
-{:b 2 :a 0}
-```
-
-Increment the value for :a key by 10:
-```clojure
-user> (transform [:a (putval 10)]
-              +
-              {:a 1 :b 3})
-{:b 3 :a 11}
-```
-
-Get every number divisible by 3 out of a sequence of sequences:
-```clojure
-user> (select [ALL ALL #(= 0 (mod % 3))]
-              [[1 2 3 4] [] [5 3 2 18] [2 4 6] [12]])
-[3 3 18 6 12]
-```
-
-Append [:c :d] to every subsequence that has at least two even numbers:
-```clojure
-user> (setval [ALL
-               (selected? (filterer even?) (view count) #(>= % 2))
-               END]
-              [:c :d]
-              [[1 2 3 4 5 6] [7 0 -1] [8 8] []])
-[[1 2 3 4 5 6 :c :d] [7 0 -1] [8 8 :c :d] []]
-```
-
-For every map in a sequence, increment every number in :c's value if :a is even or increment :d if :a is odd:
-
-```clojure
-user> (transform [ALL (if-path [:a even?] [:c ALL] :d)]
-              inc
-              [{:a 2 :c [1 2] :d 4} {:a 4 :c [0 10 -1]} {:a -1 :c [1 1 1] :d 1}])
-[{:c [2 3], :d 4, :a 2} {:c [1 11 0], :a 4} {:c [1 1 1], :d 2, :a -1}]
-```
 
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs
