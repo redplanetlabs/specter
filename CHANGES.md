@@ -1,3 +1,6 @@
+## 0.8.1 (unreleased)
+* Fixed bug where comp-paths wouldn't work on lazy seqs in cljs
+
 ## 0.8.0
 * Now compatible with Clojure 1.6.0 and 1.5.1 by switching build to cljx (thanks @MerelyAPseudonym)
 * Added subset selector (like srange but for sets)
