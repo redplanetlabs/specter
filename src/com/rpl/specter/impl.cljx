@@ -225,6 +225,9 @@
   #+cljs cljs.core/List
   #+cljs (coerce-path [this]
            (coerce-path (vec this)))
+  #+cljs cljs.core/LazySeq
+  #+cljs (coerce-path [this]
+           (coerce-path (vec this)))
   
   #+clj Object #+cljs default
   (coerce-path [this]
