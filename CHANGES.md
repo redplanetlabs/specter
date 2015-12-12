@@ -1,4 +1,4 @@
-## 0.9.0 (unreleased)
+## 0.9.0
 * Fixed bug where comp-paths wouldn't work on lazy seqs in cljs
 * Renamed defparamspath and defparamscollector to defpath and defcollector
 * For Clojure version only, implemented protocol paths (see #38)
