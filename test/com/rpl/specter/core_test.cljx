@@ -3,12 +3,12 @@
            [cljs.test :refer [is deftest]]
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
-           [com.rpl.specter.macros :refer [paramsfn]])
+           [com.rpl.specter.macros :refer [paramsfn defprotocolpath defpath extend-protocolpath]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
     #+clj [com.rpl.specter.test-helpers :only [for-all+]]
-    #+clj [com.rpl.specter.macros :only [paramsfn]]
+    #+clj [com.rpl.specter.macros :only [paramsfn defprotocolpath defpath extend-protocolpath]]
 
     )
 
@@ -579,3 +579,51 @@
 ;;TODO: there's a bug in clojurescript that won't allow
 ;; non function implementations of IFn to have more than 20 arguments
 
+#+clj
+(do
+  (defprotocolpath AccountPath [])
+  (defrecord Account [funds])
+  (defrecord User [account])
+  (defrecord Family [accounts])
+  (extend-protocolpath AccountPath User :account Family [:accounts s/ALL])
+  )
+
+#+clj
+(deftest protocolpath-basic-test
+  (let [data [(->User (->Account 30))
+              (->User (->Account 50))
+              (->Family [(->Account 51) (->Account 52)])]]
+    (is (= [30 50 51 52]
+           (s/select [s/ALL AccountPath :funds] data)))
+    (is (= [(->User (->Account 31))
+            (->User (->Account 51))
+            (->Family [(->Account 52) (->Account 53)])]
+           (s/transform [s/ALL AccountPath :funds]
+                      inc
+                      data)))
+    ))
+
+#+clj
+(do
+  (defprotocolpath LabeledAccountPath [label])
+  (defrecord LabeledUser [account])
+  (defrecord LabeledFamily [accounts])
+  (extend-protocolpath LabeledAccountPath
+    LabeledUser [:account s/keypath]
+    LabeledFamily [:accounts s/keypath s/ALL])
+  )
+
+#+clj
+(deftest protocolpath-params-test
+  (let [data [(->LabeledUser {:a (->Account 30)})
+              (->LabeledUser {:a (->Account 50)})
+              (->LabeledFamily {:a [(->Account 51) (->Account 52)]})]]
+    (is (= [30 50 51 52]
+           (s/select [s/ALL (LabeledAccountPath :a) :funds] data)))
+    (is (= [(->LabeledUser {:a (->Account 31)})
+            (->LabeledUser {:a (->Account 51)})
+            (->LabeledFamily {:a [(->Account 52) (->Account 53)]})]
+           (s/transform [s/ALL (LabeledAccountPath :a) :funds]
+                      inc
+                      data)))
+    ))

@@ -566,12 +566,12 @@
 (defn params-needed-transformer [^com.rpl.specter.impl.ParamsNeededPath path]
   (-> path .-transform-fns .-transformer))
 
-
+#+clj
 (defn extend-protocolpath* [protpath-prot extensions]
   (let [extensions (partition 2 extensions)
         m (-> protpath-prot :sigs keys first)]
     (doseq [[atype apath] extensions]
-      ;;TODO: validate that the path has the correct number of args
+      ;;TODO: validate that the path has the correct number of args (or none at all)
       (let [p (comp-paths* apath)]
         (extend atype protpath-prot {m (fn [_] p)})
         ))))
