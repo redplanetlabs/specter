@@ -18,31 +18,40 @@
   (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
          (determine-params-impls impl1 impl2)]
-    `(->ParamsNeededPath
-       (->TransformFunctions
-         RichPathExecutor
-         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
-           (let [~s-next-fn-sym (fn [structure#]
-                                  (next-fn#                                    
-                                    ~PARAMS-SYM
-                                    (+ ~PARAMS-IDX-SYM ~num-params)
-                                    vals#
-                                    structure#))
-                 ~@bindings]
-             ~@select-body
-             ))
-         (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
-           (let [~t-next-fn-sym (fn [structure#]
-                                  (next-fn#
-                                    ~PARAMS-SYM
-                                    (+ ~PARAMS-IDX-SYM ~num-params)
-                                    vals#                                    
-                                    structure#))
-                 ~@bindings]
-             ~@transform-body
-             )))
-       ~num-params
-       )))
+    (if (= 0 num-params)
+      `(no-params-compiled-path
+         (->TransformFunctions
+           StructurePathExecutor
+           (fn [~s-structure-sym ~s-next-fn-sym]
+             ~@select-body)
+           (fn [~t-structure-sym ~t-next-fn-sym]
+             ~@transform-body)
+           ))
+      `(->ParamsNeededPath
+         (->TransformFunctions
+           RichPathExecutor
+           (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
+             (let [~s-next-fn-sym (fn [structure#]
+                                    (next-fn#
+                                      ~PARAMS-SYM
+                                      (+ ~PARAMS-IDX-SYM ~num-params)
+                                      vals#
+                                      structure#))
+                   ~@bindings]
+               ~@select-body
+               ))
+           (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
+             (let [~t-next-fn-sym (fn [structure#]
+                                    (next-fn#
+                                      ~PARAMS-SYM
+                                      (+ ~PARAMS-IDX-SYM ~num-params)
+                                      vals#
+                                      structure#))
+                   ~@bindings]
+               ~@transform-body
+               )))
+         ~num-params
+         ))))
 
 (defn paramscollector* [post-bindings num-params [_ [_ structure-sym] & body]]
   `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
@@ -130,10 +139,10 @@
     (paramscollector* retrieve-params num-params impl)
     ))
 
-(defmacro defparamspath [name & body]
+(defmacro defpath [name & body]
   `(def ~name (paramspath ~@body)))
 
-(defmacro defparamscollector [name & body]
+(defmacro defcollector [name & body]
   `(def ~name (paramscollector ~@body)))
 
 (defmacro fixed-pathed-path
@@ -190,3 +199,51 @@
       )
     ))
 
+(defn- protpath-sym [name]
+  (-> name (str "-prot") symbol))
+
+(defmacro defprotocolpath [name params]
+  (let [prot-name (protpath-sym name)
+        m (-> name (str "-retrieve") symbol)
+        num-params (count params)
+        ssym (gensym "structure")
+        sargs [ssym (gensym "next-fn")]
+        rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
+        retrieve `(~m ~ssym)
+        ]
+    `(do
+        (defprotocol ~prot-name (~m [structure#]))
+        (def ~name
+          (if (= ~num-params 0)
+            (no-params-compiled-path
+              (->TransformFunctions
+                StructurePathExecutor
+                (fn ~sargs
+                  (let [path# ~retrieve
+                        selector# (compiled-selector path#)]
+                    (selector# ~@sargs)
+                    ))
+                (fn ~sargs
+                  (let [path# ~retrieve
+                        transformer# (compiled-transformer path#)]
+                    (transformer# ~@sargs)
+                    ))))
+            (->ParamsNeededPath
+              (->TransformFunctions
+                RichPathExecutor
+                (fn ~rargs
+                  (let [path# ~retrieve
+                        selector# (params-needed-selector path#)]
+                    (selector# ~@rargs)
+                    ))
+                (fn ~rargs
+                  (let [path# ~retrieve
+                        transformer# (params-needed-transformer path#)]
+                    (transformer# ~@rargs)
+                    )))
+              ~num-params
+              )
+            )))))
+
+(defmacro extend-protocolpath [protpath & extensions]
+  `(extend-protocolpath* ~(protpath-sym protpath) ~(vec extensions)))

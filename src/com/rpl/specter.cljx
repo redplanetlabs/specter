@@ -5,8 +5,8 @@
               [pathed-collector
                variable-pathed-path
                fixed-pathed-path
-               defparamscollector
-               defparamspath
+               defcollector
+               defpath
                paramscollector
                paramspath
               ]]
@@ -16,8 +16,8 @@
             [pathed-collector
              variable-pathed-path
              fixed-pathed-path
-             defparamscollector
-             defparamspath
+             defcollector
+             defpath
              paramscollector
              paramspath]]
     )
@@ -143,7 +143,7 @@
 
 (def FIRST (comp-paths (i/->PosStructurePath first i/set-first)))
 
-(defparamspath
+(defpath
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
           to select when navigating. Each function takes in the structure as input."}
   srange-dynamic
@@ -154,7 +154,7 @@
     (i/srange-transform structure (start-fn structure) (end-fn structure) next-fn)
     ))
 
-(defparamspath
+(defpath
   ^{:doc "Navigates to the subsequence bound by the indexes start (inclusive)
           and end (exclusive)"}
   srange
@@ -169,7 +169,7 @@
 
 (def END (srange-dynamic count count))
 
-(defparamspath
+(defpath
   ^{:doc "Navigates to the specified subset (by taking an intersection).
           In a transform, that subset in the original set is changed to the
           new value of the subset."}
@@ -185,7 +185,7 @@
           (set/union newset))
           )))
 
-(defparamspath
+(defpath
   walker
   [afn]
   (select* [this structure next-fn]
@@ -193,7 +193,7 @@
   (transform* [this structure next-fn]
     (i/walk-until afn next-fn structure)))
 
-(defparamspath
+(defpath
   codewalker
   [afn]
   (select* [this structure next-fn]
@@ -225,14 +225,14 @@
       )))
 
 
-(defparamspath keypath [key]
+(defpath keypath [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
   (transform* [this structure next-fn]
     (assoc structure key (next-fn (get structure key)))
     ))
 
-(defparamspath view [afn]
+(defpath view [afn]
   (select* [this structure next-fn]
     (next-fn (afn structure)))
   (transform* [this structure next-fn]
@@ -309,7 +309,7 @@
   (transform* [aset structure next-fn]
     (i/filter-transform aset structure next-fn)))
 
-(defparamspath
+(defpath
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
           late-bound parameterized version of using a function directly in a path."}
   pred
@@ -319,7 +319,7 @@
   (transform* [this structure next-fn]
     (i/filter-transform afn structure next-fn)))
 
-(defparamspath
+(defpath
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
           navigated at the structure."}
   nil->val
@@ -345,7 +345,7 @@
       (compiled-select-one late structure)
       )))
 
-(defparamscollector
+(defcollector
   ^{:doc
     "Adds an external value to the collected vals. Useful when additional arguments
      are required to the transform function that would otherwise require partial

@@ -553,3 +553,25 @@
   (if (afn structure)
     (next-fn structure)
     structure))
+
+(defn compiled-selector [^com.rpl.specter.impl.CompiledPath path]
+  (-> path .-transform-fns .-selector))
+
+(defn compiled-transformer [^com.rpl.specter.impl.CompiledPath path]
+  (-> path .-transform-fns .-transformer))
+
+(defn params-needed-selector [^com.rpl.specter.impl.ParamsNeededPath path]
+  (-> path .-transform-fns .-selector))
+
+(defn params-needed-transformer [^com.rpl.specter.impl.ParamsNeededPath path]
+  (-> path .-transform-fns .-transformer))
+
+
+(defn extend-protocolpath* [protpath-prot extensions]
+  (let [extensions (partition 2 extensions)
+        m (-> protpath-prot :sigs keys first)]
+    (doseq [[atype apath] extensions]
+      ;;TODO: validate that the path has the correct number of args
+      (let [p (comp-paths* apath)]
+        (extend atype protpath-prot {m (fn [_] p)})
+        ))))
