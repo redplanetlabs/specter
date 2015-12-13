@@ -145,6 +145,37 @@ user> (transform [ALL (if-path [:a even?] [:c ALL] :d)]
 [{:c [2 3], :d 4, :a 2} {:c [1 11 0], :a 4} {:c [1 1 1], :d 2, :a -1}]
 ```
 
+"Protocol paths" can be used to navigate on polymorphic data. For example, if you have two ways of storing "account" information:
+
+```clojure
+(defrecord Account [funds])
+(defrecord User [account])
+(defrecord Family [accounts-list])
+```
+
+You can make an "AccountPath" that dynamically chooses its path based on the type of element it is currently navigated to:
+
+
+```clojure
+(use 'com.rpl.specter.macros)
+(defprotocolpath AccountPath [])
+(extend-protocolpath AccountPath
+  User :account
+  Family [:accounts-list ALL])
+```
+
+Then, here is how to select all the funds out of a list of `User` and `Family`:
+
+```clojure
+user> (select [ALL AccountPath :funds]
+        [(->User (->Account 50))
+         (->User (->Account 51))
+         (->Family [(->Account 1)
+                    (->Account 2)])
+         ])
+[50 51 1 2]
+```
+
 You can make `select` and `transform` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of transform:
 
 ```clojure
