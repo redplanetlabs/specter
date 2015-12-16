@@ -12,6 +12,8 @@
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             )
+  #+clj
+  (:import [com.rpl.specter Util])
   )
 
 (defn spy [e]
@@ -78,6 +80,15 @@
 
 
 (declare bind-params*)
+
+#+clj
+(defmacro fast-object-array [i]
+  `(com.rpl.specter.Util/makeObjectArray ~i))
+
+#+cljs
+(defn fast-object-array [i]
+  (object-array i))
+
 
 #+clj
 (dh/define-ParamsNeededPath
@@ -555,16 +566,20 @@
     structure))
 
 (defn compiled-selector [^com.rpl.specter.impl.CompiledPath path]
-  (-> path .-transform-fns .-selector))
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
+    (.-selector tfns)))
 
 (defn compiled-transformer [^com.rpl.specter.impl.CompiledPath path]
-  (-> path .-transform-fns .-transformer))
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
+    (.-transformer tfns)))
 
 (defn params-needed-selector [^com.rpl.specter.impl.ParamsNeededPath path]
-  (-> path .-transform-fns .-selector))
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
+    (.-selector tfns)))
 
 (defn params-needed-transformer [^com.rpl.specter.impl.ParamsNeededPath path]
-  (-> path .-transform-fns .-transformer))
+  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
+      (.-transformer tfns)))
 
 #+clj
 (defn extend-protocolpath* [protpath-prot extensions]

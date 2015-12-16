@@ -9,7 +9,7 @@
                     :let [args (vec (gensyms i))
                           setters (for [j (range i)] `(aset ~a ~j ~(get args j)))]]
                 `(~invoke-name [this# ~@args]
-                  (let [~a (object-array ~i)]
+                  (let [~a (com.rpl.specter.impl/fast-object-array ~i)]
                     ~@setters
                     (com.rpl.specter.impl/bind-params* this# ~a 0)
                     )))]
