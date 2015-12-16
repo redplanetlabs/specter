@@ -92,6 +92,7 @@
 
 #+clj
 (dh/define-ParamsNeededPath
+  true
   clojure.lang.IFn
   invoke
   (applyTo [this args]
@@ -100,6 +101,7 @@
 
 #+cljs
 (define-ParamsNeededPath
+  false
   cljs.core/IFn
   -invoke
   (-invoke [this p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
