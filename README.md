@@ -19,7 +19,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 - Introductory blog post: [Functional-navigational programming in Clojure(Script) with Specter](http://nathanmarz.com/blog/functional-navigational-programming-in-clojurescript-with-sp.html)
 - Presentation about Specter: [Specter: Clojure's missing piece](https://www.youtube.com/watch?v=mXZxkpX5nt8)
 
-Specter's API is contained in a single, well-documented file: [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/com/rpl/specter.cljx)
+Specter's API is contained in a single, well-documented file: [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx)
 
 # Examples
 
