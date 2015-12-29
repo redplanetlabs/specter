@@ -21,6 +21,10 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 Specter's API is contained in a single, well-documented file: [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/com/rpl/specter.cljx)
 
+# Questions?
+
+You can ask questions about Specter by opening an issue on Github and [labeling it "question"](https://github.com/nathanmarz/specter/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aquestion+). 
+
 # Examples
 
 Here's how to increment all the even values for :a keys in a sequence of maps:
