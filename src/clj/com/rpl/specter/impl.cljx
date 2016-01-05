@@ -23,9 +23,17 @@
 (defprotocol PathComposer
   (comp-paths* [paths]))
 
+(defn- smart-str* [o]
+  (if (coll? o)
+    (pr-str o)
+    (str o)))
+
+(defn smart-str [& elems]
+  (apply str (map smart-str* elems)))
+
 #+clj
 (defmacro throw* [etype & args]
-  `(throw (new ~etype (pr-str ~@args))))
+  `(throw (new ~etype (smart-str ~@args))))
 
 #+clj
 (defmacro throw-illegal [& args]

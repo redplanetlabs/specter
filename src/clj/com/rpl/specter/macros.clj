@@ -6,6 +6,9 @@
   (vec (repeatedly amt gensym)))
 
 (defn determine-params-impls [[name1 & impl1] [name2 & impl2]]
+  (if-not (= #{name1 name2} #{'select* 'transform*})
+    (throw-illegal "defpath must implement select* and transform*, instead got "
+      name1 " and " name2))
   (if (= name1 'select*)
     [impl1 impl2]
     [impl2 impl1]))
