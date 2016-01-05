@@ -1,4 +1,4 @@
-## 0.9.1 (unreleased)
+## 0.9.1
 * Fixed reflection in protocol path code
 * Optimized late-bound parameterization for JVM implementation by directly creating the object array rather than use object-array 
 * Incorrectly specified function names in defpath will now throw error
