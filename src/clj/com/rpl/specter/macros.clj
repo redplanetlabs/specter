@@ -113,10 +113,10 @@
   with other selectors without knowing the parameters. When precompiled with other
   selectors, the resulting selector takes in parameters for all selectors in the path
   that needed parameters (in the order in which they were declared)."
-  [params & impls]
+  [params impl1 impl2]
   (let [num-params (count params)
         retrieve-params (make-param-retrievers params)]
-    (paramspath* retrieve-params num-params impls)
+    (paramspath* retrieve-params num-params [impl1 impl2])
     ))
 
 (defmacro paramsfn [params [structure-sym] & impl]
@@ -153,7 +153,7 @@
    paths as input. Those selector paths may require late-bound params, so this helper
    will create a parameterized selector if that is the case. If no late-bound params
    are required, then the result is executable."
-  [bindings & impls]
+  [bindings impl1 impl2]
   (let [bindings (partition 2 bindings)
         paths (mapv second bindings)
         names (mapv first bindings)
@@ -165,14 +165,14 @@
       latefns-sym
       [latefn-syms latefns-sym]
       (mapcat (fn [n l] [n `(~l ~PARAMS-SYM ~PARAMS-IDX-SYM)]) names latefn-syms)
-      impls)))
+      [impl1 impl2])))
 
 (defmacro variable-pathed-path
   "This helper is used to define selectors that take in a variable number of other selector
    paths as input. Those selector paths may require late-bound params, so this helper
    will create a parameterized selector if that is the case. If no late-bound params
    are required, then the result is executable."
-  [[latepaths-seq-sym paths-seq] & impls]
+  [[latepaths-seq-sym paths-seq] impl1 impl2]
   (let [latefns-sym (gensym "latefns")]
     (pathed-path*
       paramspath*
@@ -181,7 +181,7 @@
       []
       [latepaths-seq-sym `(map (fn [l#] (l# ~PARAMS-SYM ~PARAMS-IDX-SYM))
                                ~latefns-sym)]
-      impls
+      [impl1 impl2]
       )))
 
 (defmacro pathed-collector
