@@ -1,3 +1,7 @@
+## 0.9.2 (unreleased)
+* Added VOID selector which navigates nowhere
+* Better syntax checking for defpath
+
 ## 0.9.1
 * Fixed reflection in protocol path code
 * Optimized late-bound parameterization for JVM implementation by directly creating the object array rather than use object-array 
