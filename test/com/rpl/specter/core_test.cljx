@@ -566,6 +566,18 @@
          (s/setval [:a s/NIL->VECTOR s/END] [:b] nil)))
   )
 
+(defspec void-test
+  (for-all+
+    [s1 (gen/vector (limit-size 5 gen/int))]
+    (and
+      (empty? (s/select s/VOID s1))
+      (empty? (s/select [s/VOID s/ALL s/ALL s/ALL s/ALL] s1))
+      (= s1 (s/transform s/VOID inc s1))
+      (= s1 (s/transform [s/ALL s/VOID s/ALL] inc s1))
+      (= (s/transform [s/ALL (s/cond-path even? nil odd? s/VOID)] inc s1)
+         (s/transform [s/ALL even?] inc s1))
+      )))
+
 #+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))

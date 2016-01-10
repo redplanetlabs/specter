@@ -135,6 +135,17 @@
 
 ;; Built-in pathing and context operations
 
+(defpath
+  ^{:doc "Stops navigation at this point. For selection returns nothing and for 
+          transformation returns the structure unchanged"}
+  VOID
+  []
+  (select* [this structure next-fn]
+    nil )
+  (transform* [this structure next-fn]
+    structure
+    ))
+
 (def ALL (comp-paths (i/->AllStructurePath)))
 
 (def VAL (i/->ValCollect))
