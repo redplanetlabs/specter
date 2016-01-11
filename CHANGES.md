@@ -2,6 +2,7 @@
 * Added VOID selector which navigates nowhere
 * Better syntax checking for defpath
 * Fixed bug in protocol paths (#48)
+* Protocol paths error when extension has invalid number of needed parameters
 
 ## 0.9.1
 * Fixed reflection in protocol path code
