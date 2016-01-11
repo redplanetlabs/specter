@@ -639,3 +639,24 @@
                       inc
                       data)))
     ))
+
+
+#+clj
+(do
+  (defprotocolpath CustomWalker [])
+  (extend-protocolpath CustomWalker
+    Object nil
+    clojure.lang.PersistentHashMap [(s/keypath :a) CustomWalker]
+    clojure.lang.PersistentArrayMap [(s/keypath :a) CustomWalker]
+    clojure.lang.PersistentVector [s/ALL CustomWalker]
+    )
+
+  )
+
+#+clj
+(deftest mixed-rich-regular-protocolpath
+  (is (= [1 2 3 11 21 22 25]
+         (s/select [CustomWalker number?] [{:a [1 2 :c [3]]} [[[[[[11]]] 21 [22 :c 25]]]]])))
+  (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
+         (s/transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))
+  )

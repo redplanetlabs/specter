@@ -1,6 +1,7 @@
 ## 0.9.2 (unreleased)
 * Added VOID selector which navigates nowhere
 * Better syntax checking for defpath
+* Fixed bug in protocol paths (#48)
 
 ## 0.9.1
 * Fixed reflection in protocol path code

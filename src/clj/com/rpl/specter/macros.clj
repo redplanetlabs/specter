@@ -210,7 +210,6 @@
         m (-> name (str "-retrieve") symbol)
         num-params (count params)
         ssym (gensym "structure")
-        sargs [ssym (gensym "next-fn")]
         rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
         retrieve `(~m ~ssym)
         ]
@@ -220,16 +219,16 @@
           (if (= ~num-params 0)
             (no-params-compiled-path
               (->TransformFunctions
-                StructurePathExecutor
-                (fn ~sargs
+                RichPathExecutor
+                (fn ~rargs
                   (let [path# ~retrieve
                         selector# (compiled-selector path#)]
-                    (selector# ~@sargs)
+                    (selector# ~@rargs)
                     ))
-                (fn ~sargs
+                (fn ~rargs
                   (let [path# ~retrieve
                         transformer# (compiled-transformer path#)]
-                    (transformer# ~@sargs)
+                    (transformer# ~@rargs)
                     ))))
             (->ParamsNeededPath
               (->TransformFunctions

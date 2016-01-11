@@ -597,6 +597,7 @@
         m (-> protpath-prot :sigs keys first)]
     (doseq [[atype apath] extensions]
       ;;TODO: validate that the path has the correct number of args (or none at all)
-      (let [p (comp-paths* apath)]
-        (extend atype protpath-prot {m (fn [_] p)})
+      (let [p (comp-paths* apath)
+            rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))]
+        (extend atype protpath-prot {m (fn [_] rp)})
         ))))
