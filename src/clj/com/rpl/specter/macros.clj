@@ -248,4 +248,4 @@
             )))))
 
 (defmacro extend-protocolpath [protpath & extensions]
-  `(extend-protocolpath* ~(protpath-sym protpath) ~(vec extensions)))
+  `(extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))

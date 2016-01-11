@@ -591,13 +591,19 @@
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
       (.-transformer tfns)))
 
+
+
 #+clj
-(defn extend-protocolpath* [protpath-prot extensions]
+(defn extend-protocolpath* [protpath protpath-prot extensions]
   (let [extensions (partition 2 extensions)
-        m (-> protpath-prot :sigs keys first)]
+        m (-> protpath-prot :sigs keys first)
+        expected-params (num-needed-params protpath)]
     (doseq [[atype apath] extensions]
-      ;;TODO: validate that the path has the correct number of args (or none at all)
       (let [p (comp-paths* apath)
-            rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))]
+            rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))
+            needed-params (num-needed-params rp)]
+        (if-not (= needed-params expected-params)
+          (throw-illegal "Invalid number of params in extended protocol path, expected "
+              expected-params " but got " needed-params))
         (extend atype protpath-prot {m (fn [_] rp)})
         ))))
