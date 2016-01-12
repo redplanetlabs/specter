@@ -103,15 +103,15 @@
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (let [state (i/mutable-cell nil)]
     [(compiled-transform selector
-             (fn [e]
-               (let [res (transform-fn e)]
+             (fn [& args]
+               (let [res (apply transform-fn args)]
                  (if res
                    (let [[ret user-ret] res]
                      (->> user-ret
                           (merge-fn (i/get-cell state))
                           (i/set-cell! state))
                      ret)
-                   e
+                   (last args)
                    )))
              structure)
      (i/get-cell state)]
