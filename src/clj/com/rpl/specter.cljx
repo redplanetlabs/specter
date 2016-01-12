@@ -122,7 +122,7 @@
   The transform-fn in this case is expected to return [ret user-ret]. ret is
    what's used to transform the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
-   of what was transformd in the data structure."
+   of what was transformed in the data structure."
   [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
 
