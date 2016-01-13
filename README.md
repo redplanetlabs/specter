@@ -2,7 +2,7 @@
 
 Most of Clojure programming involves creating, manipulating, and transforming immutable values. However, as soon as your values become more complicated than a simple map or list – like a list of maps of maps – transforming these data structures becomes extremely cumbersome. 
 
-Specter is a library (for both Clojure and ClojureScript) for doing these queries and transformations extremely concisely and elegantly. These kinds of manipulations are so common when using Clojure – and so cumbersome without Specter – that Specter is in many ways Clojure's missing piece.
+Specter is a library (for both Clojure and ClojureScript) for doing these queries and transformations concisely, elegantly, and efficiently. These kinds of manipulations are so common when using Clojure – and so cumbersome without Specter – that Specter is in many ways Clojure's missing piece.
 
 Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
@@ -202,7 +202,7 @@ You can make `select` and `transform` work much faster by precompiling your sele
 (compiled-transform precompiled inc structure)
 ```
 
-Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup.
+Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup. Using Specter with precompilation generally gets the speed within a few percentage points of hand-optimized code. 
 
 You can even precompile selectors that require parameters! For example, `keypath` can be used to navigate into a map by any arbitrary key, such as numbers, strings, or your own types. One way to use `keypath` would be to parameterize it at the time you use it, like so:
 
@@ -225,7 +225,7 @@ When `comp-paths` is used on selectors that require parameters, the result of `c
 
 
 # Future work
-- Integrate Specter with other kinds of data structures, such as graphs
+- Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
 - Make it possible to parallelize selects/transforms
 - Any connection to transducers?
 
