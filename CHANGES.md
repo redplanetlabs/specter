@@ -6,6 +6,7 @@
 * Fix replace-in to work with value collection
 * Added STAY selector
 * Added stay-then-continue and continue-then-stay selectors which enable pre-order/post-order traversals
+* Added declarepath and providepath, which enable arbitrary recursive or mutually recursive paths
 
 ## 0.9.1
 * Fixed reflection in protocol path code

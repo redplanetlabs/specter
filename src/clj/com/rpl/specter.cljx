@@ -7,8 +7,6 @@
                fixed-pathed-path
                defcollector
                defpath
-               paramscollector
-               paramspath
               ]]
             )
   (:use [com.rpl.specter.protocols :only [StructurePath]]
@@ -17,9 +15,7 @@
              variable-pathed-path
              fixed-pathed-path
              defcollector
-             defpath
-             paramscollector
-             paramspath]]
+             defpath]]
     )
   (:require [com.rpl.specter.impl :as i]
             [clojure.set :as set])

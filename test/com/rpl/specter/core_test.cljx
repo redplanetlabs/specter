@@ -3,12 +3,16 @@
            [cljs.test :refer [is deftest]]
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
-           [com.rpl.specter.macros :refer [paramsfn defprotocolpath defpath extend-protocolpath]])
+           [com.rpl.specter.macros
+             :refer [paramsfn defprotocolpath defpath extend-protocolpath
+                     declarepath providepath]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
     #+clj [com.rpl.specter.test-helpers :only [for-all+]]
-    #+clj [com.rpl.specter.macros :only [paramsfn defprotocolpath defpath extend-protocolpath]]
+    #+clj [com.rpl.specter.macros
+           :only [paramsfn defprotocolpath defpath extend-protocolpath
+                  declarepath providepath]]
 
     )
 
@@ -588,6 +592,28 @@
   (is (= [1 3 [1 2 3]]
          (s/select (s/continue-then-stay s/ALL odd?) [1 2 3])))
   )
+
+
+(declarepath MyWalker)
+
+(providepath MyWalker
+  (s/if-path vector?
+    (s/if-path [s/FIRST #(= :abc %)]
+      (s/continue-then-stay s/ALL MyWalker)
+      [s/ALL MyWalker]
+      )))
+
+(deftest recursive-path-test
+  (is (= [9 1 10 3 1]
+         (s/select [MyWalker s/ALL number?]
+           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]])
+           ))
+  (is (= [:bb [:aa 34 [:abc 11 [:ccc 9 8 [:abc 10 2]]]] [:abc 2 [:abc 4]]]
+         (s/transform [MyWalker s/ALL number?] inc
+           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]])
+           ))
+  )
+
 
 #+clj
 (deftest large-params-test

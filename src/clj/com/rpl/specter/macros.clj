@@ -108,7 +108,7 @@
        (apply concat)))
 
 
-(defmacro paramspath
+(defmacro path
   "Defines a StructurePath with late bound parameters. This path can be precompiled
   with other selectors without knowing the parameters. When precompiled with other
   selectors, the resulting selector takes in parameters for all selectors in the path
@@ -120,7 +120,7 @@
     ))
 
 (defmacro paramsfn [params [structure-sym] & impl]
-  `(paramspath ~params
+  `(path ~params
      (~'select* [this# structure# next-fn#]
        (let [afn# (fn [~structure-sym] ~@impl)]
          (filter-select afn# structure# next-fn#)
@@ -143,7 +143,7 @@
     ))
 
 (defmacro defpath [name & body]
-  `(def ~name (paramspath ~@body)))
+  `(def ~name (path ~@body)))
 
 (defmacro defcollector [name & body]
   `(def ~name (paramscollector ~@body)))
@@ -246,6 +246,40 @@
               ~num-params
               )
             )))))
+
+
+(defn declared-name [name]
+  (symbol (str name "-declared")))
+
+(defmacro declarepath [name]
+  (let [declared (declared-name name)
+        rargs [(gensym "params") (gensym "pidx") (gensym "vals")
+               (gensym "structure") (gensym "next-fn")]]
+    `(do
+       (declare ~declared)
+       (def ~name
+         (no-params-compiled-path
+           (->TransformFunctions
+            RichPathExecutor
+            (fn ~rargs
+              (let [selector# (compiled-selector ~declared)]
+                (selector# ~@rargs)
+                ))
+            (fn ~rargs
+              (let [transformer# (compiled-transformer ~declared)]
+                (transformer# ~@rargs)
+                ))))
+         ))))
+
+(defmacro providepath [name apath]
+  `(def ~(declared-name name)
+     (update-in (comp-paths* ~apath)
+                [:transform-fns]
+                coerce-tfns-rich)
+     ))
+
+;;TODO: hmm... not sure how to proxy it as don't know if its paramsneeded/compiler or rich/regular
+;;could require later definition to be done with "defproxiedpath" or wrapped in proxied-path
 
 (defmacro extend-protocolpath [protpath & extensions]
   `(extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
