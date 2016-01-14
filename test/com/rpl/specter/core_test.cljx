@@ -578,6 +578,17 @@
          (s/transform [s/ALL even?] inc s1))
       )))
 
+(deftest stay-continue-tests
+  (is (= [[1 2 [:a :b]] [3 [:a :b]] [:a :b [:a :b]]]
+         (s/setval [(s/stay-then-continue s/ALL) s/END] [[:a :b]] [[1 2] [3]])))
+  (is (= [[1 2 [:a :b]] [3 [:a :b]] [:a :b]]
+         (s/setval [(s/continue-then-stay s/ALL) s/END] [[:a :b]] [[1 2] [3]])))
+  (is (= [[1 2 3] 1 3]
+         (s/select (s/stay-then-continue s/ALL odd?) [1 2 3])))
+  (is (= [1 3 [1 2 3]]
+         (s/select (s/continue-then-stay s/ALL odd?) [1 2 3])))
+  )
+
 #+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))

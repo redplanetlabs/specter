@@ -146,6 +146,15 @@
     structure
     ))
 
+(defpath
+  ^{:doc "Stays navigated at the current point. Essentially a no-op selector."}
+  STAY
+  []
+  (select* [this structure next-fn]
+    (next-fn structure))
+  (transform* [this structure next-fn]
+    (next-fn structure)))
+
 (def ALL (comp-paths (i/->AllStructurePath)))
 
 (def VAL (i/->ValCollect))
@@ -233,6 +242,30 @@
                   (assoc curr oldi (get next newi)))
                 (vec structure)
                 ancestry))
+      )))
+
+(defn stay-then-continue
+  "Navigates to the current element and then navigates via the provided path.
+   This can be used to implement pre-order traversal."
+  [& path]
+  (fixed-pathed-path [late path]
+    (select* [this structure next-fn]
+      (concat (next-fn structure)
+              (doall (mapcat next-fn (compiled-select late structure)))))
+    (transform* [this structure next-fn]
+      (compiled-transform late next-fn (next-fn structure))
+      )))
+
+(defn continue-then-stay
+  "Navigates to the provided path and then to the current element. This can be used
+   to implement post-order traversal."
+  [& path]
+  (fixed-pathed-path [late path]
+    (select* [this structure next-fn]
+      (concat (doall (mapcat next-fn (compiled-select late structure)))
+              (next-fn structure)))
+    (transform* [this structure next-fn]
+      (next-fn (compiled-transform late next-fn structure))
       )))
 
 
