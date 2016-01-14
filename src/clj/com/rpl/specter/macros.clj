@@ -278,8 +278,5 @@
                 coerce-tfns-rich)
      ))
 
-;;TODO: hmm... not sure how to proxy it as don't know if its paramsneeded/compiler or rich/regular
-;;could require later definition to be done with "defproxiedpath" or wrapped in proxied-path
-
 (defmacro extend-protocolpath [protpath & extensions]
   `(extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
