@@ -4,6 +4,8 @@
 * Fixed bug in protocol paths (#48)
 * Protocol paths now error when extension has invalid number of needed parameters
 * Fix replace-in to work with value collection
+* Added STAY selector
+* Added stay-then-continue and continue-then-stay selectors which enable pre-order/post-order traversals
 
 ## 0.9.1
 * Fixed reflection in protocol path code
