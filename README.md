@@ -231,4 +231,4 @@ When `comp-paths` is used on selectors that require parameters, the result of `c
 
 # License
 
-Copyright 2015 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
+Copyright 2015-2016 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
