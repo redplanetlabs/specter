@@ -240,31 +240,6 @@
                 ancestry))
       )))
 
-(defn stay-then-continue
-  "Navigates to the current element and then navigates via the provided path.
-   This can be used to implement pre-order traversal."
-  [& path]
-  (fixed-pathed-path [late path]
-    (select* [this structure next-fn]
-      (concat (next-fn structure)
-              (doall (mapcat next-fn (compiled-select late structure)))))
-    (transform* [this structure next-fn]
-      (compiled-transform late next-fn (next-fn structure))
-      )))
-
-(defn continue-then-stay
-  "Navigates to the provided path and then to the current element. This can be used
-   to implement post-order traversal."
-  [& path]
-  (fixed-pathed-path [late path]
-    (select* [this structure next-fn]
-      (concat (doall (mapcat next-fn (compiled-select late structure)))
-              (next-fn structure)))
-    (transform* [this structure next-fn]
-      (next-fn (compiled-transform late next-fn structure))
-      )))
-
-
 (defpath keypath [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
@@ -445,3 +420,15 @@
         structure
         compiled-paths
         ))))
+
+(defn stay-then-continue
+  "Navigates to the current element and then navigates via the provided path.
+   This can be used to implement pre-order traversal."
+  [& path]
+  (multi-path STAY path))
+
+(defn continue-then-stay
+  "Navigates to the provided path and then to the current element. This can be used
+   to implement post-order traversal."
+  [& path]
+  (multi-path path STAY))
