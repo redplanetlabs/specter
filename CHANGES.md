@@ -1,4 +1,4 @@
-## 0.9.2 (unreleased)
+## 0.9.2
 * Added VOID selector which navigates nowhere
 * Better syntax checking for defpath
 * Fixed bug in protocol paths (#48)
