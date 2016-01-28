@@ -615,6 +615,11 @@
   )
 
 
+(deftest all-map-test
+  (is (= {3 3} (s/transform [s/ALL s/FIRST] inc {2 3})))
+  (is (= {3 21 4 31} (s/transform [s/ALL s/ALL] inc {2 20 3 30})))
+  )
+
 #+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))

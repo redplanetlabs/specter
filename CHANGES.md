@@ -1,3 +1,6 @@
+## 0.9.3 (unreleased)
+* ALL on maps auto-coerces MapEntry to vector, enabling smoother transformation of map keys
+
 ## 0.9.2
 * Added VOID selector which navigates nowhere
 * Better syntax checking for defpath

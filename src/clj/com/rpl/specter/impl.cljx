@@ -500,19 +500,30 @@
   (assoc structure akey (next-fn (get structure akey))
   ))
 
+(defn all-select [structure next-fn]
+  (into [] (r/mapcat next-fn structure)))
+
+(defn all-transform [structure next-fn]
+  (let [empty-structure (empty structure)]
+    (cond (list? empty-structure)
+          ;; this is done to maintain order, otherwise lists get reversed
+          (doall (map next-fn structure))
+
+          (map? structure)
+          (->> structure (r/map vec) (r/map next-fn) (into empty-structure))
+
+          :else
+          (->> structure (r/map next-fn) (into empty-structure))
+      )))
+
 (deftype AllStructurePath [])
 
 (extend-protocol p/StructurePath
   AllStructurePath
   (select* [this structure next-fn]
-    (into [] (r/mapcat next-fn structure)))
+    (all-select structure next-fn))
   (transform* [this structure next-fn]
-    (let [empty-structure (empty structure)]
-      (if (list? empty-structure)
-        ;; this is done to maintain order, otherwise lists get reversed
-        (doall (map next-fn structure))
-        (->> structure (r/map next-fn) (into empty-structure))
-        ))))
+    (all-transform structure next-fn)))
 
 (deftype ValCollect [])
 
