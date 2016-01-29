@@ -59,11 +59,11 @@ user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
 [0 2 2 4 4 5 6 7]
 ```
 
-Here's how to replace the subsequence from index 2 to 4 with [-1 -1 -1]:
+Here's how to replace the subsequence from index 2 to 4 with [:a :b :c :d :e]:
 
 ```clojure
-user> (setval (srange 2 4) [-1 -1 -1] [0 1 2 3 4 5 6 7 8 9])
-[0 1 -1 -1 -1 4 5 6 7 8 9]
+user> (setval (srange 2 4) [:a :b :c :d :e] [0 1 2 3 4 5 6 7 8 9])
+[0 1 :a :b :c :d :e 4 5 6 7 8 9]
 ```
 
 Here's how to concatenate the sequence [:a :b] to every nested sequence of a sequence:
