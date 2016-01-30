@@ -632,6 +632,11 @@
       (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}}))
   )
 
+(deftest recursive-params-composable-path-test
+  (let [p (s/comp-paths s/keypath map-key-walker)]
+    (is (= [1] (s/select (p 1 :a) [{:a 3} {:a 1} {:a 2}])))
+    ))
+
 (deftest all-map-test
   (is (= {3 3} (s/transform [s/ALL s/FIRST] inc {2 3})))
   (is (= {3 21 4 31} (s/transform [s/ALL s/ALL] inc {2 20 3 30})))

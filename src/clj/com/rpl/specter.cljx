@@ -132,15 +132,16 @@
 (defn params-reset [params-path]
   ;; TODO: error if not paramsneededpath
   (let [s (i/params-needed-selector params-path)
-        t (i/params-needed-transformer params-path)]
+        t (i/params-needed-transformer params-path)
+        needed (i/num-needed-params params-path)]
     (i/->ParamsNeededPath
       (i/->TransformFunctions
         i/RichPathExecutor
         (fn [params params-idx vals structure next-fn]
-          (s params 0 vals structure next-fn)
+          (s params (- params-idx needed) vals structure next-fn)
           )
         (fn [params params-idx vals structure next-fn]
-          (t params 0 vals structure next-fn)
+          (t params (- params-idx needed) vals structure next-fn)
           ))
       0)))
 
@@ -209,7 +210,7 @@
   (select* [this structure next-fn]
     (next-fn (set/intersection structure aset)))
   (transform* [this structure next-fn]
-    (let [subset  (set/intersection structure aset)
+    (let [subset (set/intersection structure aset)
           newset (next-fn subset)]
       (-> structure
           (set/difference subset)
