@@ -614,6 +614,23 @@
            ))
   )
 
+(declarepath map-key-walker [akey])
+
+(providepath map-key-walker
+  [s/ALL
+   (s/if-path [s/FIRST (paramsfn [akey] [curr] (= curr akey))]
+     s/LAST
+     [s/LAST (s/params-reset map-key-walker)])])
+
+(deftest recursive-params-path-test
+  (is (= #{1 2 3} (set (s/select (map-key-walker :aaa)
+                                 {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}}))))
+  (is (= {:a {:aaa 4 :b {:c {:aaa 3} :aaa 2}}}
+         (s/transform (map-key-walker :aaa) inc
+                      {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}})))
+  (is (= {:a {:c {:b "X"}}})
+      (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}}))
+  )
 
 (deftest all-map-test
   (is (= {3 3} (s/transform [s/ALL s/FIRST] inc {2 3})))
