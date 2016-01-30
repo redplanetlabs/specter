@@ -251,32 +251,58 @@
 (defn declared-name [name]
   (symbol (str name "-declared")))
 
-(defmacro declarepath [name]
+(defn- declarepath* [name num-params]
   (let [declared (declared-name name)
         rargs [(gensym "params") (gensym "pidx") (gensym "vals")
                (gensym "structure") (gensym "next-fn")]]
     `(do
        (declare ~declared)
        (def ~name
-         (no-params-compiled-path
-           (->TransformFunctions
-            RichPathExecutor
-            (fn ~rargs
-              (let [selector# (compiled-selector ~declared)]
-                (selector# ~@rargs)
-                ))
-            (fn ~rargs
-              (let [transformer# (compiled-transformer ~declared)]
-                (transformer# ~@rargs)
-                ))))
-         ))))
+         (if (= ~num-params 0)
+           (no-params-compiled-path
+             (->TransformFunctions
+              RichPathExecutor
+              (fn ~rargs
+                (let [selector# (compiled-selector ~declared)]
+                  (selector# ~@rargs)
+                  ))
+              (fn ~rargs
+                (let [transformer# (compiled-transformer ~declared)]
+                  (transformer# ~@rargs)
+                  ))))
+           (->ParamsNeededPath
+             (->TransformFunctions
+               RichPathExecutor
+               (fn ~rargs
+                 (let [selector# (params-needed-selector ~declared)]
+                   (selector# ~@rargs)
+                   ))
+               (fn ~rargs
+                 (let [transformer# (params-needed-transformer ~declared)]
+                   (transformer# ~@rargs)
+                   )))
+             ~num-params
+             )
+         )))))
+
+
+(defmacro declarepath
+  ([name] (declarepath* name 0))
+  ([name params]
+    (declarepath* name (count params))))
 
 (defmacro providepath [name apath]
-  `(def ~(declared-name name)
-     (update-in (comp-paths* ~apath)
-                [:transform-fns]
-                coerce-tfns-rich)
-     ))
+  `(let [comped# (comp-paths* ~apath)
+         expected-params# (num-needed-params ~name)
+         needed-params# (num-needed-params comped#)]
+     (if-not (= needed-params# expected-params#)
+       (throw-illegal "Invalid number of params in provided path, expected "
+           expected-params# " but got " needed-params#))
+     (def ~(declared-name name)
+       (update-in comped#
+                  [:transform-fns]
+                  coerce-tfns-rich)
+       )))
 
 (defmacro extend-protocolpath [protpath & extensions]
   `(extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))

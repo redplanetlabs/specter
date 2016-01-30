@@ -129,6 +129,21 @@
              params. The return value is an executable selector."}
   bind-params* i/bind-params*)
 
+(defn params-reset [params-path]
+  ;; TODO: error if not paramsneededpath
+  (let [s (i/params-needed-selector params-path)
+        t (i/params-needed-transformer params-path)]
+    (i/->ParamsNeededPath
+      (i/->TransformFunctions
+        i/RichPathExecutor
+        (fn [params params-idx vals structure next-fn]
+          (s params 0 vals structure next-fn)
+          )
+        (fn [params params-idx vals structure next-fn]
+          (t params 0 vals structure next-fn)
+          ))
+      0)))
+
 ;; Built-in pathing and context operations
 
 (defpath
