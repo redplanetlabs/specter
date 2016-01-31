@@ -205,91 +205,92 @@
 (defn- protpath-sym [name]
   (-> name (str "-prot") symbol))
 
-(defmacro defprotocolpath [name params]
-  (let [prot-name (protpath-sym name)
-        m (-> name (str "-retrieve") symbol)
-        num-params (count params)
-        ssym (gensym "structure")
-        rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
-        retrieve `(~m ~ssym)
-        ]
-    `(do
-        (defprotocol ~prot-name (~m [structure#]))
-        (def ~name
-          (if (= ~num-params 0)
-            (no-params-compiled-path
-              (->TransformFunctions
-                RichPathExecutor
-                (fn ~rargs
-                  (let [path# ~retrieve
-                        selector# (compiled-selector path#)]
-                    (selector# ~@rargs)
-                    ))
-                (fn ~rargs
-                  (let [path# ~retrieve
-                        transformer# (compiled-transformer path#)]
-                    (transformer# ~@rargs)
-                    ))))
-            (->ParamsNeededPath
-              (->TransformFunctions
-                RichPathExecutor
-                (fn ~rargs
-                  (let [path# ~retrieve
-                        selector# (params-needed-selector path#)]
-                    (selector# ~@rargs)
-                    ))
-                (fn ~rargs
-                  (let [path# ~retrieve
-                        transformer# (params-needed-transformer path#)]
-                    (transformer# ~@rargs)
-                    )))
-              ~num-params
-              )
-            )))))
+(defmacro defprotocolpath
+  ([name]
+    `(defprotocolpath ~name []))
+  ([name params]
+    (let [prot-name (protpath-sym name)
+          m (-> name (str "-retrieve") symbol)
+          num-params (count params)
+          ssym (gensym "structure")
+          rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
+          retrieve `(~m ~ssym)
+          ]
+      `(do
+          (defprotocol ~prot-name (~m [structure#]))
+          (def ~name
+            (if (= ~num-params 0)
+              (no-params-compiled-path
+                (->TransformFunctions
+                  RichPathExecutor
+                  (fn ~rargs
+                    (let [path# ~retrieve
+                          selector# (compiled-selector path#)]
+                      (selector# ~@rargs)
+                      ))
+                  (fn ~rargs
+                    (let [path# ~retrieve
+                          transformer# (compiled-transformer path#)]
+                      (transformer# ~@rargs)
+                      ))))
+              (->ParamsNeededPath
+                (->TransformFunctions
+                  RichPathExecutor
+                  (fn ~rargs
+                    (let [path# ~retrieve
+                          selector# (params-needed-selector path#)]
+                      (selector# ~@rargs)
+                      ))
+                  (fn ~rargs
+                    (let [path# ~retrieve
+                          transformer# (params-needed-transformer path#)]
+                      (transformer# ~@rargs)
+                      )))
+                ~num-params
+                )
+              ))))))
 
 
 (defn declared-name [name]
   (symbol (str name "-declared")))
 
-(defn- declarepath* [name num-params]
-  (let [declared (declared-name name)
-        rargs [(gensym "params") (gensym "pidx") (gensym "vals")
-               (gensym "structure") (gensym "next-fn")]]
-    `(do
-       (declare ~declared)
-       (def ~name
-         (if (= ~num-params 0)
-           (no-params-compiled-path
-             (->TransformFunctions
-              RichPathExecutor
-              (fn ~rargs
-                (let [selector# (compiled-selector ~declared)]
-                  (selector# ~@rargs)
-                  ))
-              (fn ~rargs
-                (let [transformer# (compiled-transformer ~declared)]
-                  (transformer# ~@rargs)
-                  ))))
-           (->ParamsNeededPath
-             (->TransformFunctions
-               RichPathExecutor
-               (fn ~rargs
-                 (let [selector# (params-needed-selector ~declared)]
-                   (selector# ~@rargs)
-                   ))
-               (fn ~rargs
-                 (let [transformer# (params-needed-transformer ~declared)]
-                   (transformer# ~@rargs)
-                   )))
-             ~num-params
-             )
-         )))))
-
-
 (defmacro declarepath
-  ([name] (declarepath* name 0))
+  ([name]
+    `(declarepath ~name []))
   ([name params]
-    (declarepath* name (count params))))
+    (let [num-params (count params)
+          declared (declared-name name)
+          rargs [(gensym "params") (gensym "pidx") (gensym "vals")
+                 (gensym "structure") (gensym "next-fn")]]
+      `(do
+         (declare ~declared)
+         (def ~name
+           (if (= ~num-params 0)
+             (no-params-compiled-path
+               (->TransformFunctions
+                RichPathExecutor
+                (fn ~rargs
+                  (let [selector# (compiled-selector ~declared)]
+                    (selector# ~@rargs)
+                    ))
+                (fn ~rargs
+                  (let [transformer# (compiled-transformer ~declared)]
+                    (transformer# ~@rargs)
+                    ))))
+             (->ParamsNeededPath
+               (->TransformFunctions
+                 RichPathExecutor
+                 (fn ~rargs
+                   (let [selector# (params-needed-selector ~declared)]
+                     (selector# ~@rargs)
+                     ))
+                 (fn ~rargs
+                   (let [transformer# (params-needed-transformer ~declared)]
+                     (transformer# ~@rargs)
+                     )))
+               ~num-params
+               )
+           ))))))
 
 (defmacro providepath [name apath]
   `(let [comped# (comp-paths* ~apath)
