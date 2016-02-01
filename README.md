@@ -23,7 +23,7 @@ Specter's API is contained in a single, well-documented file: [specter.cljx](htt
 
 # Questions?
 
-You can ask questions about Specter by opening an issue on Github and [labeling it "question"](https://github.com/nathanmarz/specter/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aquestion+). 
+You can ask questions about Specter by [opening an issue](https://github.com/nathanmarz/specter/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aquestion+) on Github. 
 
 # Examples
 
