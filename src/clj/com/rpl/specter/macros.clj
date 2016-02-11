@@ -79,6 +79,10 @@
     `(let [paths# (map comp-paths* ~paths-seq)
            needed-params# (map num-needed-params paths#)
            offsets# (cons 0 (reductions + needed-params#))
+           any-params-needed?# (->> paths#
+                                    (filter params-needed-path?)
+                                    empty?
+                                    not)
            ~num-params-sym (last offsets#)
            ~latefns-sym (map
                           (fn [o# p#]
@@ -93,7 +97,7 @@
            ~@pre-bindings
            ret# ~(builder post-bindings num-params-sym impls)
            ]
-    (if (= 0 ~num-params-sym)
+    (if (not any-params-needed?#)
       (bind-params* ret# nil 0)
       ret#
       ))))

@@ -642,6 +642,22 @@
   (is (= {3 21 4 31} (s/transform [s/ALL s/ALL] inc {2 20 3 30})))
   )
 
+(declarepath NestedHigherOrderWalker [k])
+
+(providepath NestedHigherOrderWalker
+  (s/if-path vector?
+    (s/if-path [s/FIRST (paramsfn [k] [e] (= k e))]
+      (s/continue-then-stay s/ALL (s/params-reset NestedHigherOrderWalker))
+      [s/ALL (s/params-reset NestedHigherOrderWalker)]
+      )))
+
+(deftest nested-higher-order-walker-test
+  (is (= [:q [:abc :I 3] [:ccc [:abc :I] [:abc :I "a" [:abc :I [:abc :I [:d]]]]]]
+         (s/setval [(NestedHigherOrderWalker :abc) (s/srange 1 1)]
+                   [:I]
+                   [:q [:abc 3] [:ccc [:abc] [:abc "a" [:abc [:abc [:d]]]]]]
+                   ))))
+
 #+clj
 (deftest large-params-test
   (let [path (apply s/comp-paths (repeat 25 s/keypath))

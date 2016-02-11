@@ -123,6 +123,8 @@
       (com.rpl.specter.impl/bind-params* this a 0))
     ))
 
+(defn params-needed-path? [o]
+  (instance? ParamsNeededPath o))
 
 (defn bind-params* [^ParamsNeededPath params-needed-path params idx]
   (->CompiledPath
