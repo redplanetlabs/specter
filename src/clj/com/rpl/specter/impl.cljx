@@ -505,9 +505,17 @@
 (defn all-select [structure next-fn]
   (into [] (r/mapcat next-fn structure)))
 
+#+cljs
+(defn queue? [coll]
+  (= (type coll) (type cljs.core.PersistentQueue/EMPTY)))
+
+#+clj
+(defn queue? [coll]
+  (= (type coll) (type clojure.lang.PersistentQueue/EMPTY)))
+
 (defn all-transform [structure next-fn]
   (let [empty-structure (empty structure)]
-    (cond (list? empty-structure)
+    (cond (and (list? empty-structure) (not (queue? empty-structure)))
           ;; this is done to maintain order, otherwise lists get reversed
           (doall (map next-fn structure))
 
