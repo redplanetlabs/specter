@@ -150,7 +150,7 @@
 (defpath
   ^{:doc "Stops navigation at this point. For selection returns nothing and for 
           transformation returns the structure unchanged"}
-  VOID
+  STOP
   []
   (select* [this structure next-fn]
     nil )
