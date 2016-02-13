@@ -745,7 +745,7 @@
 (defn make-queue [coll]
   (reduce
     #(conj %1 %2)
-    cljs.core.PersistentQueue/EMPTY
+    #queue []
     coll))
 
 #+clj

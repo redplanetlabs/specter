@@ -507,7 +507,7 @@
 
 #+cljs
 (defn queue? [coll]
-  (= (type coll) (type cljs.core.PersistentQueue/EMPTY)))
+  (= (type coll) (type #queue [])))
 
 #+clj
 (defn queue? [coll]
