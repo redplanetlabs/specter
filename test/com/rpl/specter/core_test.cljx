@@ -574,11 +574,11 @@
   (for-all+
     [s1 (gen/vector (limit-size 5 gen/int))]
     (and
-      (empty? (s/select s/VOID s1))
-      (empty? (s/select [s/VOID s/ALL s/ALL s/ALL s/ALL] s1))
-      (= s1 (s/transform s/VOID inc s1))
-      (= s1 (s/transform [s/ALL s/VOID s/ALL] inc s1))
-      (= (s/transform [s/ALL (s/cond-path even? nil odd? s/VOID)] inc s1)
+      (empty? (s/select s/STOP s1))
+      (empty? (s/select [s/STOP s/ALL s/ALL s/ALL s/ALL] s1))
+      (= s1 (s/transform s/STOP inc s1))
+      (= s1 (s/transform [s/ALL s/STOP s/ALL] inc s1))
+      (= (s/transform [s/ALL (s/cond-path even? nil odd? s/STOP)] inc s1)
          (s/transform [s/ALL even?] inc s1))
       )))
 
