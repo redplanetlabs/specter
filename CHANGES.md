@@ -3,6 +3,7 @@
 * declarepath can now be parameterized
 * Added params-reset which calls its path with the params index walked back by the number of params needed by its path. This enables recursive parameterized paths
 * Added convenience syntax for defprotocolpath with no params, e.g. (defprotocolpath foo)
+* Rename VOID to STOP
 
 ## 0.9.2
 * Added VOID selector which navigates nowhere
