@@ -27,7 +27,7 @@
     (zip/root (zip/edit structure next-fn))
     ))
 
-(defn edit [path update-fn]
+(defn edited [path update-fn]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (next-fn
