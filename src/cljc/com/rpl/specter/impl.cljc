@@ -1,19 +1,13 @@
 (ns com.rpl.specter.impl
-  #+cljs (:require-macros
-            [com.rpl.specter.prot-opt-invoke
-              :refer [mk-optimized-invocation]]
-            [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
-            )
-  (:use [com.rpl.specter.protocols :only
-    [select* transform* collect-val]])
-  (:require [com.rpl.specter.protocols :as p]
+  #?(:cljs
+      (:require-macros [com.rpl.specter.prot-opt-invoke :refer [mk-optimized-invocation]]
+                       [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]))
+  (:require [com.rpl.specter.protocols :as p :refer [select* transform* collect-val]]
             [clojure.walk :as walk]
             [clojure.core.reducers :as r]
             [clojure.string :as s]
-            #+clj [com.rpl.specter.defhelpers :as dh]
+            #?(:clj [com.rpl.specter.defhelpers :as dh])
             )
-  #+clj
-  (:import [com.rpl.specter Util])
   )
 
 (defn spy [e]
@@ -31,19 +25,18 @@
 (defn smart-str [& elems]
   (apply str (map smart-str* elems)))
 
-#+clj
-(defmacro throw* [etype & args]
-  `(throw (new ~etype (smart-str ~@args))))
+#?(:clj
+    (do
+      (defmacro throw* [etype & args]
+        `(throw (new ~etype (smart-str ~@args))))
 
-#+clj
-(defmacro throw-illegal [& args]
-  `(throw* IllegalArgumentException ~@args))
+      (defmacro throw-illegal [& args]
+        `(throw* IllegalArgumentException ~@args)))
 
-
-#+cljs
-(defn throw-illegal [& args]
-  (throw (js/Error. (apply str args)))
-  )
+   :cljs
+    (defn throw-illegal [& args]
+      (throw (js/Error. (apply str args)))
+      ))
 
 (defn benchmark [iters afn]
   (time
@@ -89,39 +82,39 @@
 
 (declare bind-params*)
 
-#+clj
-(defmacro fast-object-array [i]
-  `(com.rpl.specter.Util/makeObjectArray ~i))
+#?(:clj
+    (defmacro fast-object-array [i]
+      `(object-array ~i)))
 
-#+cljs
-(defn fast-object-array [i]
-  (object-array i))
+ #?(:cljs
+    (defn fast-object-array [i]
+      (object-array i)))
 
 
-#+clj
-(dh/define-ParamsNeededPath
-  true
-  clojure.lang.IFn
-  invoke
-  (applyTo [this args]
-    (let [a (object-array args)]
-      (com.rpl.specter.impl/bind-params* this a 0))))
+#?(:clj
+    (dh/define-ParamsNeededPath
+      true
+      clojure.lang.IFn
+      invoke
+      (applyTo [this args]
+        (let [a (object-array args)]
+          (com.rpl.specter.impl/bind-params* this a 0))))
 
-#+cljs
-(define-ParamsNeededPath
-  false
-  cljs.core/IFn
-  -invoke
-  (-invoke [this p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
-                 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20
-                 rest]
-    (let [a (object-array
-              (concat 
-                [p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
-                p11 p12 p13 p14 p15 p16 p17 p18 p19 p20]
-                rest))]
-      (com.rpl.specter.impl/bind-params* this a 0))
-    ))
+  :cljs
+    (define-ParamsNeededPath
+      false
+      cljs.core/IFn
+      -invoke
+      (-invoke [this p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
+                     p11 p12 p13 p14 p15 p16 p17 p18 p19 p20
+                     rest]
+        (let [a (object-array
+                  (concat
+                    [p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
+                    p11 p12 p13 p14 p15 p16 p17 p18 p19 p20]
+                    rest))]
+          (com.rpl.specter.impl/bind-params* this a 0))
+        )))
 
 (defn params-needed-path? [o]
   (instance? ParamsNeededPath o))
@@ -145,37 +138,34 @@
         optimized performance. Instead, you should extend the protocols via an
         explicit extend-protocol call. \n" obj))
 
-#+clj
+#?(:clj
+    (do
+      (defn find-protocol-impl! [prot obj]
+        (let [ret (find-protocol-impl prot obj)]
+          (if (= ret obj)
+            (throw-illegal (no-prot-error-str obj))
+            ret
+            )))
 
-(defn find-protocol-impl! [prot obj]
-  (let [ret (find-protocol-impl prot obj)]
-    (if (= ret obj)
-      (throw-illegal (no-prot-error-str obj))
-      ret
-      )))
+      (defn structure-path-impl [this]
+        (if (fn? this)
+          ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
+          (-> p/StructurePath :impls (get clojure.lang.AFn))
+          (find-protocol-impl! p/StructurePath this)))
 
-#+clj
-(defn structure-path-impl [this]
-  (if (fn? this)
-    ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
-    (-> p/StructurePath :impls (get clojure.lang.AFn))
-    (find-protocol-impl! p/StructurePath this)))
-
-#+clj
-(defn collector-impl [this]
-  (find-protocol-impl! p/Collector this))
+      (defn collector-impl [this]
+        (find-protocol-impl! p/Collector this))))
 
 
-#+cljs
-(defn structure-path-impl [obj]
-  {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
-   :transform* (mk-optimized-invocation p/StructurePath obj transform* 2)
-   })
+#?(:cljs
+    (defn structure-path-impl [obj]
+      {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
+       :transform* (mk-optimized-invocation p/StructurePath obj transform* 2)
+       }))
 
-#+cljs
-(defn collector-impl [obj]
-  {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
-   })
+#?(:cljs
+    (defn collector-impl [obj]
+      {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)}))
 
 (defn coerce-collector [this]
   (let [cfn (->> this
@@ -234,25 +224,25 @@
   ParamsNeededPath
   (coerce-path [this]
     this)
-  
-  #+clj java.util.List #+cljs cljs.core/PersistentVector
+
+  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (coerce-path [this]
     (comp-paths* this))
 
-  #+cljs cljs.core/IndexedSeq
-  #+cljs (coerce-path [this]
-           (coerce-path (vec this)))
-  #+cljs cljs.core/EmptyList
-  #+cljs (coerce-path [this]
-           (coerce-path (vec this)))
-  #+cljs cljs.core/List
-  #+cljs (coerce-path [this]
-           (coerce-path (vec this)))
-  #+cljs cljs.core/LazySeq
-  #+cljs (coerce-path [this]
-           (coerce-path (vec this)))
-  
-  #+clj Object #+cljs default
+  #?@(:cljs
+      [cljs.core/IndexedSeq
+      (coerce-path [this] (coerce-path (vec this)))
+
+      cljs.core/EmptyList
+      (coerce-path [this] (coerce-path (vec this)))
+
+      cljs.core/List
+      (coerce-path [this] (coerce-path (vec this)))
+
+      cljs.core/LazySeq
+      (coerce-path [this] (coerce-path (vec this)))])
+
+  #?(:clj Object :cljs default)
   (coerce-path [this]
     (cond (structure-path? this) (coerce-structure-path this)
           (satisfies? p/Collector this) (coerce-collector this)
@@ -332,10 +322,10 @@
   nil
   (comp-paths* [sp]
     (coerce-path sp))
-  #+clj Object #+cljs default
+  #?(:clj Object :cljs default)
   (comp-paths* [sp]
     (coerce-path sp))
-  #+clj java.util.List #+cljs cljs.core/PersistentVector
+  #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (comp-paths* [structure-paths]
     (if (empty? structure-paths)
       (coerce-path nil)
@@ -373,12 +363,12 @@
 
 ;; cell implementation idea taken from prismatic schema library
 (defprotocol PMutableCell
-  #+clj (get_cell [cell])
+  #?(:clj (get_cell [cell]))
   (set_cell [cell x]))
 
 (deftype MutableCell [^:volatile-mutable q]
   PMutableCell
-  #+clj (get_cell [cell] q)
+  #?(:clj (get_cell [cell] q))
   (set_cell [this x] (set! q x)))
 
 (defn mutable-cell
@@ -389,7 +379,7 @@
   (set_cell cell val))
 
 (defn get-cell [cell]
-  #+clj (get_cell cell) #+cljs (.-q cell)
+  #?(:clj (get_cell cell) :cljs (.-q cell))
   )
 
 (defn update-cell! [cell afn]
@@ -411,12 +401,12 @@
   (append (butlast l) v))
 
 (extend-protocol SetExtremes
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (set-first [v val]
     (assoc v 0 val))
   (set-last [v val]
     (assoc v (-> v count dec) val))
-  #+clj Object #+cljs default
+  #?(:clj Object :cljs default)
   (set-first [l val]
     (set-first-list l val))
   (set-last [l val]
@@ -606,17 +596,17 @@
 
 
 
-#+clj
-(defn extend-protocolpath* [protpath protpath-prot extensions]
-  (let [extensions (partition 2 extensions)
-        m (-> protpath-prot :sigs keys first)
-        expected-params (num-needed-params protpath)]
-    (doseq [[atype apath] extensions]
-      (let [p (comp-paths* apath)
-            rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))
-            needed-params (num-needed-params rp)]
-        (if-not (= needed-params expected-params)
-          (throw-illegal "Invalid number of params in extended protocol path, expected "
-              expected-params " but got " needed-params))
-        (extend atype protpath-prot {m (fn [_] rp)})
-        ))))
+#?(:clj
+    (defn extend-protocolpath* [protpath protpath-prot extensions]
+      (let [extensions (partition 2 extensions)
+            m (-> protpath-prot :sigs keys first)
+            expected-params (num-needed-params protpath)]
+        (doseq [[atype apath] extensions]
+          (let [p (comp-paths* apath)
+                rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))
+                needed-params (num-needed-params rp)]
+            (if-not (= needed-params expected-params)
+              (throw-illegal "Invalid number of params in extended protocol path, expected "
+                  expected-params " but got " needed-params))
+            (extend atype protpath-prot {m (fn [_] rp)})
+            )))))

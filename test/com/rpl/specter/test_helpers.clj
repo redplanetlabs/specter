@@ -1,5 +1,5 @@
 (ns com.rpl.specter.test-helpers
-  (:require [clojure.test.check             
+  (:require [clojure.test.check
              [generators :as gen]
              [properties :as prop]]))
 
@@ -14,4 +14,4 @@
                 `(gen/return ~vars)
                 (reverse parts))]
     `(prop/for-all [~vars ~genned]
-                   ~@body )))
+                   ~@body)))

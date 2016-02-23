@@ -1,26 +1,32 @@
 (ns com.rpl.specter.core-test
-  #+cljs (:require-macros
-           [cljs.test :refer [is deftest]]
-           [cljs.test.check.cljs-test :refer [defspec]]
-           [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
-           [com.rpl.specter.macros
-             :refer [paramsfn defprotocolpath defpath extend-protocolpath
-                     declarepath providepath]])
+  #?(:cljs 
+      (:require-macros
+         [cljs.test :refer [is deftest]]
+         [cljs.test.check.cljs-test :refer [defspec]]
+         [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+         [com.rpl.specter.macros :refer [paramsfn 
+                                         defprotocolpath 
+                                         defpath 
+                                         extend-protocolpath 
+                                         declarepath 
+                                         providepath]]))
   (:use
-    #+clj [clojure.test :only [deftest is]]
-    #+clj [clojure.test.check.clojure-test :only [defspec]]
-    #+clj [com.rpl.specter.test-helpers :only [for-all+]]
-    #+clj [com.rpl.specter.macros
-           :only [paramsfn defprotocolpath defpath extend-protocolpath
-                  declarepath providepath]]
-
+    #?@(:clj [[clojure.test :only [deftest is]]
+              [clojure.test.check.clojure-test :only [defspec]]
+              [com.rpl.specter.test-helpers :only [for-all+]]
+              [com.rpl.specter.macros :only [paramsfn 
+                                             defprotocolpath 
+                                             defpath 
+                                             extend-protocolpath 
+                                             declarepath 
+                                             providepath]]]) 
     )
 
-  (:require #+clj [clojure.test.check.generators :as gen]
-            #+clj [clojure.test.check.properties :as prop]
-            #+cljs [cljs.test.check :as tc]
-            #+cljs [cljs.test.check.generators :as gen]
-            #+cljs [cljs.test.check.properties :as prop :include-macros true]
+  (:require #?@(:clj [[clojure.test.check.generators :as gen]
+                     [clojure.test.check.properties :as prop]]
+               :cljs [[cljs.test.check :as tc]
+                     [cljs.test.check.generators :as gen]
+                     [cljs.test.check.properties :as prop :include-macros true]])
             [com.rpl.specter :as s]
             [clojure.set :as set]))
 
@@ -67,7 +73,7 @@
     ))
 
 (deftest select-one-test
-   (is (thrown? #+clj Exception #+cljs js/Error (s/select-one [s/ALL even?] [1 2 3 4])))
+   (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one [s/ALL even?] [1 2 3 4])))
    (is (= 1 (s/select-one [s/ALL odd?] [2 4 1 6])))
    )
 
@@ -398,7 +404,7 @@
 
 (deftest nil-select-one-test
   (is (= nil (s/select-one! s/ALL [nil])))
-  (is (thrown? #+clj Exception #+cljs js/Error (s/select-one! s/ALL [])))
+  (is (thrown? #?(:clj Exception :cljs js/Error) (s/select-one! s/ALL [])))
   )
 
 
@@ -658,85 +664,80 @@
                    [:q [:abc 3] [:ccc [:abc] [:abc "a" [:abc [:abc [:d]]]]]]
                    ))))
 
-#+clj
-(deftest large-params-test
-  (let [path (apply s/comp-paths (repeat 25 s/keypath))
-        m (reduce
-            (fn [m k]
-              {k m})
-            :a
-            (reverse (range 25)))]
-    (is (= :a (s/select-one (apply path (range 25)) m)))
-    ))
-;;TODO: there's a bug in clojurescript that won't allow
-;; non function implementations of IFn to have more than 20 arguments
+#?(:clj 
+    (do  
+      (deftest large-params-test
+        (let [path (apply s/comp-paths (repeat 25 s/keypath))
+              m (reduce
+                  (fn [m k]
+                    {k m})
+                  :a
+                  (reverse (range 25)))]
+          (is (= :a (s/select-one (apply path (range 25)) m)))
+          ))
+      ;;TODO: there's a bug in clojurescript that won't allow
+      ;; non function implementations of IFn to have more than 20 arguments
 
-#+clj
-(do
-  (defprotocolpath AccountPath [])
-  (defrecord Account [funds])
-  (defrecord User [account])
-  (defrecord Family [accounts])
-  (extend-protocolpath AccountPath User :account Family [:accounts s/ALL])
-  )
+      (do
+        (defprotocolpath AccountPath [])
+        (defrecord Account [funds])
+        (defrecord User [account])
+        (defrecord Family [accounts])
+        (extend-protocolpath AccountPath User :account Family [:accounts s/ALL])
+        )
 
-#+clj
-(deftest protocolpath-basic-test
-  (let [data [(->User (->Account 30))
-              (->User (->Account 50))
-              (->Family [(->Account 51) (->Account 52)])]]
-    (is (= [30 50 51 52]
-           (s/select [s/ALL AccountPath :funds] data)))
-    (is (= [(->User (->Account 31))
-            (->User (->Account 51))
-            (->Family [(->Account 52) (->Account 53)])]
-           (s/transform [s/ALL AccountPath :funds]
-                      inc
-                      data)))
-    ))
+      (deftest protocolpath-basic-test
+        (let [data [(->User (->Account 30))
+                    (->User (->Account 50))
+                    (->Family [(->Account 51) (->Account 52)])]]
+          (is (= [30 50 51 52]
+                 (s/select [s/ALL AccountPath :funds] data)))
+          (is (= [(->User (->Account 31))
+                  (->User (->Account 51))
+                  (->Family [(->Account 52) (->Account 53)])]
+                 (s/transform [s/ALL AccountPath :funds]
+                            inc
+                            data)))
+          ))
 
-#+clj
-(do
-  (defprotocolpath LabeledAccountPath [label])
-  (defrecord LabeledUser [account])
-  (defrecord LabeledFamily [accounts])
-  (extend-protocolpath LabeledAccountPath
-    LabeledUser [:account s/keypath]
-    LabeledFamily [:accounts s/keypath s/ALL])
-  )
+      (do
+        (defprotocolpath LabeledAccountPath [label])
+        (defrecord LabeledUser [account])
+        (defrecord LabeledFamily [accounts])
+        (extend-protocolpath LabeledAccountPath
+          LabeledUser [:account s/keypath]
+          LabeledFamily [:accounts s/keypath s/ALL])
+        )
 
-#+clj
-(deftest protocolpath-params-test
-  (let [data [(->LabeledUser {:a (->Account 30)})
-              (->LabeledUser {:a (->Account 50)})
-              (->LabeledFamily {:a [(->Account 51) (->Account 52)]})]]
-    (is (= [30 50 51 52]
-           (s/select [s/ALL (LabeledAccountPath :a) :funds] data)))
-    (is (= [(->LabeledUser {:a (->Account 31)})
-            (->LabeledUser {:a (->Account 51)})
-            (->LabeledFamily {:a [(->Account 52) (->Account 53)]})]
-           (s/transform [s/ALL (LabeledAccountPath :a) :funds]
-                      inc
-                      data)))
-    ))
+      (deftest protocolpath-params-test
+        (let [data [(->LabeledUser {:a (->Account 30)})
+                    (->LabeledUser {:a (->Account 50)})
+                    (->LabeledFamily {:a [(->Account 51) (->Account 52)]})]]
+          (is (= [30 50 51 52]
+                 (s/select [s/ALL (LabeledAccountPath :a) :funds] data)))
+          (is (= [(->LabeledUser {:a (->Account 31)})
+                  (->LabeledUser {:a (->Account 51)})
+                  (->LabeledFamily {:a [(->Account 52) (->Account 53)]})]
+                 (s/transform [s/ALL (LabeledAccountPath :a) :funds]
+                            inc
+                            data)))
+          ))
 
 
-#+clj
-(do
-  (defprotocolpath CustomWalker [])
-  (extend-protocolpath CustomWalker
-    Object nil
-    clojure.lang.PersistentHashMap [(s/keypath :a) CustomWalker]
-    clojure.lang.PersistentArrayMap [(s/keypath :a) CustomWalker]
-    clojure.lang.PersistentVector [s/ALL CustomWalker]
-    )
+      (do
+        (defprotocolpath CustomWalker [])
+        (extend-protocolpath CustomWalker
+          Object nil
+          clojure.lang.PersistentHashMap [(s/keypath :a) CustomWalker]
+          clojure.lang.PersistentArrayMap [(s/keypath :a) CustomWalker]
+          clojure.lang.PersistentVector [s/ALL CustomWalker]
+          )
 
-  )
+        )
 
-#+clj
-(deftest mixed-rich-regular-protocolpath
-  (is (= [1 2 3 11 21 22 25]
-         (s/select [CustomWalker number?] [{:a [1 2 :c [3]]} [[[[[[11]]] 21 [22 :c 25]]]]])))
-  (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
-         (s/transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))
-  )
+      (deftest mixed-rich-regular-protocolpath
+        (is (= [1 2 3 11 21 22 25]
+               (s/select [CustomWalker number?] [{:a [1 2 :c [3]]} [[[[[[11]]] 21 [22 :c 25]]]]])))
+        (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
+               (s/transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))
+        )))
