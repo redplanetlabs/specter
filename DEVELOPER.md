@@ -1,13 +1,6 @@
-# Running Clojure tests
+# Running all tests
 
 ```
 lein cleantest
 ```
-
-# Running ClojureScript tests
-
-```
-$ rm -rf out/
-$ rlwrap java -cp `lein classpath` clojure.main repl.clj
-cljs.user=> (require 'com.rpl.specter.cljs-test-runner)
-```
+> **NOTE:** clojurescript tests requires [phantomj](http://phantomjs.org/download.html) to be installed

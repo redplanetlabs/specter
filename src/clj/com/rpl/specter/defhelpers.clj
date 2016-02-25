@@ -11,10 +11,9 @@
                 `(~invoke-name [this# ~@args]
                   (let [~a (~(if clj? 'com.rpl.specter.impl/fast-object-array 'object-array) ~i)]
                     ~@setters
-                    (com.rpl.specter.impl/bind-params* this# ~a 0)
-                    )))]
+                    (com.rpl.specter.impl/bind-params* this# ~a 0))))]
+
     `(defrecord ~'ParamsNeededPath [~'transform-fns ~'num-needed-params]
        ~fn-type
        ~@impls
-       ~var-arity-impl
-       )))
+       ~var-arity-impl)))

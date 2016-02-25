@@ -10,4 +10,4 @@
                 `(cljs.test.check.generators/return ~vars)
                 (reverse parts))]
     `(cljs.test.check.properties/for-all [~vars ~genned]
-                   ~@body )))
+                   ~@body)))
