@@ -1,4 +1,5 @@
-## 0.9.3 (unreleased)
+## 0.9.3
+* Change clojure/clojurescript to provided dependencies
 * ALL on maps auto-coerces MapEntry to vector, enabling smoother transformation of map keys
 * declarepath can now be parameterized
 * Added params-reset which calls its path with the params index walked back by the number of params needed by its path. This enables recursive parameterized paths
