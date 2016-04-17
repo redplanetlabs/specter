@@ -1,5 +1,5 @@
 (ns com.rpl.specter.macros
-  (:use [com.rpl.specter impl])
+  (:require [com.rpl.specter [impl :as i]])
   )
 
 (defn gensyms [amt]
@@ -7,7 +7,7 @@
 
 (defn determine-params-impls [[name1 & impl1] [name2 & impl2]]
   (if-not (= #{name1 name2} #{'select* 'transform*})
-    (throw-illegal "defpath must implement select* and transform*, instead got "
+    (i/throw-illegal "defpath must implement select* and transform*, instead got "
       name1 " and " name2))
   (if (= name1 'select*)
     [impl1 impl2]
@@ -22,17 +22,17 @@
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
          (determine-params-impls impl1 impl2)]
     (if (= 0 num-params)
-      `(no-params-compiled-path
-         (->TransformFunctions
-           StructurePathExecutor
+      `(i/no-params-compiled-path
+         (i/->TransformFunctions
+           i/StructurePathExecutor
            (fn [~s-structure-sym ~s-next-fn-sym]
              ~@select-body)
            (fn [~t-structure-sym ~t-next-fn-sym]
              ~@transform-body)
            ))
-      `(->ParamsNeededPath
-         (->TransformFunctions
-           RichPathExecutor
+      `(i/->ParamsNeededPath
+         (i/->TransformFunctions
+           i/RichPathExecutor
            (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
              (let [~s-next-fn-sym (fn [structure#]
                                     (next-fn#
@@ -66,9 +66,9 @@
                           (conj vals# c#)
                           ~structure-sym)                     
                         ))]
-     (->ParamsNeededPath
-       (->TransformFunctions
-         RichPathExecutor
+     (i/->ParamsNeededPath
+       (i/->TransformFunctions
+         i/RichPathExecutor
          collector#
          collector# )
        ~num-params
@@ -76,21 +76,21 @@
 
 (defn pathed-path* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
-    `(let [paths# (map comp-paths* ~paths-seq)
-           needed-params# (map num-needed-params paths#)
+    `(let [paths# (map i/comp-paths* ~paths-seq)
+           needed-params# (map i/num-needed-params paths#)
            offsets# (cons 0 (reductions + needed-params#))
            any-params-needed?# (->> paths#
-                                    (filter params-needed-path?)
+                                    (filter i/params-needed-path?)
                                     empty?
                                     not)
            ~num-params-sym (last offsets#)
            ~latefns-sym (map
                           (fn [o# p#]
-                            (if (compiled-path? p#)
+                            (if (i/compiled-path? p#)
                               (fn [params# params-idx#]
                                 p# )
                               (fn [params# params-idx#]
-                                (bind-params* p# params# (+ params-idx# o#))
+                                (i/bind-params* p# params# (+ params-idx# o#))
                                 )))
                           offsets#
                           paths#)
@@ -98,7 +98,7 @@
            ret# ~(builder post-bindings num-params-sym impls)
            ]
     (if (not any-params-needed?#)
-      (bind-params* ret# nil 0)
+      (i/bind-params* ret# nil 0)
       ret#
       ))))
 
@@ -127,11 +127,11 @@
   `(path ~params
      (~'select* [this# structure# next-fn#]
        (let [afn# (fn [~structure-sym] ~@impl)]
-         (filter-select afn# structure# next-fn#)
+         (i/filter-select afn# structure# next-fn#)
          ))
      (~'transform* [this# structure# next-fn#]
        (let [afn# (fn [~structure-sym] ~@impl)]
-         (filter-transform afn# structure# next-fn#)
+         (i/filter-transform afn# structure# next-fn#)
          ))))
 
 (defmacro paramscollector
@@ -224,30 +224,30 @@
           (defprotocol ~prot-name (~m [structure#]))
           (def ~name
             (if (= ~num-params 0)
-              (no-params-compiled-path
-                (->TransformFunctions
-                  RichPathExecutor
+              (i/no-params-compiled-path
+                (i/->TransformFunctions
+                  i/RichPathExecutor
                   (fn ~rargs
                     (let [path# ~retrieve
-                          selector# (compiled-selector path#)]
+                          selector# (i/compiled-selector path#)]
                       (selector# ~@rargs)
                       ))
                   (fn ~rargs
                     (let [path# ~retrieve
-                          transformer# (compiled-transformer path#)]
+                          transformer# (i/compiled-transformer path#)]
                       (transformer# ~@rargs)
                       ))))
-              (->ParamsNeededPath
-                (->TransformFunctions
-                  RichPathExecutor
+              (i/->ParamsNeededPath
+                (i/->TransformFunctions
+                  i/RichPathExecutor
                   (fn ~rargs
                     (let [path# ~retrieve
-                          selector# (params-needed-selector path#)]
+                          selector# (i/params-needed-selector path#)]
                       (selector# ~@rargs)
                       ))
                   (fn ~rargs
                     (let [path# ~retrieve
-                          transformer# (params-needed-transformer path#)]
+                          transformer# (i/params-needed-transformer path#)]
                       (transformer# ~@rargs)
                       )))
                 ~num-params
@@ -270,26 +270,26 @@
          (declare ~declared)
          (def ~name
            (if (= ~num-params 0)
-             (no-params-compiled-path
-               (->TransformFunctions
-                RichPathExecutor
+             (i/no-params-compiled-path
+               (i/->TransformFunctions
+                i/RichPathExecutor
                 (fn ~rargs
-                  (let [selector# (compiled-selector ~declared)]
+                  (let [selector# (i/compiled-selector ~declared)]
                     (selector# ~@rargs)
                     ))
                 (fn ~rargs
-                  (let [transformer# (compiled-transformer ~declared)]
+                  (let [transformer# (i/compiled-transformer ~declared)]
                     (transformer# ~@rargs)
                     ))))
-             (->ParamsNeededPath
-               (->TransformFunctions
-                 RichPathExecutor
+             (i/->ParamsNeededPath
+               (i/->TransformFunctions
+                 i/RichPathExecutor
                  (fn ~rargs
-                   (let [selector# (params-needed-selector ~declared)]
+                   (let [selector# (i/params-needed-selector ~declared)]
                      (selector# ~@rargs)
                      ))
                  (fn ~rargs
-                   (let [transformer# (params-needed-transformer ~declared)]
+                   (let [transformer# (i/params-needed-transformer ~declared)]
                      (transformer# ~@rargs)
                      )))
                ~num-params
@@ -297,17 +297,17 @@
            ))))))
 
 (defmacro providepath [name apath]
-  `(let [comped# (comp-paths* ~apath)
-         expected-params# (num-needed-params ~name)
-         needed-params# (num-needed-params comped#)]
+  `(let [comped# (i/comp-paths* ~apath)
+         expected-params# (i/num-needed-params ~name)
+         needed-params# (i/num-needed-params comped#)]
      (if-not (= needed-params# expected-params#)
-       (throw-illegal "Invalid number of params in provided path, expected "
+       (i/throw-illegal "Invalid number of params in provided path, expected "
            expected-params# " but got " needed-params#))
      (def ~(declared-name name)
        (update-in comped#
                   [:transform-fns]
-                  coerce-tfns-rich)
+                  i/coerce-tfns-rich)
        )))
 
 (defmacro extend-protocolpath [protpath & extensions]
-  `(extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
+  `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
