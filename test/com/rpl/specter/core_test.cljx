@@ -245,11 +245,13 @@
 (defspec parser-test
   (for-all+
     [i gen/int
-     j gen/int]
-    (and (= (first (s/select (s/parser #(+ % j) #(- % j)) i))
-            (+ j i))
-         (= (s/transform (s/parser #(+ % j) #(- % j)) identity i)
-            i)
+     afn (gen/elements [inc dec #(* % 2)])
+     bfn (gen/elements [inc dec #(* % 2)])
+     cfn (gen/elements [inc dec #(* % 2)])]
+    (and (= (first (s/select (s/parser afn bfn) i))
+            (afn i))
+         (= (s/transform (s/parser afn bfn) cfn i)
+            (-> i afn cfn bfn))
          )))
 
 (deftest selected?-test
