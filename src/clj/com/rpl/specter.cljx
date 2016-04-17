@@ -270,11 +270,11 @@
     (next-fn (afn structure))
     ))
 
-(defpath biview [afn bfn]
+(defpath parser [parse unparse]
   (select* [this structure next-fn]
-    (next-fn (afn structure)))
+    (next-fn (parse structure)))
   (transform* [this structure next-fn]
-    (bfn (next-fn (afn structure)))
+    (unparse (next-fn (parse structure)))
     ))
 
 (defn selected?

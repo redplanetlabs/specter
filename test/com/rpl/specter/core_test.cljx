@@ -242,6 +242,16 @@
        (s/transform (s/view afn) identity i)
        )))
 
+(defspec parser-test
+  (for-all+
+    [i gen/int
+     j gen/int]
+    (and (= (first (s/select (s/parser #(+ % j) #(- % j)) i))
+            (+ j i))
+         (= (s/transform (s/parser #(+ % j) #(- % j)) identity i)
+            i)
+         )))
+
 (deftest selected?-test
   (is (= [[1 3 5] [2 :a] [7 11 4 2 :a] [10 1 :a] []]
          (s/setval [s/ALL (s/selected? s/ALL even?) s/END]
