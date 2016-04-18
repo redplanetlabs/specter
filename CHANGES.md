@@ -2,6 +2,7 @@
 * Make codebase bootstrap cljs compatible
 * Remove usage of reducers in cljs version in favor of transducers (thanks @StephenRudolph)
 * ALL now maintains type of queues (thanks @StephenRudolph)
+* Added `parser` path (thanks @thomasathorne)
 
 ## 0.9.3
 * Change clojure/clojurescript to provided dependencies
