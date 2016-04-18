@@ -1,3 +1,6 @@
+## 0.9.4 (unreleased)
+* Make codebase bootstrap cljs compatible
+
 ## 0.9.3
 * Change clojure/clojurescript to provided dependencies
 * ALL on maps auto-coerces MapEntry to vector, enabling smoother transformation of map keys

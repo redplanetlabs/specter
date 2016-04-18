@@ -1,5 +1,5 @@
 (ns com.rpl.specter.macros
-  (:require [com.rpl.specter [impl :as i]])
+  (:require [com.rpl.specter.impl :as i])
   )
 
 (defn gensyms [amt]
