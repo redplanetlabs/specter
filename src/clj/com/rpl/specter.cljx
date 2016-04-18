@@ -270,11 +270,11 @@
     (next-fn (afn structure))
     ))
 
-(defpath parser [parse unparse]
+(defpath parser [parse-fn unparse-fn]
   (select* [this structure next-fn]
-    (next-fn (parse structure)))
+    (next-fn (parse-fn structure)))
   (transform* [this structure next-fn]
-    (unparse (next-fn (parse structure)))
+    (unparse-fn (next-fn (parse-fn structure)))
     ))
 
 (defn selected?
