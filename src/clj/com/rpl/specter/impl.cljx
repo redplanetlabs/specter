@@ -8,7 +8,7 @@
     [select* transform* collect-val]])
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
-            [clojure.core.reducers :as r]
+            #+clj [clojure.core.reducers :as r]
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             )
@@ -502,12 +502,30 @@
   (assoc structure akey (next-fn (get structure akey))
   ))
 
+#+clj
 (defn all-select [structure next-fn]
   (into [] (r/mapcat next-fn structure)))
 
+#+cljs
+(defn next-fn-mapcat-transformation [next-fn]
+  (mapcat #(next-fn %1)))
+
+#+cljs
+(defn all-select [structure next-fn]
+  (into [] (next-fn-mapcat-transformation next-fn) structure))
+
+#+cljs
+(defn queue? [coll]
+  (= (type coll) (type #queue [])))
+
+#+clj
+(defn queue? [coll]
+  (= (type coll) (type clojure.lang.PersistentQueue/EMPTY)))
+
+#+clj
 (defn all-transform [structure next-fn]
   (let [empty-structure (empty structure)]
-    (cond (list? empty-structure)
+    (cond (and (list? empty-structure) (not (queue? empty-structure)))
           ;; this is done to maintain order, otherwise lists get reversed
           (doall (map next-fn structure))
 
@@ -517,6 +535,19 @@
           :else
           (->> structure (r/map next-fn) (into empty-structure))
       )))
+
+#+cljs
+(defn next-fn-map-transformation [next-fn]
+  (map #(next-fn %1)))
+
+#+cljs
+(defn all-transform [structure next-fn]
+  (let [empty-structure (empty structure)]
+    (if (and (list? empty-structure) (not (queue? empty-structure)))
+        ;; this is done to maintain order, otherwise lists get reversed
+        (doall (map next-fn structure))
+        (into empty-structure (next-fn-map-transformation next-fn) structure)
+        )))
 
 (deftype AllStructurePath [])
 

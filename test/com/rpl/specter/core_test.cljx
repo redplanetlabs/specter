@@ -740,3 +740,41 @@
   (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
          (s/transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))
   )
+
+#+cljs
+(defn make-queue [coll]
+  (reduce
+    #(conj %1 %2)
+    #queue []
+    coll))
+
+#+clj
+(defn make-queue [coll]
+  (reduce
+    #(conj %1 %2)
+    clojure.lang.PersistentQueue/EMPTY
+    coll))
+
+(defspec transform-idempotency
+         (for-all+
+           [v1 (gen/vector gen/int)
+            l1 (gen/list gen/int)
+            m1 (gen/map gen/keyword gen/int)]
+           (let [s1 (set v1)
+                 q1 (make-queue v1)
+                 v2 (s/transform s/ALL identity v1)
+                 m2 (s/transform s/ALL identity m1)
+                 s2 (s/transform s/ALL identity s1)
+                 l2 (s/transform s/ALL identity l1)
+                 q2 (s/transform s/ALL identity q1)]
+             (and
+               (= v1 v2)
+               (= (type v1) (type v2))
+               (= m1 m2)
+               (= (type m1) (type m2))
+               (= s1 s2)
+               (= (type s1) (type s2))
+               (= l1 l2)
+               (seq? l2)                                    ;; Transformed lists are only guaranteed to impelment ISeq
+               (= q1 q2)
+               (= (type q1) (type q2))))))
