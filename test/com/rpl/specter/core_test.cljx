@@ -775,6 +775,6 @@
                (= s1 s2)
                (= (type s1) (type s2))
                (= l1 l2)
-               (seq? l2)                                    ;; Transformed lists are only guaranteed to impelment ISeq
+               (seq? l2) ; Transformed lists are only guaranteed to impelment ISeq
                (= q1 q2)
                (= (type q1) (type q2))))))

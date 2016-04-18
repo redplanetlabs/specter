@@ -507,12 +507,8 @@
   (into [] (r/mapcat next-fn structure)))
 
 #+cljs
-(defn next-fn-mapcat-transformation [next-fn]
-  (mapcat #(next-fn %1)))
-
-#+cljs
 (defn all-select [structure next-fn]
-  (into [] (next-fn-mapcat-transformation next-fn) structure))
+  (into [] (mapcat #(next-fn %)) structure))
 
 #+cljs
 (defn queue? [coll]
@@ -520,7 +516,7 @@
 
 #+clj
 (defn queue? [coll]
-  (= (type coll) (type clojure.lang.PersistentQueue/EMPTY)))
+  (instance? clojure.lang.PersistentQueue coll))
 
 #+clj
 (defn all-transform [structure next-fn]
@@ -537,16 +533,12 @@
       )))
 
 #+cljs
-(defn next-fn-map-transformation [next-fn]
-  (map #(next-fn %1)))
-
-#+cljs
 (defn all-transform [structure next-fn]
   (let [empty-structure (empty structure)]
     (if (and (list? empty-structure) (not (queue? empty-structure)))
         ;; this is done to maintain order, otherwise lists get reversed
         (doall (map next-fn structure))
-        (into empty-structure (next-fn-map-transformation next-fn) structure)
+        (into empty-structure (map #(next-fn %)) structure)
         )))
 
 (deftype AllStructurePath [])
