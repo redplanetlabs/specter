@@ -270,6 +270,13 @@
     (next-fn (afn structure))
     ))
 
+(defpath parser [parse-fn unparse-fn]
+  (select* [this structure next-fn]
+    (next-fn (parse-fn structure)))
+  (transform* [this structure next-fn]
+    (unparse-fn (next-fn (parse-fn structure)))
+    ))
+
 (defn selected?
   "Filters the current value based on whether a selector finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
