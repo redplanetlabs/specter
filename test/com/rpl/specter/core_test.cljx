@@ -248,7 +248,7 @@
      afn (gen/elements [inc dec #(* % 2)])
      bfn (gen/elements [inc dec #(* % 2)])
      cfn (gen/elements [inc dec #(* % 2)])]
-    (and (= (first (s/select (s/parser afn bfn) i))
+    (and (= (s/select-one! (s/parser afn bfn) i)
             (afn i))
          (= (s/transform (s/parser afn bfn) cfn i)
             (-> i afn cfn bfn))
@@ -767,7 +767,7 @@
     clojure.lang.PersistentQueue/EMPTY
     coll))
 
-(defspec transform-idempotency
+(defspec transform-idempotency 50
          (for-all+
            [v1 (gen/vector gen/int)
             l1 (gen/list gen/int)
