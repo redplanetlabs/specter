@@ -510,18 +510,18 @@
            ))
     ))
 
-(defspec select-view-nested-vectors
+(defspec subselect-nested-vectors
   (for-all+
     [v1 (gen/vector
          (gen/vector gen/int))]
-    (let [path (s/comp-paths (s/select-view s/ALL s/ALL))
+    (let [path (s/comp-paths (s/subselect s/ALL s/ALL))
           v2 (s/compiled-transform path reverse v1)]
       (and
         (= (s/compiled-select path v1) [(flatten v1)])
         (= (flatten v1) (reverse (flatten v2)))
         (= (map count v1) (map count v2))))))
 
-(defspec select-view-param-test
+(defspec subselect-param-test
   (for-all+
     [k gen/keyword
      v (gen/vector
@@ -531,9 +531,9 @@
              gen/int
              k)))]
     (and
-     (= (s/compiled-select ((s/select-view s/ALL s/keypath) k) v)
+     (= (s/compiled-select ((s/subselect s/ALL s/keypath) k) v)
         [(map k v)])
-     (let [v2 (s/compiled-transform ((s/comp-paths (s/select-view s/ALL s/keypath)) k)
+     (let [v2 (s/compiled-transform ((s/comp-paths (s/subselect s/ALL s/keypath)) k)
                                     reverse
                                     v)]
        (and (= (map k v) (reverse (map k v2)))

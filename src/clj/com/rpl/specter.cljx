@@ -256,7 +256,7 @@
                 ancestry))
       )))
 
-(defn select-view
+(defn subselect
   "Navigates to a sequence that contains the results of (select ...),
   but is a view to the original structure that can be transformed.
 
