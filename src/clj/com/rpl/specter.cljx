@@ -256,6 +256,23 @@
                 ancestry))
       )))
 
+(defn select-view
+  "Navigates to a sequence that contains the results of (select ...),
+  but is a view to the original structure that can be transformed."
+  [& path]
+  (fixed-pathed-path [late path]
+    (select* [this structure next-fn]
+             (next-fn (compiled-select late structure)))
+    (transform* [this structure next-fn]
+      (let [select-result (compiled-select late structure)
+            transformed (next-fn select-result)
+            values-to-insert (atom transformed)]
+        (compiled-transform late
+                            (fn [_] (let [next-val (first @values-to-insert)]
+                                      (swap! values-to-insert rest)
+                                      next-val))
+                            structure)))))
+
 (defpath keypath [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
