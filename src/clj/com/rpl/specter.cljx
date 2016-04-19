@@ -266,10 +266,10 @@
     (transform* [this structure next-fn]
       (let [select-result (compiled-select late structure)
             transformed (next-fn select-result)
-            values-to-insert (atom transformed)]
+            values-to-insert (i/mutable-cell transformed)]
         (compiled-transform late
-                            (fn [_] (let [next-val (first @values-to-insert)]
-                                      (swap! values-to-insert rest)
+                            (fn [_] (let [next-val (first (i/get-cell values-to-insert))]
+                                      (i/update-cell! values-to-insert rest)
                                       next-val))
                             structure)))))
 
