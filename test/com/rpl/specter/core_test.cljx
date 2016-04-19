@@ -671,8 +671,8 @@
   (is (= {:a {:aaa 4 :b {:c {:aaa 3} :aaa 2}}}
          (s/transform (map-key-walker :aaa) inc
                       {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}})))
-  (is (= {:a {:c {:b "X"}}})
-      (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}}))
+  (is (= {:a {:c {:b "X"}}}
+         (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}})))
   )
 
 (deftest recursive-params-composable-path-test
