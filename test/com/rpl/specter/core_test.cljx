@@ -573,6 +573,18 @@
         (= (s/setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))
         ))))
 
+(deftest submap-test
+  (is (= [{:foo 1, :baz nil}]
+         (s/select [(s/submap :foo :baz)] {:foo 1 :bar 2})))
+  (is (= {:foo 1, :barry 1}
+         (s/setval [(s/submap :bar)] {:barry 1} {:foo 1 :bar 2})))
+  (is (= {:bar 1, :foo 2, :baz nil}
+         (s/transform [(s/submap :foo :baz) s/ALL s/LAST (comp not nil?)] inc {:foo 1 :bar 1})))
+  (is (= {:a {:new 1}
+          :c {:new 1
+              :old 1}}
+         (s/setval [s/ALL s/LAST (s/submap)] {:new 1} {:a nil, :c {:old 1}}))))
+
 (deftest nil->val-test
   (is (= {:a #{:b}}
          (s/setval [:a s/NIL->SET (s/subset #{})] #{:b} nil)))
