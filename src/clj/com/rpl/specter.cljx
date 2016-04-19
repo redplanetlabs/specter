@@ -258,7 +258,11 @@
 
 (defn select-view
   "Navigates to a sequence that contains the results of (select ...),
-  but is a view to the original structure that can be transformed."
+  but is a view to the original structure that can be transformed.
+
+  Requires that the input navigators will walk the structure's
+  children in the same order when executed on \"select\" and then
+  \"transform\"."
   [& path]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
