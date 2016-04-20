@@ -218,23 +218,19 @@
           )))
 
 (defpath
-  submap*
+  ^{:doc "Navigates to the specified submap (using select-keys).
+          In a transform, that submap in the original map is changed to the new
+          value of the submap."}
+  submap
   [m-keys]
   (select* [this structure next-fn]
-    (next-fn (merge (zipmap m-keys (repeat nil)) (select-keys structure m-keys))))
+    (next-fn (select-keys structure m-keys)))
 
   (transform* [this structure next-fn]
-    (let [submap (merge (zipmap m-keys (repeat nil)) (select-keys structure m-keys))
+    (let [submap (select-keys structure m-keys)
           newmap (next-fn submap)]
-      (merge (apply dissoc structure m-keys)
+      (merge (reduce dissoc structure m-keys)
              newmap))))
-
-(defn submap
-  "Navigates to the specified submap (by attempting a get for each key).
-   In a transform, that submap in the original map is changed to the new
-   value of the submap."
-  [& m-keys]
-  (submap* m-keys))
 
 (defpath
   walker
