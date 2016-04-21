@@ -271,6 +271,27 @@
                 ancestry))
       )))
 
+(defn subselect
+  "Navigates to a sequence that contains the results of (select ...),
+  but is a view to the original structure that can be transformed.
+
+  Requires that the input navigators will walk the structure's
+  children in the same order when executed on \"select\" and then
+  \"transform\"."
+  [& path]
+  (fixed-pathed-path [late path]
+    (select* [this structure next-fn]
+             (next-fn (compiled-select late structure)))
+    (transform* [this structure next-fn]
+      (let [select-result (compiled-select late structure)
+            transformed (next-fn select-result)
+            values-to-insert (i/mutable-cell transformed)]
+        (compiled-transform late
+                            (fn [_] (let [next-val (first (i/get-cell values-to-insert))]
+                                      (i/update-cell! values-to-insert rest)
+                                      next-val))
+                            structure)))))
+
 (defpath keypath [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
