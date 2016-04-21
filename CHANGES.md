@@ -4,6 +4,7 @@
 * ALL now maintains type of queues (thanks @StephenRudolph)
 * Added `parser` path (thanks @thomasathorne)
 * Added `submap` path (thanks @bfabry)
+* Added `subselect` path (thanks @aengelberg)
 
 ## 0.9.3
 * Change clojure/clojurescript to provided dependencies
