@@ -510,6 +510,37 @@
            ))
     ))
 
+(defspec subselect-nested-vectors
+  (for-all+
+    [v1 (gen/vector
+         (gen/vector gen/int))]
+    (let [path (s/comp-paths (s/subselect s/ALL s/ALL))
+          v2 (s/compiled-transform path reverse v1)]
+      (and
+        (= (s/compiled-select path v1) [(flatten v1)])
+        (= (flatten v1) (reverse (flatten v2)))
+        (= (map count v1) (map count v2))))))
+
+(defspec subselect-param-test
+  (for-all+
+    [k gen/keyword
+     v (gen/vector
+         (limit-size 5
+           (gen-map-with-keys
+             gen/keyword
+             gen/int
+             k)))]
+    (and
+     (= (s/compiled-select ((s/subselect s/ALL s/keypath) k) v)
+        [(map k v)])
+     (let [v2 (s/compiled-transform ((s/comp-paths (s/subselect s/ALL s/keypath)) k)
+                                    reverse
+                                    v)]
+       (and (= (map k v) (reverse (map k v2)))
+            (= (map #(dissoc % k) v)
+               (map #(dissoc % k) v2))) ; only key k was touched in any of the maps
+       ))))
+
 (defspec param-multi-path-test
   (for-all+
     [k1 gen/keyword
@@ -652,8 +683,8 @@
   (is (= {:a {:aaa 4 :b {:c {:aaa 3} :aaa 2}}}
          (s/transform (map-key-walker :aaa) inc
                       {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}})))
-  (is (= {:a {:c {:b "X"}}})
-      (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}}))
+  (is (= {:a {:c {:b "X"}}}
+         (s/setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}})))
   )
 
 (deftest recursive-params-composable-path-test
