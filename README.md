@@ -181,7 +181,7 @@ user> (select [ALL AccountPath :funds]
 [50 51 1 2]
 ```
 
-The next example demonstrates recursive navigation. Here's how to double all the even numbers in a tree:
+The next examples demonstrate recursive navigation. Here's how to double all the even numbers in a tree:
 
 ```clojure
 (defprotocolpath TreeWalker [])
@@ -192,6 +192,26 @@ The next example demonstrates recursive navigation. Here's how to double all the
 
 (transform [TreeWalker number? even?] #(* 2 %) [:a 1 [2 [[[3]]] :e] [4 5 [6 7]]])
 ;; => [:a 1 [4 [[[3]]] :e] [8 5 [12 7]]]
+```
+
+Here's how to reverse the positions of all even numbers in a tree (with order based on a depth first search). This example uses conditional navigation instead of protocol paths to do the walk:
+
+```clojure
+(declarepath TreeValues)
+
+(providepath TreeValues
+  (if-path vector?
+    [ALL TreeValues]
+    STAY
+    ))
+
+
+(transform (subselect TreeValues even?)
+  reverse
+  [1 2 [3 [[4]] 5] [6 [7 8] 9 [[10]]]]
+  )
+
+;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
 ```
 
 You can make `select` and `transform` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of transform:
