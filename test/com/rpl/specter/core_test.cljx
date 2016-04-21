@@ -124,13 +124,15 @@
 
 (defspec transform-filterer-all-equivalency
   (prop/for-all
-   [v (gen/vector gen/int)
+   [s (gen/vector gen/int)
+    target-type (gen/elements ['() []])
     pred (gen/elements [even? odd?])
     updater (gen/elements [inc dec])]
-   (let [v2 (s/transform [(s/filterer pred) s/ALL] updater v)
+   (let [v (into target-type s)
+         v2 (s/transform [(s/filterer pred) s/ALL] updater v)
          v3 (s/transform [s/ALL pred] updater v)]
-     (= v2 v3))
-     ))
+     (and (= v2 v3) (= (type v2) (type v3)))
+     )))
 
 (defspec transform-with-context
   (for-all+
