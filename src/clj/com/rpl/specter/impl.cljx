@@ -482,19 +482,6 @@
     (get-cell ret)
     ))
 
-(defn filter+ancestry [path aseq]
-  (let [aseq (vec aseq)]
-    (reduce (fn [[s m :as orig] i]
-              (let [e (get aseq i)
-                    pos (count s)]
-                (if (selected?* path e)
-                  [(conj s e) (assoc m pos i)]
-                  orig
-                  )))
-            [[] {}]
-            (range (count aseq))
-            )))
-
 (defn key-select [akey structure next-fn]
   (next-fn (get structure akey)))
 

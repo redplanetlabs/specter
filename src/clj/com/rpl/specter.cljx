@@ -248,29 +248,6 @@
   (transform* [this structure next-fn]
     (i/codewalk-until afn next-fn structure)))
 
-(defn filterer
-  "Navigates to a view of the current sequence that only contains elements that
-  match the given selector path. An element matches the selector path if calling select
-  on that element with the selector path yields anything other than an empty sequence.
-
-   The input path may be parameterized, in which case the result of filterer
-   will be parameterized in the order of which the parameterized selectors
-   were declared."
-  [& path]
-  (fixed-pathed-path [late path]
-    (select* [this structure next-fn]
-      (->> structure (filter #(i/selected?* late %)) doall next-fn))
-    (transform* [this structure next-fn]
-      (let [[filtered ancestry] (i/filter+ancestry late structure)
-            ;; the vec is necessary so that we can get by index later
-            ;; (can't get by index for cons'd lists)
-            next (vec (next-fn filtered))]
-        (reduce (fn [curr [newi oldi]]
-                  (assoc curr oldi (get next newi)))
-                (vec structure)
-                ancestry))
-      )))
-
 (defn subselect
   "Navigates to a sequence that contains the results of (select ...),
   but is a view to the original structure that can be transformed.
@@ -346,6 +323,17 @@
         #(i/not-selected?* late %)
         structure
         next-fn))))
+
+(defn filterer
+  "Navigates to a view of the current sequence that only contains elements that
+  match the given selector path. An element matches the selector path if calling select
+  on that element with the selector path yields anything other than an empty sequence.
+
+   The input path may be parameterized, in which case the result of filterer
+   will be parameterized in the order of which the parameterized selectors
+   were declared."
+  [& path]
+  (subselect ALL (selected? path)))
 
 (defn transformed
   "Navigates to a view of the current value by transforming it with the
