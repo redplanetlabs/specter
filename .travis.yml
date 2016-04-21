@@ -1,2 +1,4 @@
 language: clojure
-script: lein cljx
+script:
+  - lein cljx
+  - lein test
