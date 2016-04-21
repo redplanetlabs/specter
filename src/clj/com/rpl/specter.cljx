@@ -24,81 +24,81 @@
 (defn comp-paths [& paths]
   (i/comp-paths* (vec paths)))
 
-;; Selector functions
+;; Selection functions
 
-(def ^{:doc "Version of select that takes in a selector pre-compiled with comp-paths"}
+(def ^{:doc "Version of select that takes in a path pre-compiled with comp-paths"}
   compiled-select i/compiled-select*)
 
 (defn select
-  "Navigates to and returns a sequence of all the elements specified by the selector."
-  [selector structure]
-  (compiled-select (i/comp-paths* selector)
+  "Navigates to and returns a sequence of all the elements specified by the path."
+  [path structure]
+  (compiled-select (i/comp-paths* path)
                    structure))
 
 (defn compiled-select-one
-  "Version of select-one that takes in a selector pre-compiled with comp-paths"
-  [selector structure]
-  (let [res (compiled-select selector structure)]
+  "Version of select-one that takes in a path pre-compiled with comp-paths"
+  [path structure]
+  (let [res (compiled-select path structure)]
     (when (> (count res) 1)
-      (i/throw-illegal "More than one element found for params: " selector structure))
+      (i/throw-illegal "More than one element found for params: " path structure))
     (first res)
     ))
 
 (defn select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
-  [selector structure]
-  (compiled-select-one (i/comp-paths* selector) structure))
+  [path structure]
+  (compiled-select-one (i/comp-paths* path) structure))
 
 (defn compiled-select-one!
-  "Version of select-one! that takes in a selector pre-compiled with comp-paths"
-  [selector structure]
-  (let [res (compiled-select selector structure)]
-    (when (not= 1 (count res)) (i/throw-illegal "Expected exactly one element for params: " selector structure))
+  "Version of select-one! that takes in a path pre-compiled with comp-paths"
+  [path structure]
+  (let [res (compiled-select path structure)]
+    (when (not= 1 (count res)) (i/throw-illegal "Expected exactly one element for params: " path structure))
     (first res)
     ))
 
 (defn select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found"
-  [selector structure]
-  (compiled-select-one! (i/comp-paths* selector) structure))
+  [path structure]
+  (compiled-select-one! (i/comp-paths* path) structure))
 
 (defn compiled-select-first
-  "Version of select-first that takes in a selector pre-compiled with comp-paths"
-  [selector structure]
-  (first (compiled-select selector structure)))
+  "Version of select-first that takes in a path pre-compiled with comp-paths"
+  [path structure]
+  (first (compiled-select path structure)))
 
 (defn select-first
   "Returns first element found. Not any more efficient than select, just a convenience"
-  [selector structure]
-  (compiled-select-first (i/comp-paths* selector) structure))
+  [path structure]
+  (compiled-select-first (i/comp-paths* path) structure))
 
 
-;; Transform functions
+;; Transformation functions
 
-(def ^{:doc "Version of transform that takes in a selector pre-compiled with comp-paths"}
+(def ^{:doc "Version of transform that takes in a path pre-compiled with comp-paths"}
   compiled-transform i/compiled-transform*)
 
 (defn transform
-  "Navigates to each value specified by the selector and replaces it by the result of running
+  "Navigates to each value specified by the path and replaces it by the result of running
   the transform-fn on it"
-  [selector transform-fn structure]
-  (compiled-transform (i/comp-paths* selector) transform-fn structure))
+  [path transform-fn structure]
+  (compiled-transform (i/comp-paths* path) transform-fn structure))
 
 (defn compiled-setval
-  "Version of setval that takes in a selector pre-compiled with comp-paths"
-  [selector val structure]
-  (compiled-transform selector (fn [_] val) structure))
+  "Version of setval that takes in a path pre-compiled with comp-paths"
+  [path val structure]
+  (compiled-transform path (fn [_] val) structure))
 
 (defn setval
-  "Navigates to each value specified by the selector and replaces it by val"
-  [selector val structure]
-  (compiled-setval (i/comp-paths* selector) val structure))
+  "Navigates to each value specified by the path and replaces it by val"
+  [path val structure]
+  (compiled-setval (i/comp-paths* path) val structure))
 
 (defn compiled-replace-in
-  "Version of replace-in that takes in a selector pre-compiled with comp-paths"
-  [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  "Version of replace-in that takes in a path pre-compiled with comp-paths"
+  [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (let [state (i/mutable-cell nil)]
-    [(compiled-transform selector
+    [(compiled-transform path
              (fn [& args]
                (let [res (apply transform-fn args)]
                  (if res
@@ -119,12 +119,12 @@
    what's used to transform the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was transformed in the data structure."
-  [selector transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (compiled-replace-in (i/comp-paths* selector) transform-fn structure :merge-fn merge-fn))
+  [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  (compiled-replace-in (i/comp-paths* path) transform-fn structure :merge-fn merge-fn))
 
 ;; Helpers for defining selectors and collectors with late-bound params
 
-(def ^{:doc "Takes a compiled selector that needs late-bound params and supplies it with
+(def ^{:doc "Takes a compiled path that needs late-bound params and supplies it with
              an array of params and a position in the array from which to begin reading
              params. The return value is an executable selector."}
   bind-params* i/bind-params*)
@@ -159,7 +159,7 @@
     ))
 
 (defpath
-  ^{:doc "Stays navigated at the current point. Essentially a no-op selector."}
+  ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
   STAY
   []
   (select* [this structure next-fn]
@@ -291,12 +291,12 @@
     ))
 
 (defn selected?
-  "Filters the current value based on whether a selector finds anything.
+  "Filters the current value based on whether a path finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key.
 
   The input path may be parameterized, in which case the result of selected?
-  will be parameterized in the order of which the parameterized selectors
+  will be parameterized in the order of which the parameterized navigators
   were declared."
   [& path]
   (fixed-pathed-path [late path]
@@ -326,8 +326,8 @@
 
 (defn filterer
   "Navigates to a view of the current sequence that only contains elements that
-  match the given selector path. An element matches the selector path if calling select
-  on that element with the selector path yields anything other than an empty sequence.
+  match the given path. An element matches the selector path if calling select
+  on that element with the path yields anything other than an empty sequence.
 
    The input path may be parameterized, in which case the result of filterer
    will be parameterized in the order of which the parameterized selectors
@@ -337,10 +337,10 @@
 
 (defn transformed
   "Navigates to a view of the current value by transforming it with the
-   specified selector and update-fn.
+   specified path and update-fn.
 
    The input path may be parameterized, in which case the result of transformed
-   will be parameterized in the order of which the parameterized selectors
+   will be parameterized in the order of which the parameterized navigators
    were declared."
   [path update-fn]
   (fixed-pathed-path [late path]
@@ -421,14 +421,14 @@
     val ))
 
 (defn cond-path
-  "Takes in alternating cond-path selector cond-path selector...
+  "Takes in alternating cond-path path cond-path path...
    Tests the structure if selecting with cond-path returns anything.
-   If so, it uses the following selector for this portion of the navigation.
+   If so, it uses the following path for this portion of the navigation.
    Otherwise, it tries the next cond-path. If nothing matches, then the structure
    is not selected.
 
    The input paths may be parameterized, in which case the result of cond-path
-   will be parameterized in the order of which the parameterized selectors
+   will be parameterized in the order of which the parameterized navigators
    were declared."
   [& conds]
   (variable-pathed-path [compiled-paths conds]
@@ -462,8 +462,8 @@
            ))
     (transform* [this structure next-fn]
       (reduce
-        (fn [structure selector]
-          (compiled-transform selector next-fn structure))
+        (fn [structure path]
+          (compiled-transform path next-fn structure))
         structure
         compiled-paths
         ))))
