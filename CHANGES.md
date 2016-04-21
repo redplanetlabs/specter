@@ -5,7 +5,7 @@
 * Added `parser` path (thanks @thomasathorne)
 * Added `submap` path (thanks @bfabry)
 * Added `subselect` path (thanks @aengelberg)
-* Fix filterer to maintain the type in the input sequence in transforms
+* Fix filterer to maintain the type of the input sequence in transforms
 
 ## 0.9.3
 * Change clojure/clojurescript to provided dependencies
