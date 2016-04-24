@@ -2,10 +2,11 @@
   #+cljs (:require-macros
             [com.rpl.specter.macros
               :refer [defpath]])
+  #+clj
   (:use
-    #+clj [com.rpl.specter.macros :only [defpath]]
-    [com.rpl specter])
-  (:require [clojure [zip :as zip]]))
+    [com.rpl.specter.macros :only [defpath]])
+  (:require [com.rpl.specter :as s]
+            [clojure.zip :as zip]))
 
 (defpath zipper [constructor]
   (select* [this structure next-fn]
@@ -18,13 +19,13 @@
 (def SEQ-ZIP (zipper zip/seq-zip))
 (def XML-ZIP (zipper zip/xml-zip))
 
-(def NEXT (view zip/next))
-(def RIGHT (view zip/right))
-(def RIGHTMOST (view zip/rightmost))
-(def LEFT (view zip/left))
-(def DOWN (view zip/down))
-(def LEFTMOST (view zip/leftmost))
-(def UP (view zip/up))
+(def NEXT (s/view zip/next))
+(def RIGHT (s/view zip/right))
+(def RIGHTMOST (s/view zip/rightmost))
+(def LEFT (s/view zip/left))
+(def DOWN (s/view zip/down))
+(def LEFTMOST (s/view zip/leftmost))
+(def UP (s/view zip/up))
 
 (defn- inner-insert [structure next-fn inserter mover backer]
   (let [to-insert (next-fn [])
