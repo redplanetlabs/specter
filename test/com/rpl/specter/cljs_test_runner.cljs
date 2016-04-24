@@ -3,3 +3,4 @@
             [com.rpl.specter.core-test]))
 
 (run-tests 'com.rpl.specter.core-test)
+(run-tests 'com.rpl.specter.zipper-test)

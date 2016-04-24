@@ -1,9 +1,9 @@
 (ns com.rpl.specter.zipper
   #+cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [fixed-pathed-path defpath]])
+              :refer [defpath]])
   (:use
-    #+clj [com.rpl.specter.macros :only [fixed-pathed-path defpath]]
+    #+clj [com.rpl.specter.macros :only [defpath]]
     [com.rpl specter])
   (:require [clojure [zip :as zip]]))
 
