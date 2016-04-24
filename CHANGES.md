@@ -6,6 +6,7 @@
 * Added `submap` path (thanks @bfabry)
 * Added `subselect` path (thanks @aengelberg)
 * Fix filterer to maintain the type of the input sequence in transforms
+* Integrated zipper navigation into com.rpl.specter.zipper namespace
 
 ## 0.9.3
 * Change clojure/clojurescript to provided dependencies
