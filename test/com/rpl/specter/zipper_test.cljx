@@ -69,20 +69,21 @@
            )))
   )
 
-(declarepath NEXT-WALKER)
-
-(providepath NEXT-WALKER
-  (s/stay-then-continue
-    z/NEXT
-    NEXT-WALKER
-    ))
-
 
 (deftest next-terminate-test
   (is (= [2 [3 4 [5]] 6]
-         (s/transform [z/VECTOR-ZIP NEXT-WALKER z/NODE number?]
+         (s/transform [z/VECTOR-ZIP z/NEXT-WALK z/NODE number?]
            inc
            [1 [2 3 [4]] 5])))
+  (is (= [1 [3 [[]] 5]]
+         (s/setval [z/VECTOR-ZIP
+                    z/NEXT-WALK
+                    (s/selected? z/NODE number? even?)
+                    z/NODE-SEQ]
+          []
+          [1 2 [3 [[4]] 5] 6]
+          )
+         ))  
   )
 
 (deftest zipper-nav-stop-test
@@ -96,3 +97,26 @@
          (s/transform [z/VECTOR-ZIP z/DOWN z/NODE] inc [])))
   )
 
+(deftest find-first-test
+  (is (= [1 [3 [[4]] 5] 6]
+         (s/setval [z/VECTOR-ZIP
+                    (z/find-first #(and (number? %) (even? %)))
+                    z/NODE-SEQ
+                    ]
+           []
+           [1 2 [3 [[4]] 5] 6])
+         ))
+  )
+
+(deftest nodeseq-expand-test
+  (is (= [2 [2] [[4 4 4]] 4 4 4 6]
+         (s/transform [z/VECTOR-ZIP
+                       z/NEXT-WALK
+                       (s/selected? z/NODE number? odd?)
+                       (s/collect-one z/NODE)
+                       z/NODE-SEQ]
+           (fn [v _]
+             (repeat v (inc v)))
+           [1 [2] [[3]] 3 6]
+           )))
+  )

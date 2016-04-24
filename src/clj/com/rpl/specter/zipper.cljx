@@ -1,10 +1,10 @@
 (ns com.rpl.specter.zipper
   #+cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [defpath path]])
+              :refer [defpath path declarepath providepath]])
   #+clj
   (:use
-    [com.rpl.specter.macros :only [defpath path]])
+    [com.rpl.specter.macros :only [defpath path declarepath providepath]])
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
@@ -83,4 +83,30 @@
     )
   (transform* [this structure next-fn]
     (zip/edit structure next-fn)
+    ))
+
+(defpath NODE-SEQ []
+  (select* [this structure next-fn]
+    (next-fn [(zip/node structure)])
+    )
+  (transform* [this structure next-fn]
+    (let [to-insert (next-fn [(zip/node structure)])
+          inserted (reduce zip/insert-left structure to-insert)]
+      (zip/remove inserted)
+      )))
+
+(declarepath find-first [predfn])
+
+(providepath find-first
+  (s/if-path [NODE s/pred]
+    s/STAY
+    [NEXT (s/params-reset find-first)]
+    ))
+
+(declarepath NEXT-WALK)
+
+(providepath NEXT-WALK
+  (s/stay-then-continue
+    NEXT
+    NEXT-WALK
     ))
