@@ -1,10 +1,10 @@
 (ns com.rpl.specter.zipper
   #+cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [defpath]])
+              :refer [defpath path]])
   #+clj
   (:use
-    [com.rpl.specter.macros :only [defpath]])
+    [com.rpl.specter.macros :only [defpath path]])
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
@@ -19,13 +19,37 @@
 (def SEQ-ZIP (zipper zip/seq-zip))
 (def XML-ZIP (zipper zip/xml-zip))
 
-(def NEXT (s/view zip/next))
-(def RIGHT (s/view zip/right))
+
+(def NEXT
+  (s/comp-paths
+    (s/view zip/next)
+    (s/if-path zip/end?
+      s/STOP
+      s/STAY)))
+
+(defn- mk-zip-nav [nav]
+  (path []
+    (select* [this structure next-fn]
+      (let [ret (nav structure)]
+        (if ret (next-fn ret))
+        ))
+    (transform* [this structure next-fn]
+      (let [ret (nav structure)]
+        (if ret (next-fn ret) structure)
+        ))))
+
+;; (multi-path RIGHT LEFT) will not navigate to the right and left
+;; of the currently navigated element because locations aren't stable
+;; like they are for maps/graphs. The path following RIGHT could 
+;; insert lots of elements all over the sequence, and there's no
+;; way to determine how to get "back". 
+(def RIGHT (mk-zip-nav zip/right))
+(def LEFT (mk-zip-nav zip/left))
+(def DOWN (mk-zip-nav zip/down))
+(def UP (mk-zip-nav zip/up))
+
 (def RIGHTMOST (s/view zip/rightmost))
-(def LEFT (s/view zip/left))
-(def DOWN (s/view zip/down))
 (def LEFTMOST (s/view zip/leftmost))
-(def UP (s/view zip/up))
 
 (defn- inner-insert [structure next-fn inserter mover backer]
   (let [to-insert (next-fn [])

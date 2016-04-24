@@ -3,11 +3,15 @@
            [cljs.test :refer [is deftest]]
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+           [com.rpl.specter.macros
+             :refer [declarepath providepath]]
            )
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
     #+clj [com.rpl.specter.test-helpers :only [for-all+]]
+    #+clj [com.rpl.specter.macros
+           :only [declarepath providepath]]
     )
   (:require #+clj [clojure.test.check.generators :as gen]
             #+clj [clojure.test.check.properties :as prop]
@@ -64,3 +68,31 @@
            [1 [2 3 4] 5]
            )))
   )
+
+(declarepath NEXT-WALKER)
+
+(providepath NEXT-WALKER
+  (s/stay-then-continue
+    z/NEXT
+    NEXT-WALKER
+    ))
+
+
+(deftest next-terminate-test
+  (is (= [2 [3 4 [5]] 6]
+         (s/transform [z/VECTOR-ZIP NEXT-WALKER z/NODE number?]
+           inc
+           [1 [2 3 [4]] 5])))
+  )
+
+(deftest zipper-nav-stop-test
+  (is (= [1]
+         (s/transform [z/VECTOR-ZIP z/UP z/NODE] inc [1])))
+  (is (= [1]
+         (s/transform [z/VECTOR-ZIP z/DOWN z/LEFT z/NODE] inc [1])))
+  (is (= [1]
+         (s/transform [z/VECTOR-ZIP z/DOWN z/RIGHT z/NODE] inc [1])))
+  (is (= []
+         (s/transform [z/VECTOR-ZIP z/DOWN z/NODE] inc [])))
+  )
+
