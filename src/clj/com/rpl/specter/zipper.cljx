@@ -27,6 +27,7 @@
       s/STOP
       s/STAY)))
 
+
 (defn- mk-zip-nav [nav]
   (path []
     (select* [this structure next-fn]
@@ -47,6 +48,7 @@
 (def LEFT (mk-zip-nav zip/left))
 (def DOWN (mk-zip-nav zip/down))
 (def UP (mk-zip-nav zip/up))
+(def PREV (mk-zip-nav zip/prev))
 
 (def RIGHTMOST (s/view zip/rightmost))
 (def LEFTMOST (s/view zip/leftmost))
