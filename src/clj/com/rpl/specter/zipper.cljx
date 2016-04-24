@@ -26,6 +26,32 @@
 (def LEFTMOST (view zip/leftmost))
 (def UP (view zip/up))
 
+(defn- inner-insert [structure next-fn inserter mover backer]
+  (let [to-insert (next-fn [])
+        inserts (reduce
+                  (fn [z e] (-> z (inserter e) mover))
+                  structure
+                  to-insert
+                  )]
+    (if backer
+      (reduce (fn [z _] (backer z)) inserts to-insert)
+      inserts)
+    ))
+
+(defpath INNER-RIGHT []
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (inner-insert structure next-fn zip/insert-right zip/right zip/left)
+    ))
+
+(defpath INNER-LEFT []
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (inner-insert structure next-fn zip/insert-left identity nil)
+    ))
+
 (defpath NODE []
   (select* [this structure next-fn]
     (next-fn (zip/node structure))
