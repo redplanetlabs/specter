@@ -20,7 +20,9 @@
 (def XML-ZIP (zipper zip/xml-zip))
 
 
-(def NEXT
+(def ^{:doc "Navigate to the next element in the structure.
+             If no next element, works like STOP."}
+  NEXT
   (s/comp-paths
     (s/view zip/next)
     (s/if-path zip/end?
@@ -44,11 +46,20 @@
 ;; like they are for maps/graphs. The path following RIGHT could 
 ;; insert lots of elements all over the sequence, and there's no
 ;; way to determine how to get "back". 
-(def RIGHT (mk-zip-nav zip/right))
-(def LEFT (mk-zip-nav zip/left))
+(def ^{:doc "Navigate to the element to the right.
+             If no element there, works like STOP."}
+  RIGHT (mk-zip-nav zip/right))
+
+(def ^{:doc "Navigate to the element to the left.
+             If no element there, works like STOP."}
+  LEFT (mk-zip-nav zip/left))
+
 (def DOWN (mk-zip-nav zip/down))
 (def UP (mk-zip-nav zip/up))
-(def PREV (mk-zip-nav zip/prev))
+
+(def ^{:doc "Navigate to the previous element.
+             If this is the first element, works like STOP."}
+  PREV (mk-zip-nav zip/prev))
 
 (def RIGHTMOST (s/view zip/rightmost))
 (def LEFTMOST (s/view zip/leftmost))
@@ -65,14 +76,18 @@
       inserts)
     ))
 
-(defpath INNER-RIGHT []
+(defpath ^{:doc "Navigate to the empty subsequence directly to the
+                 right of this element."}
+  INNER-RIGHT []
   (select* [this structure next-fn]
     (next-fn []))
   (transform* [this structure next-fn]
     (inner-insert structure next-fn zip/insert-right zip/right zip/left)
     ))
 
-(defpath INNER-LEFT []
+(defpath ^{:doc "Navigate to the empty subsequence directly to the
+                 left of this element."}
+  INNER-LEFT []
   (select* [this structure next-fn]
     (next-fn []))
   (transform* [this structure next-fn]
@@ -87,7 +102,11 @@
     (zip/edit structure next-fn)
     ))
 
-(defpath NODE-SEQ []
+(defpath ^{:doc "Navigate to the subsequence containing only
+                 the node currently pointed to. This works just 
+                 like srange and can be used to remove elements
+                 from the structure"}
+  NODE-SEQ []
   (select* [this structure next-fn]
     (next-fn [(zip/node structure)])
     )
@@ -97,7 +116,10 @@
       (zip/remove inserted)
       )))
 
-(declarepath find-first [predfn])
+(declarepath ^{:doc "Navigate the zipper to the first element
+                     in the structure matching predfn. A linear scan
+                     is done using NEXT to find the element."}
+  find-first [predfn])
 
 (providepath find-first
   (s/if-path [NODE s/pred]
@@ -105,7 +127,9 @@
     [NEXT (s/params-reset find-first)]
     ))
 
-(declarepath NEXT-WALK)
+(declarepath ^{:doc "Navigate to every element reachable using calls
+                     to NEXT"}
+  NEXT-WALK)
 
 (providepath NEXT-WALK
   (s/stay-then-continue
