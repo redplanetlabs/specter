@@ -291,7 +291,10 @@
      structure
      )))
 
-(defpath view [afn]
+(defpath
+  ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
+  view
+  [afn]
   (select* [this structure next-fn]
     (next-fn (afn structure)))
   (transform* [this structure next-fn]
