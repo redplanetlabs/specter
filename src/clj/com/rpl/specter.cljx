@@ -284,7 +284,8 @@
   must
   [k]
   (select* [this structure next-fn]
-    (next-fn (get structure k)))
+    (if (contains? structure k)
+      (next-fn (get structure k))))
   (transform* [this structure next-fn]
    (if (contains? structure k)
      (assoc structure k (next-fn (get structure k)))

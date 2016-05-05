@@ -255,6 +255,8 @@
       (and (= (s/transform (s/must k1) op m)
               (s/transform (s/keypath k1) op m))
            (= (s/transform (s/must k2) op m) m)
+           (= (s/select (s/must k1) m) (s/select (s/keypath k1) m))
+           (empty? (s/select (s/must k2) m))
            ))))
 
 (defspec parser-test
