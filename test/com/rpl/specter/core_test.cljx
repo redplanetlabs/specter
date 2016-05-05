@@ -244,6 +244,19 @@
        (s/transform (s/view afn) identity i)
        )))
 
+(defspec must-test
+  (for-all+
+    [k1 gen/int
+     k2 (gen/such-that #(not= k1 %) gen/int)
+     m (gen-map-with-keys gen/int gen/int k1)
+     op (gen/elements [inc dec])
+     ]
+    (let [m (dissoc m k2)]
+      (and (= (s/transform (s/must k1) op m)
+              (s/transform (s/keypath k1) op m))
+           (= (s/transform (s/must k2) op m) m)
+           ))))
+
 (defspec parser-test
   (for-all+
     [i gen/int
@@ -835,3 +848,4 @@
                (seq? l2) ; Transformed lists are only guaranteed to impelment ISeq
                (= q1 q2)
                (= (type q1) (type q2))))))
+

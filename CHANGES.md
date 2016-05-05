@@ -1,3 +1,6 @@
+## 0.10.1 (unreleased)
+* Added `must` navigator
+
 ## 0.10.0
 * Make codebase bootstrap cljs compatible
 * Remove usage of reducers in cljs version in favor of transducers (thanks @StephenRudolph)

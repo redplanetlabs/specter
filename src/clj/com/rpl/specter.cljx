@@ -269,12 +269,27 @@
                                       next-val))
                             structure)))))
 
-(defpath keypath [key]
+(defpath
+  ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
+  keypath
+  [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
   (transform* [this structure next-fn]
     (assoc structure key (next-fn (get structure key)))
     ))
+
+(defpath
+  ^{:doc "Navigates to the key only if it exists in the map."}
+  must
+  [k]
+  (select* [this structure next-fn]
+    (next-fn (get structure k)))
+  (transform* [this structure next-fn]
+   (if (contains? structure k)
+     (assoc structure k (next-fn (get structure k)))
+     structure
+     )))
 
 (defpath view [afn]
   (select* [this structure next-fn]
