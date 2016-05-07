@@ -280,6 +280,17 @@
     ))
 
 (defpath
+  ^{:doc "Navigates to atom value."}
+  atompath
+  []
+  (select* [this structure next-fn]
+    (next-fn @structure))
+  (transform* [this structure next-fn]
+    (do
+      (reset! structure (next-fn @structure))
+      structure)))
+
+(defpath
   ^{:doc "Navigates to the key only if it exists in the map."}
   must
   [k]
