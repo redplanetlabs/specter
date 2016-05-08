@@ -235,6 +235,11 @@
   (is (= 5 (s/select-one (s/comp-paths :a :b) {:a {:b 5}})))
   )
 
+(deftest atom-test
+  (let [v (s/transform s/ATOM inc (atom 1))]
+    (is (instance? clojure.lang.Atom v))
+    (is (= 2 (s/select-one s/ATOM v) @v))))
+
 (defspec view-test
   (for-all+
     [i gen/int
