@@ -281,7 +281,7 @@
 
 (defpath
   ^{:doc "Navigates to atom value."}
-  atompath
+  ATOM
   []
   (select* [this structure next-fn]
     (next-fn @structure))
