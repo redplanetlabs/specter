@@ -1,5 +1,6 @@
 ## 0.10.1 (unreleased)
 * Added `must` navigator
+* Added `ATOM` navigator (thanks @rakeshp)
 
 ## 0.10.0
 * Make codebase bootstrap cljs compatible

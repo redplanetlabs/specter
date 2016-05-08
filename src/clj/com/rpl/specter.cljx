@@ -280,17 +280,6 @@
     ))
 
 (defpath
-  ^{:doc "Navigates to atom value."}
-  ATOM
-  []
-  (select* [this structure next-fn]
-    (next-fn @structure))
-  (transform* [this structure next-fn]
-    (do
-      (reset! structure (next-fn @structure))
-      structure)))
-
-(defpath
   ^{:doc "Navigates to the key only if it exists in the map."}
   must
   [k]
@@ -319,6 +308,17 @@
   (transform* [this structure next-fn]
     (unparse-fn (next-fn (parse-fn structure)))
     ))
+
+(defpath
+  ^{:doc "Navigates to atom value."}
+  ATOM
+  []
+  (select* [this structure next-fn]
+    (next-fn @structure))
+  (transform* [this structure next-fn]
+    (do
+      (swap! structure next-fn)
+      structure)))
 
 (defn selected?
   "Filters the current value based on whether a path finds anything.
