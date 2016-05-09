@@ -238,7 +238,13 @@
 (deftest atom-test
   (let [v (s/transform s/ATOM inc (atom 1))]
     (is (instance? clojure.lang.Atom v))
-    (is (= 2 (s/select-one s/ATOM v) @v))))
+    (is (= 2 (s/select-one s/ATOM v) @v)))
+
+  (is (nil? (s/select-one s/ATOM nil)))
+
+  (let [v (s/transform s/ATOM #(if % (inc %) 1) nil)]
+    (is (instance? clojure.lang.Atom v))
+    (is (= 1 (s/select-one s/ATOM v) @v))))
 
 (defspec view-test
   (for-all+
