@@ -314,9 +314,10 @@
   ATOM
   []
   (select* [this structure next-fn]
-    (next-fn @structure))
+    (next-fn (when structure
+               @structure)))
   (transform* [this structure next-fn]
-    (do
+    (let [structure (or structure (atom nil))]
       (swap! structure next-fn)
       structure)))
 
