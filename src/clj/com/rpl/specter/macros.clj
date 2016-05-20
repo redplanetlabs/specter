@@ -1,5 +1,7 @@
 (ns com.rpl.specter.macros
-  (:require [com.rpl.specter.impl :as i])
+  (:require [com.rpl.specter.impl :as i]
+            [clojure.walk :as walk]
+            [clojure.tools.macro :as m])
   )
 
 (defn gensyms [amt]
@@ -311,3 +313,68 @@
 
 (defmacro extend-protocolpath [protpath & extensions]
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
+
+(defmacro defpathedfn [name & args]
+  (let [[n args] (m/name-with-attributes name args)]
+    `(def ~n (vary-meta (fn ~@args) assoc :pathedfn true))))
+  
+
+(defn ic-prepare-path [locals-set path]
+  (cond
+    (vector? path)
+    (mapv #(ic-prepare-path locals-set %) path)
+
+    (symbol? path)
+    (if (contains? locals-set path)
+      `(com.rpl.specter.impl/->LocalSym ~path (quote ~path))
+      `(com.rpl.specter.impl/->VarUse (var ~path) (quote ~path))
+      )
+
+    (i/fn-invocation? path)
+    (let [[op & params] path]
+      (if (special-symbol? op)
+        `(com.rpl.specter.impl/->SpecialFormUse ~path (quote ~path))
+        `(com.rpl.specter.impl/->FnInvocation
+           ~(ic-prepare-path locals-set op)
+           ~(mapv #(ic-prepare-path locals-set %) params)
+           (quote ~path)))
+      )
+
+    :else
+    path
+    ))
+
+;; still possible to mess this up with alter-var-root!
+(defmacro ic! [& path] ; "inline cache"
+  (let [local-syms (-> &env keys set)
+        used-locals (vec (i/walk-select local-syms vector path))
+        prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
+        ;; TODO: will turning this into a keyword make it faster?
+        cache-id (str (java.util.UUID/randomUUID))
+        ]
+
+    `(let [info# (i/get-cache ~cache-id)
+           
+           ^com.rpl.specter.impl.CachedPathInfo info#
+            (if info#
+              info#
+              (let [info# (i/magic-precompilation
+                           ~prepared-path
+                           ~(mapv (fn [e] `(quote ~e)) used-locals)
+                           )]
+                (i/add-cache! ~cache-id info#)
+                info#
+                ))
+
+           precompiled# (.-precompiled info#)
+           params-maker# (.-params-maker info#)]
+       (cond (nil? precompiled#)
+             ~path
+
+             (and precompiled# (nil? params-maker#))
+             precompiled#
+
+             :else
+             (i/bind-params* precompiled# (params-maker# ~@used-locals) 0)
+         ))
+  ))

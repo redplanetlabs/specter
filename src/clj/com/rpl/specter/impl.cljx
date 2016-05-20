@@ -429,7 +429,7 @@
     (walk/walk (partial walk-until pred on-match-fn) identity structure)
     ))
 
-(defn- fn-invocation? [f]
+(defn fn-invocation? [f]
   (or (instance? clojure.lang.Cons f)
       (instance? clojure.lang.LazySeq f)
       (list? f)))
@@ -614,6 +614,149 @@
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
       (.-transformer tfns)))
 
+
+(defrecord LocalSym
+  [val sym])
+
+(defrecord VarUse
+  [var sym])
+
+(defrecord SpecialFormUse
+  [val code])
+
+(defrecord FnInvocation
+  ;; op and params elems can be any of the above
+  [op params code])
+
+(defrecord CachedPathInfo
+  [precompiled ; can be null
+   params-maker ; can be null
+   ])
+
+(def CACHE
+  #+clj (java.util.concurrent.ConcurrentHashMap.)
+  #+cljs (atom {})
+  )
+
+#+clj
+(defn add-cache! [k v]
+  (.put ^java.util.concurrent.ConcurrentHashMap CACHE k v))
+
+#+clj
+(defn get-cache [k]
+  (.get ^java.util.concurrent.ConcurrentHashMap CACHE k))
+
+#+cljs
+(defn add-cache! [k v]
+  (swap! CACHE (fn [m] (assoc m k v))))
+
+#+cljs
+(defn get-cache [k]
+  (get @CACHE k))
+
+(defn- extract-original-code [p]
+  (cond
+    (instance? LocalSym p) (:sym p)
+    (instance? VarUse p) (:sym p)
+    (instance? SpecialFormUse p) (:code p)
+    (instance? FnInvocation p) (:code p)
+    :else p
+    ))
+
+(defn- valid-navigator? [v]
+  (or (structure-path? v)
+      (satisfies? p/Collector v)
+      (instance? CompiledPath v)))
+
+(defn magic-fail! [failed-atom]
+  (reset! failed-atom true)
+  nil)
+
+(defn- magic-precompilation* [p params-atom failed-atom]
+  (cond
+    (vector? p)
+    (mapv
+      #(magic-precompilation* % params-atom failed-atom)
+      p)
+
+    (instance? LocalSym p)
+    (magic-fail! failed-atom)
+
+    (instance? VarUse p)
+    (let [v (:var p)
+          vv (var-get v)]
+      (if (and (-> v meta :dynamic not)
+               (valid-navigator? vv))
+        vv
+        (magic-fail! failed-atom)
+        ))
+
+    (instance? SpecialFormUse p)
+    (magic-fail! failed-atom)
+
+    (instance? FnInvocation p)
+    (let [op (:op p)
+          ps (:params p)]
+      (if (instance? VarUse op)
+        (let [v (:var op)
+              vv (var-get v)]
+          (if (-> v meta :dynamic)
+            (magic-fail! failed-atom)
+            (cond
+              (instance? ParamsNeededPath vv)
+              ;;TODO: if all params are constants, then just bind the path right here
+              ;;otherwise, add the params
+              (do
+                (swap! params-atom concat ps)
+                vv
+                )
+
+              (and (fn? vv) (-> vv meta :pathedfn))
+              (let [subpath (mapv #(magic-precompilation* % params-atom failed-atom)
+                                  ps)]
+                (if @failed-atom
+                  nil
+                  (apply vv subpath)
+                  ))
+
+              :else
+              (magic-fail! failed-atom)
+              )))
+        (magic-fail! failed-atom)
+        ))
+
+    :else
+    (magic-fail! failed-atom)
+    ))
+
+(defn magic-precompilation [prepared-path used-locals]
+  (let [params-atom (atom [])
+        failed-atom (atom false)
+        path (magic-precompilation* prepared-path params-atom failed-atom)
+        ]
+    (if @failed-atom
+      (->CachedPathInfo nil nil)
+      (let [precompiled (comp-paths* path)
+            params-code (mapv extract-original-code @params-atom)
+            array-sym (gensym "array")
+            params-maker
+            (if-not (empty? params-code)
+              (eval
+                `(fn [~@used-locals]
+                   (let [~array-sym (fast-object-array ~(count params-code))]
+                     ~@(map-indexed
+                         (fn [i c]
+                          `(aset ~array-sym ~i ~c))
+                         params-code
+                         )
+                     ~array-sym
+                     ))))
+            ]
+        ;; TODO: error if precompiled is compiledpath and there are params or
+        ;; precompiled is paramsneededpath and there are no params...
+        (->CachedPathInfo precompiled params-maker)
+        ))
+    ))
 
 
 #+clj

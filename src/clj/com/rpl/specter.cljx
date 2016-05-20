@@ -7,6 +7,7 @@
                fixed-pathed-path
                defcollector
                defpath
+               defpathedfn
               ]]
             )
   (:use [com.rpl.specter.protocols :only [StructurePath]]
@@ -15,7 +16,8 @@
              variable-pathed-path
              fixed-pathed-path
              defcollector
-             defpath]]
+             defpath
+             defpathedfn]]
     )
   (:require [com.rpl.specter.impl :as i]
             [clojure.set :as set])
@@ -248,7 +250,7 @@
   (transform* [this structure next-fn]
     (i/codewalk-until afn next-fn structure)))
 
-(defn subselect
+(defpathedfn subselect
   "Navigates to a sequence that contains the results of (select ...),
   but is a view to the original structure that can be transformed.
 
@@ -320,7 +322,7 @@
       (swap! structure next-fn)
       structure)))
 
-(defn selected?
+(defpathedfn selected?
   "Filters the current value based on whether a path finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
   even number exists for the :vals key.
@@ -341,7 +343,7 @@
         structure
         next-fn))))
 
-(defn not-selected? [& path]
+(defpathedfn not-selected? [& path]
   (fixed-pathed-path [late path]
     (select* [this structure next-fn]
       (i/filter-select
@@ -354,7 +356,7 @@
         structure
         next-fn))))
 
-(defn filterer
+(defpathedfn filterer
   "Navigates to a view of the current sequence that only contains elements that
   match the given path. An element matches the selector path if calling select
   on that element with the path yields anything other than an empty sequence.
@@ -365,7 +367,7 @@
   [& path]
   (subselect ALL (selected? path)))
 
-(defn transformed
+(defpathedfn transformed
   "Navigates to a view of the current value by transforming it with the
    specified path and update-fn.
 
@@ -425,13 +427,13 @@
 (def NIL->LIST (nil->val '()))
 (def NIL->VECTOR (nil->val []))
 
-(defn collect [& path]
+(defpathedfn collect [& path]
   (pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select late structure)
       )))
 
-(defn collect-one [& path]
+(defpathedfn collect-one [& path]
   (pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select-one late structure)
@@ -450,7 +452,7 @@
   (collect-val [this structure]
     val ))
 
-(defn cond-path
+(defpathedfn cond-path
   "Takes in alternating cond-path path cond-path path...
    Tests the structure if selecting with cond-path returns anything.
    If so, it uses the following path for this portion of the navigation.
@@ -473,13 +475,13 @@
         structure
         ))))
 
-(defn if-path
+(defpathedfn if-path
   "Like cond-path, but with if semantics."
   ([cond-p if-path] (cond-path cond-p if-path))
   ([cond-p if-path else-path]
     (cond-path cond-p if-path nil else-path)))
 
-(defn multi-path
+(defpathedfn multi-path
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
@@ -498,13 +500,13 @@
         compiled-paths
         ))))
 
-(defn stay-then-continue
+(defpathedfn stay-then-continue
   "Navigates to the current element and then navigates via the provided path.
    This can be used to implement pre-order traversal."
   [& path]
   (multi-path STAY path))
 
-(defn continue-then-stay
+(defpathedfn continue-then-stay
   "Navigates to the provided path and then to the current element. This can be used
    to implement post-order traversal."
   [& path]
