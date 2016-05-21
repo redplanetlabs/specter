@@ -19,14 +19,14 @@
 (def PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
 (def PARAMS-IDX-SYM (gensym "params-idx"))
 
-(defn paramspath* [bindings num-params [impl1 impl2]]
+(defn paramsnav* [bindings num-params [impl1 impl2]]
   (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
          (determine-params-impls impl1 impl2)]
     (if (= 0 num-params)
       `(i/no-params-compiled-path
          (i/->TransformFunctions
-           i/StructurePathExecutor
+           i/LeanPathExecutor
            (fn [~s-structure-sym ~s-next-fn-sym]
              ~@select-body)
            (fn [~t-structure-sym ~t-next-fn-sym]
@@ -76,7 +76,7 @@
        ~num-params
        )))
 
-(defn pathed-path* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
+(defn pathed-nav* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
     `(let [paths# (map i/comp-paths* ~paths-seq)
            needed-params# (map i/num-needed-params paths#)
@@ -114,19 +114,19 @@
        (apply concat)))
 
 
-(defmacro path
-  "Defines a StructurePath with late bound parameters. This path can be precompiled
-  with other selectors without knowing the parameters. When precompiled with other
-  selectors, the resulting selector takes in parameters for all selectors in the path
+(defmacro nav
+  "Defines a navigator with late bound parameters. This navigator can be precompiled
+  with other navigators without knowing the parameters. When precompiled with other
+  navigators, the resulting path takes in parameters for all navigators in the path
   that needed parameters (in the order in which they were declared)."
   [params impl1 impl2]
   (let [num-params (count params)
         retrieve-params (make-param-retrievers params)]
-    (paramspath* retrieve-params num-params [impl1 impl2])
+    (paramsnav* retrieve-params num-params [impl1 impl2])
     ))
 
 (defmacro paramsfn [params [structure-sym] & impl]
-  `(path ~params
+  `(nav ~params
      (~'select* [this# structure# next-fn#]
        (let [afn# (fn [~structure-sym] ~@impl)]
          (i/filter-select afn# structure# next-fn#)
@@ -148,16 +148,16 @@
     (paramscollector* retrieve-params num-params impl)
     ))
 
-(defmacro defpath [name & body]
-  `(def ~name (path ~@body)))
+(defmacro defnav [name & body]
+  `(def ~name (nav ~@body)))
 
 (defmacro defcollector [name & body]
   `(def ~name (paramscollector ~@body)))
 
-(defmacro fixed-pathed-path
-  "This helper is used to define selectors that take in a fixed number of other selector
-   paths as input. Those selector paths may require late-bound params, so this helper
-   will create a parameterized selector if that is the case. If no late-bound params
+(defmacro fixed-pathed-nav
+  "This helper is used to define navigators that take in a fixed number of other
+   paths as input. Those paths may require late-bound params, so this helper
+   will create a parameterized navigator if that is the case. If no late-bound params
    are required, then the result is executable."
   [bindings impl1 impl2]
   (let [bindings (partition 2 bindings)
@@ -165,23 +165,23 @@
         names (mapv first bindings)
         latefns-sym (gensym "latefns")
         latefn-syms (vec (gensyms (count paths)))]
-    (pathed-path*
-      paramspath*
+    (pathed-nav*
+      paramsnav*
       paths
       latefns-sym
       [latefn-syms latefns-sym]
       (mapcat (fn [n l] [n `(~l ~PARAMS-SYM ~PARAMS-IDX-SYM)]) names latefn-syms)
       [impl1 impl2])))
 
-(defmacro variable-pathed-path
-  "This helper is used to define selectors that take in a variable number of other selector
-   paths as input. Those selector paths may require late-bound params, so this helper
-   will create a parameterized selector if that is the case. If no late-bound params
+(defmacro variable-pathed-nav
+  "This helper is used to define navigators that take in a variable number of other
+   paths as input. Those paths may require late-bound params, so this helper
+   will create a parameterized navigator if that is the case. If no late-bound params
    are required, then the result is executable."
   [[latepaths-seq-sym paths-seq] impl1 impl2]
   (let [latefns-sym (gensym "latefns")]
-    (pathed-path*
-      paramspath*
+    (pathed-nav*
+      paramsnav*
       paths-seq
       latefns-sym
       []
@@ -198,7 +198,7 @@
   [[name path] impl]
   (let [latefns-sym (gensym "latefns")
         latefn (gensym "latefn")]
-    (pathed-path*
+    (pathed-nav*
       paramscollector*
       [path]
       latefns-sym

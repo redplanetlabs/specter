@@ -4,15 +4,15 @@
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
            [com.rpl.specter.macros
-             :refer [paramsfn defprotocolpath defpath extend-protocolpath
-                     declarepath providepath]])
+             :refer [paramsfn defprotocolpath defnav extend-protocolpath
+                     nav declarepath providepath]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
     #+clj [com.rpl.specter.test-helpers :only [for-all+]]
     #+clj [com.rpl.specter.macros
-           :only [paramsfn defprotocolpath defpath extend-protocolpath
-                  declarepath providepath]]
+           :only [paramsfn defprotocolpath defnav extend-protocolpath
+                  nav declarepath providepath]]
 
     )
 
@@ -603,8 +603,8 @@
      val (gen/elements (range 10))
      op (gen/elements [inc dec])
      comparator (gen/elements [= > <])]
-    (let [path (s/comp-paths s/ALL (paramsfn [p] [v] (comparator v p)))]
-      (= (s/transform (path val) op v)
+    (let [cpath (s/comp-paths s/ALL (paramsfn [p] [v] (comparator v p)))]
+      (= (s/transform (cpath val) op v)
          (s/transform [s/ALL #(comparator % val)] op v)))
       ))
 

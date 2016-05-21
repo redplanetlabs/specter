@@ -67,9 +67,9 @@
             (apply transform-fn (conj vals structure))))))
     ))
 
-(def StructurePathExecutor
+(def LeanPathExecutor
   (->ExecutorFunctions
-    :spath
+    :leanpath
     (fn [params params-idx selector structure]
       (selector structure (fn [structure] [structure])))
     (fn [params params-idx transformer transform-fn structure]
@@ -158,8 +158,8 @@
 (defn structure-path-impl [this]
   (if (fn? this)
     ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
-    (-> p/StructurePath :impls (get clojure.lang.AFn))
-    (find-protocol-impl! p/StructurePath this)))
+    (-> p/Navigator :impls (get clojure.lang.AFn))
+    (find-protocol-impl! p/Navigator this)))
 
 #+clj
 (defn collector-impl [this]
@@ -168,8 +168,8 @@
 
 #+cljs
 (defn structure-path-impl [obj]
-  {:select* (mk-optimized-invocation p/StructurePath obj select* 2)
-   :transform* (mk-optimized-invocation p/StructurePath obj transform* 2)
+  {:select* (mk-optimized-invocation p/Navigator obj select* 2)
+   :transform* (mk-optimized-invocation p/Navigator obj transform* 2)
    })
 
 #+cljs
@@ -196,7 +196,7 @@
         transformer (:transform* pimpl)]
     (no-params-compiled-path
       (->TransformFunctions
-        StructurePathExecutor
+        LeanPathExecutor
         (fn [structure next-fn]
           (selector this structure next-fn))
         (fn [structure next-fn]
@@ -217,7 +217,7 @@
       )))
 
 (defn structure-path? [obj]
-  (or (fn? obj) (satisfies? p/StructurePath obj)))
+  (or (fn? obj) (satisfies? p/Navigator obj)))
 
 (defprotocol CoercePath
   (coerce-path [this]))
@@ -528,10 +528,10 @@
         (into empty-structure (map #(next-fn %)) structure)
         )))
 
-(deftype AllStructurePath [])
+(deftype AllNavigator [])
 
-(extend-protocol p/StructurePath
-  AllStructurePath
+(extend-protocol p/Navigator
+  AllNavigator
   (select* [this structure next-fn]
     (all-select structure next-fn))
   (transform* [this structure next-fn]
@@ -544,10 +544,10 @@
   (collect-val [this structure]
     structure))
 
-(deftype PosStructurePath [getter setter])
+(deftype PosNavigator [getter setter])
 
-(extend-protocol p/StructurePath
-  PosStructurePath
+(extend-protocol p/Navigator
+  PosNavigator
   (select* [this structure next-fn]
     (if-not (empty? structure)
       (next-fn ((.-getter this) structure))))
@@ -570,7 +570,7 @@
       res
       )))
 
-(extend-protocol p/StructurePath
+(extend-protocol p/Navigator
   nil
   (select* [this structure next-fn]
     (next-fn structure))
@@ -724,8 +724,7 @@
       (instance? VarUse p)
       (let [v (:var p)
             vv (var-get v)]
-        (cond (-> v meta :dynamic)
-              (magic-fail! "Var " (:sym p) " is dynamic")
+        (cond (-> v meta :dynamic) (magic-fail! "Var " (:sym p) " is dynamic")
               (valid-navigator? vv) vv
               :else (magic-fail! "Var " (:sym p) " is not a navigator")
               ))

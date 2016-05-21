@@ -1,14 +1,14 @@
 (ns com.rpl.specter.zipper
   #+cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [defpath path declarepath providepath]])
+              :refer [defnav nav declarepath providepath]])
   #+clj
   (:use
-    [com.rpl.specter.macros :only [defpath path declarepath providepath]])
+    [com.rpl.specter.macros :only [defnav nav declarepath providepath]])
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
-(defpath zipper [constructor]
+(defnav zipper [constructor]
   (select* [this structure next-fn]
     (next-fn (constructor structure)))
   (transform* [this structure next-fn]
@@ -30,14 +30,14 @@
       s/STAY)))
 
 
-(defn- mk-zip-nav [nav]
-  (path []
+(defn- mk-zip-nav [znav]
+  (nav []
     (select* [this structure next-fn]
-      (let [ret (nav structure)]
+      (let [ret (znav structure)]
         (if ret (next-fn ret))
         ))
     (transform* [this structure next-fn]
-      (let [ret (nav structure)]
+      (let [ret (znav structure)]
         (if ret (next-fn ret) structure)
         ))))
 
@@ -76,7 +76,7 @@
       inserts)
     ))
 
-(defpath ^{:doc "Navigate to the empty subsequence directly to the
+(defnav ^{:doc "Navigate to the empty subsequence directly to the
                  right of this element."}
   INNER-RIGHT []
   (select* [this structure next-fn]
@@ -85,7 +85,7 @@
     (inner-insert structure next-fn zip/insert-right zip/right zip/left)
     ))
 
-(defpath ^{:doc "Navigate to the empty subsequence directly to the
+(defnav ^{:doc "Navigate to the empty subsequence directly to the
                  left of this element."}
   INNER-LEFT []
   (select* [this structure next-fn]
@@ -94,7 +94,7 @@
     (inner-insert structure next-fn zip/insert-left identity nil)
     ))
 
-(defpath NODE []
+(defnav NODE []
   (select* [this structure next-fn]
     (next-fn (zip/node structure))
     )
@@ -102,7 +102,7 @@
     (zip/edit structure next-fn)
     ))
 
-(defpath ^{:doc "Navigate to the subsequence containing only
+(defnav ^{:doc "Navigate to the subsequence containing only
                  the node currently pointed to. This works just 
                  like srange and can be used to remove elements
                  from the structure"}

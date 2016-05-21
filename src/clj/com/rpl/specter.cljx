@@ -3,20 +3,20 @@
             [com.rpl.specter.macros
               :refer
               [pathed-collector
-               variable-pathed-path
-               fixed-pathed-path
+               variable-pathed-nav
+               fixed-pathed-nav
                defcollector
-               defpath
+               defnav
                defpathedfn
               ]]
             )
-  (:use [com.rpl.specter.protocols :only [StructurePath]]
+  (:use [com.rpl.specter.protocols :only [Navigator]]
     #+clj [com.rpl.specter.macros :only
             [pathed-collector
-             variable-pathed-path
-             fixed-pathed-path
+             variable-pathed-nav
+             fixed-pathed-nav
              defcollector
-             defpath
+             defnav
              defpathedfn]]
     )
   (:require [com.rpl.specter.impl :as i]
@@ -119,7 +119,7 @@
 
 (defn replace-in
   "Similar to transform, except returns a pair of [transformed-structure sequence-of-user-ret].
-  The transform-fn in this case is expected to return [ret user-ret]. ret is
+   The transform-fn in this case is expected to return [ret user-ret]. ret is
    what's used to transform the data structure, while user-ret will be added to the user-ret sequence
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was transformed in the data structure."
@@ -151,7 +151,7 @@
 
 ;; Built-in pathing and context operations
 
-(defpath
+(defnav
   ^{:doc "Stops navigation at this point. For selection returns nothing and for 
           transformation returns the structure unchanged"}
   STOP
@@ -162,7 +162,7 @@
     structure
     ))
 
-(defpath
+(defnav
   ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
   STAY
   []
@@ -171,15 +171,15 @@
   (transform* [this structure next-fn]
     (next-fn structure)))
 
-(def ALL (comp-paths (i/->AllStructurePath)))
+(def ALL (comp-paths (i/->AllNavigator)))
 
 (def VAL (i/->ValCollect))
 
-(def LAST (comp-paths (i/->PosStructurePath last i/set-last)))
+(def LAST (comp-paths (i/->PosNavigator last i/set-last)))
 
-(def FIRST (comp-paths (i/->PosStructurePath first i/set-first)))
+(def FIRST (comp-paths (i/->PosNavigator first i/set-first)))
 
-(defpath
+(defnav
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
           to select when navigating. Each function takes in the structure as input."}
   srange-dynamic
@@ -190,7 +190,7 @@
     (i/srange-transform structure (start-fn structure) (end-fn structure) next-fn)
     ))
 
-(defpath
+(defnav
   ^{:doc "Navigates to the subsequence bound by the indexes start (inclusive)
           and end (exclusive)"}
   srange
@@ -205,7 +205,7 @@
 
 (def END (srange-dynamic count count))
 
-(defpath
+(defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
           In a transform, that subset in the original set is changed to the
           new value of the subset."}
@@ -221,7 +221,7 @@
           (set/union newset))
           )))
 
-(defpath
+(defnav
   ^{:doc "Navigates to the specified submap (using select-keys).
           In a transform, that submap in the original map is changed to the new
           value of the submap."}
@@ -236,7 +236,7 @@
       (merge (reduce dissoc structure m-keys)
              newmap))))
 
-(defpath
+(defnav
   walker
   [afn]
   (select* [this structure next-fn]
@@ -244,7 +244,7 @@
   (transform* [this structure next-fn]
     (i/walk-until afn next-fn structure)))
 
-(defpath
+(defnav
   codewalker
   [afn]
   (select* [this structure next-fn]
@@ -260,7 +260,7 @@
   children in the same order when executed on \"select\" and then
   \"transform\"."
   [& path]
-  (fixed-pathed-path [late path]
+  (fixed-pathed-nav [late path]
     (select* [this structure next-fn]
              (next-fn (compiled-select late structure)))
     (transform* [this structure next-fn]
@@ -273,7 +273,7 @@
                                       next-val))
                             structure)))))
 
-(defpath
+(defnav
   ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
   keypath
   [key]
@@ -283,7 +283,7 @@
     (assoc structure key (next-fn (get structure key)))
     ))
 
-(defpath
+(defnav
   ^{:doc "Navigates to the key only if it exists in the map."}
   must
   [k]
@@ -296,7 +296,7 @@
      structure
      )))
 
-(defpath
+(defnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
   view
   [afn]
@@ -306,14 +306,14 @@
     (next-fn (afn structure))
     ))
 
-(defpath parser [parse-fn unparse-fn]
+(defnav parser [parse-fn unparse-fn]
   (select* [this structure next-fn]
     (next-fn (parse-fn structure)))
   (transform* [this structure next-fn]
     (unparse-fn (next-fn (parse-fn structure)))
     ))
 
-(defpath
+(defnav
   ^{:doc "Navigates to atom value."}
   ATOM
   []
@@ -333,7 +333,7 @@
   will be parameterized in the order of which the parameterized navigators
   were declared."
   [& path]
-  (fixed-pathed-path [late path]
+  (fixed-pathed-nav [late path]
     (select* [this structure next-fn]
       (i/filter-select
         #(i/selected?* late %)
@@ -346,7 +346,7 @@
         next-fn))))
 
 (defpathedfn not-selected? [& path]
-  (fixed-pathed-path [late path]
+  (fixed-pathed-nav [late path]
     (select* [this structure next-fn]
       (i/filter-select
         #(i/not-selected?* late %)
@@ -377,14 +377,14 @@
    will be parameterized in the order of which the parameterized navigators
    were declared."
   [path update-fn]
-  (fixed-pathed-path [late path]
+  (fixed-pathed-nav [late path]
     (select* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))
     (transform* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))))
 
 (extend-type #+clj clojure.lang.Keyword #+cljs cljs.core/Keyword
-  StructurePath
+  Navigator
   (select* [kw structure next-fn]
     (next-fn (get structure kw)))
   (transform* [kw structure next-fn]
@@ -392,14 +392,14 @@
     ))
 
 (extend-type #+clj clojure.lang.AFn #+cljs function
-  StructurePath
+  Navigator
   (select* [afn structure next-fn]
     (i/filter-select afn structure next-fn))
   (transform* [afn structure next-fn]
     (i/filter-transform afn structure next-fn)))
 
 (extend-type #+clj clojure.lang.PersistentHashSet #+cljs cljs.core/PersistentHashSet
-  StructurePath
+  Navigator
   (select* [aset structure next-fn]
     (i/filter-select aset structure next-fn))
   (transform* [aset structure next-fn]
@@ -412,7 +412,7 @@
   i/pred*
   )
 
-(defpath
+(defnav
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
           navigated at the structure."}
   nil->val
@@ -462,7 +462,7 @@
    will be parameterized in the order of which the parameterized navigators
    were declared."
   [& conds]
-  (variable-pathed-path [compiled-paths conds]
+  (variable-pathed-nav [compiled-paths conds]
     (select* [this structure next-fn]
       (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
         (->> (compiled-select selector structure)
@@ -484,7 +484,7 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (variable-pathed-path [compiled-paths paths]
+  (variable-pathed-nav [compiled-paths paths]
     (select* [this structure next-fn]
       (->> compiled-paths
            (mapcat #(compiled-select % structure))

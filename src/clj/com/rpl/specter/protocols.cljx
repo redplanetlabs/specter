@@ -1,6 +1,6 @@
 (ns com.rpl.specter.protocols)
 
-(defprotocol StructurePath
+(defprotocol Navigator
   (select* [this structure next-fn])
   (transform* [this structure next-fn]))
 
