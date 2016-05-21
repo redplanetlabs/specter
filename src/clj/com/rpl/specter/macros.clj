@@ -363,7 +363,7 @@
     `(let [info# (i/get-path-cache ~cache-id)
            
            ^com.rpl.specter.impl.CachedPathInfo info#
-            (if info#
+            (if (some? info#)
               info#
               (let [info# (i/magic-precompilation
                            ~prepared-path
