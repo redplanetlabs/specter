@@ -26,6 +26,8 @@
 (defn comp-paths [& paths]
   (i/comp-paths* (vec paths)))
 
+(def must-cache-paths! i/must-cache-paths!)
+
 ;; Selection functions
 
 (def ^{:doc "Version of select that takes in a path pre-compiled with comp-paths"}
@@ -403,15 +405,12 @@
   (transform* [aset structure next-fn]
     (i/filter-transform aset structure next-fn)))
 
-(defpath
+(def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
           late-bound parameterized version of using a function directly in a path."}
   pred
-  [afn]
-  (select* [this structure next-fn]
-    (i/filter-select afn structure next-fn))
-  (transform* [this structure next-fn]
-    (i/filter-transform afn structure next-fn)))
+  i/pred*
+  )
 
 (defpath
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays

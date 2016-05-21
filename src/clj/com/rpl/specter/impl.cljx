@@ -633,26 +633,42 @@
    params-maker ; can be null
    ])
 
-(def CACHE
-  #+clj (java.util.concurrent.ConcurrentHashMap.)
+(defonce PATH-CACHE
+  #+clj (mutable-cell (java.util.HashMap.))
   #+cljs (atom {})
   )
 
-#+clj
-(defn add-cache! [k v]
-  (.put ^java.util.concurrent.ConcurrentHashMap CACHE k v))
+(def ^:dynamic *must-cache-paths* false)
+
+(defn must-cache-paths!
+  ([] (must-cache-paths! true))
+  ([v] (alter-var-root #'*must-cache-paths* (constantly v))))
 
 #+clj
-(defn get-cache [k]
-  (.get ^java.util.concurrent.ConcurrentHashMap CACHE k))
+(defn add-path-cache! [k v]
+  ;; This looks very inefficient but is actually the best approach
+  ;; without real inline caches. The total number of copies will be the
+  ;; number of Specter callsites (plus perhaps a few more if 
+  ;; multiple callsites attempt to be cached at exactly the same time).
+  ;; Eventually it will stabilize and there won't be any more garbage generated.
+  ;; The `select` performance using this cache strategy is ~20% faster for
+  ;; the [:a :b :c] path use case than ConcurrentHashMap. 
+  (let [newmap (java.util.HashMap. ^java.util.HashMap (get-cell PATH-CACHE))]
+    (.put newmap k v)
+    (set-cell! PATH-CACHE newmap)
+    ))
+
+#+clj
+(defn get-path-cache [k]
+  (.get ^java.util.HashMap (get-cell PATH-CACHE) k))
 
 #+cljs
 (defn add-cache! [k v]
-  (swap! CACHE (fn [m] (assoc m k v))))
+  (swap! PATH-CACHE (fn [m] (assoc m k v))))
 
 #+cljs
 (defn get-cache [k]
-  (get @CACHE k))
+  (get @PATH-CACHE k))
 
 (defn- extract-original-code [p]
   (cond
@@ -672,62 +688,99 @@
   (reset! failed-atom true)
   nil)
 
-(defn- magic-precompilation* [p params-atom failed-atom]
-  (cond
-    (vector? p)
-    (mapv
-      #(magic-precompilation* % params-atom failed-atom)
-      p)
-
-    (instance? LocalSym p)
-    (magic-fail! failed-atom)
-
-    (instance? VarUse p)
-    (let [v (:var p)
-          vv (var-get v)]
-      (if (and (-> v meta :dynamic not)
-               (valid-navigator? vv))
-        vv
-        (magic-fail! failed-atom)
-        ))
-
-    (instance? SpecialFormUse p)
-    (magic-fail! failed-atom)
-
-    (instance? FnInvocation p)
-    (let [op (:op p)
-          ps (:params p)]
-      (if (instance? VarUse op)
-        (let [v (:var op)
-              vv (var-get v)]
-          (if (-> v meta :dynamic)
-            (magic-fail! failed-atom)
-            (cond
-              (instance? ParamsNeededPath vv)
-              ;;TODO: if all params are constants, then just bind the path right here
-              ;;otherwise, add the params
-              (do
-                (swap! params-atom concat ps)
-                vv
-                )
-
-              (and (fn? vv) (-> vv meta :pathedfn))
-              (let [subpath (mapv #(magic-precompilation* % params-atom failed-atom)
-                                  ps)]
-                (if @failed-atom
-                  nil
-                  (apply vv subpath)
-                  ))
-
-              :else
-              (magic-fail! failed-atom)
-              )))
-        (magic-fail! failed-atom)
-        ))
-
-    :else
-    (magic-fail! failed-atom)
+(def pred*
+  (->ParamsNeededPath
+    (->TransformFunctions
+      RichPathExecutor
+      (fn [params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn structure)
+            (next-fn params (inc params-idx) vals structure)
+            )))
+      (fn [params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn structure)
+            (next-fn params (inc params-idx) vals structure)
+            structure
+            ))))
+    1
     ))
+
+(defn- magic-precompilation* [p params-atom failed-atom]
+  (let [magic-fail! (fn [& reason]
+                      (if *must-cache-paths*
+                        (println "Failed to cache path:" (apply str reason)))
+                      (reset! failed-atom true)
+                      nil)]
+    (cond
+      (vector? p)
+      (mapv
+        #(magic-precompilation* % params-atom failed-atom)
+        p)
+
+      (instance? LocalSym p)
+      (magic-fail! "Local symbol " (:sym p) " where navigator expected")
+
+      (instance? VarUse p)
+      (let [v (:var p)
+            vv (var-get v)]
+        (cond (-> v meta :dynamic)
+              (magic-fail! "Var " (:sym p) " is dynamic")
+              (valid-navigator? vv) vv
+              :else (magic-fail! "Var " (:sym p) " is not a navigator")
+              ))
+
+      (instance? SpecialFormUse p)
+      (if (-> p :code first (= 'fn*))
+        (do
+          (swap! params-atom conj (:code p))
+          pred*
+          )
+        (magic-fail! "Special form " (:code p) " where navigator expected")
+        )
+
+      (instance? FnInvocation p)
+      (let [op (:op p)
+            ps (:params p)]
+        (if (instance? VarUse op)
+          (let [v (:var op)
+                vv (var-get v)]
+            (if (-> v meta :dynamic)
+              (magic-fail! "Var " (:sym op) " is dynamic")
+              (cond
+                (instance? ParamsNeededPath vv)
+                ;;TODO: if all params are constants, then just bind the path right here
+                ;;otherwise, add the params
+                ;;  - could extend this to see if it contains nested function calls which
+                ;;    are only on constants
+                (do
+                  (swap! params-atom concat ps)
+                  vv
+                  )
+
+                (and (fn? vv) (-> vv meta :pathedfn))
+                (let [subpath (mapv #(magic-precompilation* % params-atom failed-atom)
+                                    ps)]
+                  (if @failed-atom
+                    nil
+                    (apply vv subpath)
+                    ))
+
+                :else
+                (magic-fail! "Var " (:sym op) " must be either a parameterized "
+                  "navigator or a higher order pathed constructor function")
+                )))
+          (magic-fail! "Code at " (extract-original-code p) " is in "
+            "function invocation position and must be either a parameterized "
+            "navigator or a higher order pathed constructor function"
+            )
+          ))
+
+      :else
+      (if (valid-navigator? p)
+        p
+        (magic-fail! "Constant " p " is not a valid navigator"))
+      )))
 
 (defn magic-precompilation [prepared-path used-locals]
   (let [params-atom (atom [])
@@ -735,7 +788,9 @@
         path (magic-precompilation* prepared-path params-atom failed-atom)
         ]
     (if @failed-atom
-      (->CachedPathInfo nil nil)
+      (if *must-cache-paths*
+        (throw-illegal "Failed to cache path")
+        (->CachedPathInfo nil nil))
       (let [precompiled (comp-paths* path)
             params-code (mapv extract-original-code @params-atom)
             array-sym (gensym "array")

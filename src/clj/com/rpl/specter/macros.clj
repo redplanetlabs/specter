@@ -315,8 +315,8 @@
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
 
 (defmacro defpathedfn [name & args]
-  (let [[n args] (m/name-with-attributes name args)]
-    `(def ~n (vary-meta (fn ~@args) assoc :pathedfn true))))
+  (let [[name args] (m/name-with-attributes name args)]
+    `(def ~name (vary-meta (fn ~@args) assoc :pathedfn true))))
   
 
 (defn ic-prepare-path [locals-set path]
@@ -344,16 +344,23 @@
     path
     ))
 
-;; still possible to mess this up with alter-var-root!
+;; still possible to mess this up with alter-var-root
 (defmacro ic! [& path] ; "inline cache"
   (let [local-syms (-> &env keys set)
         used-locals (vec (i/walk-select local-syms vector path))
         prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
-        ;; TODO: will turning this into a keyword make it faster?
+        ;; TODO: unclear if using long here versus string makes
+        ;; a significant difference
+        ;; - but using random longs creates possibility of collisions
+        ;; (birthday problem)
+        ;; - ideally could have a real inline cache that wouldn't
+        ;; have to do any hashing/equality checking at all
+        ;; - with invokedynamic here, could go directly to the code
+        ;; to invoke and/or parameterize the precompiled path without
+        ;; a bunch of checks beforehand
         cache-id (str (java.util.UUID/randomUUID))
         ]
-
-    `(let [info# (i/get-cache ~cache-id)
+    `(let [info# (i/get-path-cache ~cache-id)
            
            ^com.rpl.specter.impl.CachedPathInfo info#
             (if info#
@@ -362,19 +369,17 @@
                            ~prepared-path
                            ~(mapv (fn [e] `(quote ~e)) used-locals)
                            )]
-                (i/add-cache! ~cache-id info#)
+                (i/add-path-cache! ~cache-id info#)
                 info#
                 ))
 
            precompiled# (.-precompiled info#)
            params-maker# (.-params-maker info#)]
-       (cond (nil? precompiled#)
-             ~path
-
-             (and precompiled# (nil? params-maker#))
-             precompiled#
-
-             :else
-             (i/bind-params* precompiled# (params-maker# ~@used-locals) 0)
+       (if (some? precompiled#)
+         (if (nil? params-maker#)
+           precompiled#
+           (i/bind-params* precompiled# (params-maker# ~@used-locals) 0)
+           )
+         (i/comp-paths* ~(vec path))
          ))
   ))
