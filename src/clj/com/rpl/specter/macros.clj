@@ -341,11 +341,11 @@
       )
 
     :else
-    path
+    `(quote ~path)
     ))
 
 ;; still possible to mess this up with alter-var-root
-(defmacro ic! [& path] ; "inline cache"
+(defmacro path [& path] ; "inline cache"
   (let [local-syms (-> &env keys set)
         used-locals (vec (i/walk-select local-syms vector path))
         prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
@@ -383,3 +383,26 @@
          (i/comp-paths* ~(vec path))
          ))
   ))
+
+(defmacro select [apath structure]
+  `(i/compiled-select* (path ~apath) ~structure))
+
+(defmacro select-one! [apath structure]
+  `(i/compiled-select-one!* (path ~apath) ~structure))
+
+(defmacro select-one [apath structure]
+  `(i/compiled-select-one* (path ~apath) ~structure))
+
+(defmacro select-first [apath structure]
+  `(i/compiled-select-first* (path ~apath) ~structure))
+
+(defmacro transform [apath transform-fn structure]
+  `(i/compiled-transform* (path ~apath) ~transform-fn ~structure))
+
+(defmacro setval [apath aval structure]
+  `(i/compiled-setval* (path ~apath) ~aval ~structure))
+
+(defmacro replace-in
+  [apath transform-fn structure & args]
+  `(i/compiled-replace-in* (path ~apath) ~transform-fn ~structure ~@args))
+

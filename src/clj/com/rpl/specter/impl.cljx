@@ -753,7 +753,7 @@
                 ;;  - could extend this to see if it contains nested function calls which
                 ;;    are only on constants
                 (do
-                  (swap! params-atom concat ps)
+                  (swap! params-atom #(vec (concat % ps)))
                   vv
                   )
 
@@ -776,9 +776,16 @@
           ))
 
       :else
-      (if (valid-navigator? p)
-        p
-        (magic-fail! "Constant " p " is not a valid navigator"))
+      (cond (set? p)
+            (do (swap! params-atom conj p)
+                pred*)
+
+            (keyword? p)
+            p
+
+            :else
+            (magic-fail! "Code " p " is not a valid navigator or can't be factored")
+            )
       )))
 
 (defn magic-precompilation [prepared-path used-locals]
@@ -812,6 +819,43 @@
         ))
     ))
 
+
+(defn compiled-select-one* [path structure]
+  (let [res (compiled-select* path structure)]
+    (when (> (count res) 1)
+      (throw-illegal "More than one element found for params: " path structure))
+    (first res)
+    ))
+
+(defn compiled-select-one!* [path structure]
+  (let [res (compiled-select* path structure)]
+    (when (not= 1 (count res)) (throw-illegal "Expected exactly one element for params: " path structure))
+    (first res)
+    ))
+
+(defn compiled-select-first* [path structure]
+  (first (compiled-select* path structure)))
+
+(defn compiled-setval* [path val structure]
+  (compiled-transform* path (fn [_] val) structure))
+
+(defn compiled-replace-in*
+  [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
+  (let [state (mutable-cell nil)]
+    [(compiled-transform* path
+             (fn [& args]
+               (let [res (apply transform-fn args)]
+                 (if res
+                   (let [[ret user-ret] res]
+                     (->> user-ret
+                          (merge-fn (get-cell state))
+                          (set-cell! state))
+                     ret)
+                   (last args)
+                   )))
+             structure)
+     (get-cell state)]
+    ))
 
 #+clj
 (defn extend-protocolpath* [protpath protpath-prot extensions]

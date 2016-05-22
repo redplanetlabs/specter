@@ -33,45 +33,33 @@
 (def ^{:doc "Version of select that takes in a path pre-compiled with comp-paths"}
   compiled-select i/compiled-select*)
 
-(defn select
+(defn select*
   "Navigates to and returns a sequence of all the elements specified by the path."
   [path structure]
   (compiled-select (i/comp-paths* path)
                    structure))
 
-(defn compiled-select-one
-  "Version of select-one that takes in a path pre-compiled with comp-paths"
-  [path structure]
-  (let [res (compiled-select path structure)]
-    (when (> (count res) 1)
-      (i/throw-illegal "More than one element found for params: " path structure))
-    (first res)
-    ))
+(def ^{:doc "Version of select-one that takes in a path pre-compiled with comp-paths"}
+  compiled-select-one i/compiled-select-one*)
 
-(defn select-one
+(defn select-one*
   "Like select, but returns either one element or nil. Throws exception if multiple elements found"
   [path structure]
   (compiled-select-one (i/comp-paths* path) structure))
 
-(defn compiled-select-one!
-  "Version of select-one! that takes in a path pre-compiled with comp-paths"
-  [path structure]
-  (let [res (compiled-select path structure)]
-    (when (not= 1 (count res)) (i/throw-illegal "Expected exactly one element for params: " path structure))
-    (first res)
-    ))
+(def ^{:doc "Version of select-one! that takes in a path pre-compiled with comp-paths"}
+  compiled-select-one! i/compiled-select-one!*)
 
-(defn select-one!
+(defn select-one!*
   "Returns exactly one element, throws exception if zero or multiple elements found"
   [path structure]
   (compiled-select-one! (i/comp-paths* path) structure))
 
-(defn compiled-select-first
-  "Version of select-first that takes in a path pre-compiled with comp-paths"
-  [path structure]
-  (first (compiled-select path structure)))
+(def ^{:doc "Version of select-first that takes in a path pre-compiled with comp-paths"}
+  compiled-select-first i/compiled-select-first*)
 
-(defn select-first
+
+(defn select-first*
   "Returns first element found. Not any more efficient than select, just a convenience"
   [path structure]
   (compiled-select-first (i/comp-paths* path) structure))
@@ -82,42 +70,24 @@
 (def ^{:doc "Version of transform that takes in a path pre-compiled with comp-paths"}
   compiled-transform i/compiled-transform*)
 
-(defn transform
+(defn transform*
   "Navigates to each value specified by the path and replaces it by the result of running
   the transform-fn on it"
   [path transform-fn structure]
   (compiled-transform (i/comp-paths* path) transform-fn structure))
 
-(defn compiled-setval
-  "Version of setval that takes in a path pre-compiled with comp-paths"
-  [path val structure]
-  (compiled-transform path (fn [_] val) structure))
+(def ^{:doc "Version of setval that takes in a path precompiled with comp-paths"}
+  compiled-setval i/compiled-setval*)
 
-(defn setval
+(defn setval*
   "Navigates to each value specified by the path and replaces it by val"
   [path val structure]
   (compiled-setval (i/comp-paths* path) val structure))
 
-(defn compiled-replace-in
-  "Version of replace-in that takes in a path pre-compiled with comp-paths"
-  [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
-  (let [state (i/mutable-cell nil)]
-    [(compiled-transform path
-             (fn [& args]
-               (let [res (apply transform-fn args)]
-                 (if res
-                   (let [[ret user-ret] res]
-                     (->> user-ret
-                          (merge-fn (i/get-cell state))
-                          (i/set-cell! state))
-                     ret)
-                   (last args)
-                   )))
-             structure)
-     (i/get-cell state)]
-    ))
+(def ^{:doc "Version of replace-in that takes in a path precompiled with comp-paths"}
+  compiled-replace-in i/compiled-replace-in*)
 
-(defn replace-in
+(defn replace-in*
   "Similar to transform, except returns a pair of [transformed-structure sequence-of-user-ret].
    The transform-fn in this case is expected to return [ret user-ret]. ret is
    what's used to transform the data structure, while user-ret will be added to the user-ret sequence

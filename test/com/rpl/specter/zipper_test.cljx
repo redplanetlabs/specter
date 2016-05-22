@@ -4,14 +4,16 @@
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
            [com.rpl.specter.macros
-             :refer [declarepath providepath]]
+             :refer [declarepath providepath select select-one select-one!
+                     select-first transform setval replace-in]]
            )
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
     #+clj [com.rpl.specter.test-helpers :only [for-all+]]
     #+clj [com.rpl.specter.macros
-           :only [declarepath providepath]]
+           :only [declarepath providepath select select-one select-one!
+                  select-first transform setval replace-in]]
     )
   (:require #+clj [clojure.test.check.generators :as gen]
             #+clj [clojure.test.check.properties :as prop]
@@ -25,13 +27,13 @@
   (for-all+
     [v (gen/not-empty (gen/vector gen/int))
      i (gen/vector gen/int)]
-    (= (s/setval s/END i v)
-       (s/setval [z/VECTOR-ZIP z/DOWN z/RIGHTMOST z/INNER-RIGHT] i v))
+    (= (setval s/END i v)
+       (setval [z/VECTOR-ZIP z/DOWN z/RIGHTMOST z/INNER-RIGHT] i v))
     ))
 
 (deftest zipper-multi-insert-test
   (is (= [1 2 :a :b 3 :a :b 4]
-         (s/setval [z/VECTOR-ZIP
+         (setval [z/VECTOR-ZIP
                     z/DOWN
                     z/RIGHT
                     z/RIGHT
@@ -40,7 +42,7 @@
            [:a :b]
            [1 2 3 4]
            )
-          (s/setval [z/VECTOR-ZIP
+          (setval [z/VECTOR-ZIP
                      z/DOWN
                      z/RIGHT
                      z/RIGHT
@@ -54,7 +56,7 @@
 
 (deftest zipper-down-up-test
   (is (= [1 [2 3 5] 6]
-         (s/transform [z/VECTOR-ZIP
+         (transform [z/VECTOR-ZIP
                        z/DOWN
                        z/RIGHT
                        z/DOWN
@@ -72,11 +74,11 @@
 
 (deftest next-terminate-test
   (is (= [2 [3 4 [5]] 6]
-         (s/transform [z/VECTOR-ZIP z/NEXT-WALK z/NODE number?]
+         (transform [z/VECTOR-ZIP z/NEXT-WALK z/NODE number?]
            inc
            [1 [2 3 [4]] 5])))
   (is (= [1 [3 [[]] 5]]
-         (s/setval [z/VECTOR-ZIP
+         (setval [z/VECTOR-ZIP
                     z/NEXT-WALK
                     (s/selected? z/NODE number? even?)
                     z/NODE-SEQ]
@@ -88,18 +90,18 @@
 
 (deftest zipper-nav-stop-test
   (is (= [1]
-         (s/transform [z/VECTOR-ZIP z/UP z/NODE] inc [1])))
+         (transform [z/VECTOR-ZIP z/UP z/NODE] inc [1])))
   (is (= [1]
-         (s/transform [z/VECTOR-ZIP z/DOWN z/LEFT z/NODE] inc [1])))
+         (transform [z/VECTOR-ZIP z/DOWN z/LEFT z/NODE] inc [1])))
   (is (= [1]
-         (s/transform [z/VECTOR-ZIP z/DOWN z/RIGHT z/NODE] inc [1])))
+         (transform [z/VECTOR-ZIP z/DOWN z/RIGHT z/NODE] inc [1])))
   (is (= []
-         (s/transform [z/VECTOR-ZIP z/DOWN z/NODE] inc [])))
+         (transform [z/VECTOR-ZIP z/DOWN z/NODE] inc [])))
   )
 
 (deftest find-first-test
   (is (= [1 [3 [[4]] 5] 6]
-         (s/setval [z/VECTOR-ZIP
+         (setval [z/VECTOR-ZIP
                     (z/find-first #(and (number? %) (even? %)))
                     z/NODE-SEQ
                     ]
@@ -110,7 +112,7 @@
 
 (deftest nodeseq-expand-test
   (is (= [2 [2] [[4 4 4]] 4 4 4 6]
-         (s/transform [z/VECTOR-ZIP
+         (transform [z/VECTOR-ZIP
                        z/NEXT-WALK
                        (s/selected? z/NODE number? odd?)
                        (s/collect-one z/NODE)
