@@ -634,7 +634,7 @@
    ])
 
 (defonce PATH-CACHE
-  #+clj (mutable-cell (java.util.HashMap.))
+  #+clj (java.util.concurrent.ConcurrentHashMap.)
   #+cljs (atom {})
   )
 
@@ -646,28 +646,18 @@
 
 #+clj
 (defn add-path-cache! [k v]
-  ;; This looks very inefficient but is actually the best approach
-  ;; without real inline caches. The total number of copies will be the
-  ;; number of Specter callsites (plus perhaps a few more if 
-  ;; multiple callsites attempt to be cached at exactly the same time).
-  ;; Eventually it will stabilize and there won't be any more garbage generated.
-  ;; The `select` performance using this cache strategy is ~20% faster for
-  ;; the [:a :b :c] path use case than ConcurrentHashMap. 
-  (let [newmap (java.util.HashMap. ^java.util.HashMap (get-cell PATH-CACHE))]
-    (.put newmap k v)
-    (set-cell! PATH-CACHE newmap)
-    ))
+  (.put ^java.util.concurrent.ConcurrentHashMap PATH-CACHE k v))
 
 #+clj
-(defn get-path-cache [k]
-  (.get ^java.util.HashMap (get-cell PATH-CACHE) k))
+(defn get-path-cache [^String k]
+  (.get ^java.util.concurrent.ConcurrentHashMap PATH-CACHE k))
 
 #+cljs
-(defn add-cache! [k v]
+(defn add-path-cache! [k v]
   (swap! PATH-CACHE (fn [m] (assoc m k v))))
 
 #+cljs
-(defn get-cache [k]
+(defn get-path-cache [k]
   (get @PATH-CACHE k))
 
 (defn- extract-original-code [p]
