@@ -783,6 +783,10 @@
             (keyword? p)
             p
 
+            ;; in case anyone extends String for their own use case
+            (and (string? p) (valid-navigator? p))
+            p
+
             :else
             (magic-fail! "Code " p " is not a valid navigator or can't be factored")
             )
