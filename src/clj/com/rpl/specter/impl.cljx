@@ -642,11 +642,11 @@
   #+cljs (atom {})
   )
 
-(def ^:dynamic *must-cache-paths* false)
+(def MUST-CACHE-PATHS (mutable-cell false))
 
 (defn must-cache-paths!
   ([] (must-cache-paths! true))
-  ([v] (alter-var-root #'*must-cache-paths* (constantly v))))
+  ([v] (set-cell! MUST-CACHE-PATHS v)))
 
 #+clj
 (defn add-path-cache! [k v]
@@ -707,7 +707,7 @@
 
 (defn- magic-precompilation* [p params-atom failed-atom]
   (let [magic-fail! (fn [& reason]
-                      (if *must-cache-paths*
+                      (if (get-cell MUST-CACHE-PATHS)
                         (println "Failed to cache path:" (apply str reason)))
                       (reset! failed-atom true)
                       nil)]
@@ -820,7 +820,7 @@
         path (magic-precompilation* prepared-path params-atom failed-atom)
         ]
     (if @failed-atom
-      (if *must-cache-paths*
+      (if (get-cell MUST-CACHE-PATHS)
         (throw-illegal "Failed to cache path")
         (->CachedPathInfo nil nil))
       (let [precompiled (comp-paths* path)
