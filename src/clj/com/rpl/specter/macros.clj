@@ -333,7 +333,9 @@
 
     (i/fn-invocation? path)
     (let [[op & params] path]
-      (if (special-symbol? op)
+      ;; need special case for 'fn since macroexpand does NOT 
+      ;; expand fn when run on cljs code, but it's also not considered a special symbol
+      (if (or (= 'fn op) (special-symbol? op))
         `(com.rpl.specter.impl/->SpecialFormUse ~path (quote ~path))
         `(com.rpl.specter.impl/->FnInvocation
            ~(ic-prepare-path locals-set op)
@@ -351,7 +353,7 @@
       (fn [e]
         (cond (or (set? e)
                   (map? e) ; in case inline maps are ever extended
-                  (and (i/fn-invocation? e) (= 'fn* (first e))))
+                  (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
               [e]
 
               (i/fn-invocation? e)
@@ -399,7 +401,6 @@
              ~(mapv (fn [p] `(fn [] ~p)) possible-params)
              ))
         ]
-      ;; in order to pass the used locals to the clj handle-params macro
     `(let [info# (i/get-path-cache ~cache-id)
            
            ^com.rpl.specter.impl.CachedPathInfo info#

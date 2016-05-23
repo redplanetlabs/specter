@@ -3,6 +3,7 @@
            [cljs.test :refer [is deftest]]
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+           [com.rpl.specter.test-helpers :refer [ic-test]]
            [com.rpl.specter.macros
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
@@ -10,7 +11,7 @@
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
-    #+clj [com.rpl.specter.test-helpers :only [for-all+]]
+    #+clj [com.rpl.specter.test-helpers :only [for-all+ ic-test]]
     #+clj [com.rpl.specter.macros
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
@@ -857,4 +858,68 @@
                (seq? l2) ; Transformed lists are only guaranteed to impelment ISeq
                (= q1 q2)
                (= (type q1) (type q2))))))
+
+(def ^:dynamic *APATH* s/keypath)
+
+(deftest inline-caching-test
+  (ic-test
+    true
+    [k]
+    [s/ALL (s/must k)]
+    inc
+    [{:a 1} {:b 2 :c 3} {:a 7 :d -1}]
+    [[:a] [:b] [:c] [:d] [:e]])
+  (ic-test
+    true
+    []
+    [s/ALL #{4 5 11} #(> % 2) (fn [e] (< e 7))]
+    inc
+    (range 20)
+    [])
+  (ic-test
+    false
+    [v]
+    (if v :a :b)
+    inc
+    {:a 1 :b 2}
+    [[true] [false]])
+  (ic-test
+    false
+    [k]
+    (*APATH* k)
+    str
+    {:a 1 :b 2}
+    [[:a] [:b] [:c]]
+    )
+  (binding [*APATH* s/must]
+    (ic-test
+      false
+      [k]
+      (*APATH* k)
+      inc
+      {:a 1 :b 2}
+      [[:a] [:b] [:c]]
+      ))
+  (ic-test
+    true
+    [k k2]
+    [s/ALL (s/selected? (s/must k) #(> % 2)) (s/must k2)]
+    dec
+    [{:a 1 :b 2} {:a 10 :b 6} {:c 7 :b 8} {:c 1 :d 9} {:c 3 :d -1}]
+    [[:a :b] [:b :a] [:c :d] [:b :c]]
+    )
+  ;; TODO: test exception thrown when can't cache and must-cache-paths!
+  )
+
+;;TODO: 
+;; make a macro to help with testing inline caching
+;;  - put into test-helpers
+;;  - do must-cache-paths!
+;;  - take in params vec, path expression, data, transform fn, and sequence of param vecs
+;;  - verify that functional version gets same result as inline
+;;    caching version run on the data multiple times (make sure same callsite)
+;;  - have another test that turns must-cache-paths on and verifies certain paths
+;;    don't cache (but still run with must-cache-paths off)
+
+
 

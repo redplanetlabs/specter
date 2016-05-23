@@ -681,8 +681,7 @@
 #+cljs
 (defn handle-params [precompiled params-maker possible-params]
   (let [params (fast-object-array (count params-maker))]
-    ;;TODO: is there a faster way to do this in cljs?
-    (doseq [i (range (count params-maker))]
+    (dotimes [i (count params-maker)]
       (aset params i ((get possible-params (get params-maker i)))))
     (bind-params* precompiled params 0)
     ))
@@ -729,7 +728,7 @@
               ))
 
       (instance? SpecialFormUse p)
-      (if (-> p :code first (= 'fn*))
+      (if (->> p :code first (contains? #{'fn* 'fn}))
         (do
           (swap! params-atom conj (:code p))
           pred*
