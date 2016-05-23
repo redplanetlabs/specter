@@ -349,13 +349,19 @@
   (do
     (mapcat
       (fn [e]
-        (cond (i/fn-invocation? e)
+        (cond (or (set? e)
+                  (map? e) ; in case inline maps are ever extended
+                  (and (i/fn-invocation? e) (= 'fn* (first e))))
+              [e]
+
+              (i/fn-invocation? e)
               (concat (rest e) (ic-possible-params e))
 
               (vector? e)
               (ic-possible-params e)
               ))
-      path)))
+      path
+      )))
 
 ;; still possible to mess this up with alter-var-root
 (defmacro path [& path] ; "inline cache"
@@ -366,8 +372,9 @@
                     (-> &env keys set) ;clj
                     )
         used-locals (vec (i/walk-select local-syms vector path))
-        prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
-        possible-params (vec (ic-possible-params path))
+        expanded (walk/macroexpand-all (vec path))
+        prepared-path (ic-prepare-path local-syms expanded)
+        possible-params (vec (ic-possible-params expanded))
 
         ;; TODO: unclear if using long here versus string makes
         ;; a significant difference
