@@ -327,7 +327,8 @@
     (symbol? path)
     (if (contains? locals-set path)
       `(com.rpl.specter.impl/->LocalSym ~path (quote ~path))
-      `(com.rpl.specter.impl/->VarUse (var ~path) (quote ~path))
+      ;; var-get doesn't work in cljs, so capture the val in the macro instead
+      `(com.rpl.specter.impl/->VarUse ~path (var ~path) (quote ~path))
       )
 
     (i/fn-invocation? path)
@@ -344,11 +345,20 @@
     `(quote ~path)
     ))
 
+(defn ic-possible-params [path]
+  (do
+    (mapcat
+      (fn [e]
+        (if (i/fn-invocation? e)
+          (concat (-> e rest) (ic-possible-params e))))
+      path)))
+
 ;; still possible to mess this up with alter-var-root
 (defmacro path [& path] ; "inline cache"
   (let [local-syms (-> &env keys set)
         used-locals (vec (i/walk-select local-syms vector path))
         prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
+        possible-params (vec (ic-possible-params path))
         ;; TODO: unclear if using long here versus string makes
         ;; a significant difference
         ;; - but using random longs creates possibility of collisions
@@ -360,28 +370,35 @@
         ;; a bunch of checks beforehand
         cache-id (str (java.util.UUID/randomUUID))
         ]
-    `(let [info# (i/get-path-cache ~cache-id)
-           
-           ^com.rpl.specter.impl.CachedPathInfo info#
-            (if (some? info#)
-              info#
-              (let [info# (i/magic-precompilation
-                           ~prepared-path
-                           ~(mapv (fn [e] `(quote ~e)) used-locals)
-                           )]
-                (i/add-path-cache! ~cache-id info#)
-                info#
-                ))
+    (binding [i/*used-locals* used-locals]
+      ;; in order to pass the used locals to the clj handle-params macro
+      (walk/macroexpand-all 
+        `(let [info# (i/get-path-cache ~cache-id)
+               
+               ^com.rpl.specter.impl.CachedPathInfo info#
+                (if (some? info#)
+                  info#
+                  (let [info# (i/magic-precompilation
+                               ~prepared-path
+                               (quote ~used-locals)
+                               (quote ~possible-params)
+                               )]
+                    (i/add-path-cache! ~cache-id info#)
+                    info#
+                    ))
 
-           precompiled# (.-precompiled info#)
-           params-maker# (.-params-maker info#)]
-       (if (some? precompiled#)
-         (if (nil? params-maker#)
-           precompiled#
-           (i/bind-params* precompiled# (params-maker# ~@used-locals) 0)
-           )
-         (i/comp-paths* ~(vec path))
-         ))
+               precompiled# (.-precompiled info#)
+               params-maker# (.-params-maker info#)]
+           (if (some? precompiled#)
+             (if (nil? params-maker#)
+               precompiled#
+               (i/handle-params
+                precompiled#
+                params-maker#
+                ~(mapv (fn [p] `(fn [] ~p)) possible-params)
+                ))
+             (i/comp-paths* ~(vec path))
+             ))))
   ))
 
 (defmacro select [apath structure]

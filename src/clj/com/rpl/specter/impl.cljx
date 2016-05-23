@@ -619,7 +619,7 @@
   [val sym])
 
 (defrecord VarUse
-  [var sym])
+  [val var sym])
 
 (defrecord SpecialFormUse
   [val code])
@@ -635,6 +635,8 @@
 
 (defonce PATH-CACHE
   #+clj (java.util.concurrent.ConcurrentHashMap.)
+  ;;TODO: according to @dnolen, can forgo this for instead doing
+  ;;inline defs at runtime
   #+cljs (atom {})
   )
 
@@ -674,9 +676,20 @@
       (satisfies? p/Collector v)
       (instance? CompiledPath v)))
 
-(defn magic-fail! [failed-atom]
-  (reset! failed-atom true)
-  nil)
+#+clj
+(def ^:dynamic *used-locals*)
+
+#+clj
+(defmacro handle-params [precompiled params-maker possible-params]
+  `(bind-params* ~precompiled (~params-maker ~@*used-locals*) 0))
+
+#+cljs
+(defn handle-params [precompiled params-maker possible-params]
+  (let [params (fast-object-array (count params-maker))]
+    (doseq [i params-maker]
+      (aset params i ((get possible-params i))))
+    (bind-params* precompiled params 0)
+    ))
 
 (def pred*
   (->ParamsNeededPath
@@ -713,7 +726,7 @@
 
       (instance? VarUse p)
       (let [v (:var p)
-            vv (var-get v)]
+            vv (:val p)]
         (cond (-> v meta :dynamic) (magic-fail! "Var " (:sym p) " is dynamic")
               (valid-navigator? vv) vv
               :else (magic-fail! "Var " (:sym p) " is not a navigator")
@@ -733,7 +746,7 @@
             ps (:params p)]
         (if (instance? VarUse op)
           (let [v (:var op)
-                vv (var-get v)]
+                vv (:val op)]
             (if (-> v meta :dynamic)
               (magic-fail! "Var " (:sym op) " is dynamic")
               (cond
@@ -782,7 +795,30 @@
             )
       )))
 
-(defn magic-precompilation [prepared-path used-locals]
+#+clj
+(defn mk-params-maker [params-code possible-params-code used-locals]
+  (let [array-sym (gensym "array")]
+    (eval
+      `(fn [~@used-locals]
+         (let [~array-sym (fast-object-array ~(count params-code))]
+           ~@(map-indexed
+               (fn [i c]
+                `(aset ~array-sym ~i ~c))
+               params-code
+               )
+           ~array-sym
+           )))))
+
+#+cljs
+(defn mk-params-maker [params-code possible-params-code used-locals]
+  (let [indexed (->> possible-params-code
+                     (map-indexed (comp vec reverse vector))
+                     (into {}))]
+    ;;TODO: may be more efficient as an array
+    (mapv (fn [c] (get indexed c)) params-code)))
+
+;; possible-params-code is for cljs impl that can't use eval
+(defn magic-precompilation [prepared-path used-locals possible-params-code]
   (let [params-atom (atom [])
         failed-atom (atom false)
         path (magic-precompilation* prepared-path params-atom failed-atom)
@@ -793,19 +829,8 @@
         (->CachedPathInfo nil nil))
       (let [precompiled (comp-paths* path)
             params-code (mapv extract-original-code @params-atom)
-            array-sym (gensym "array")
-            params-maker
-            (if-not (empty? params-code)
-              (eval
-                `(fn [~@used-locals]
-                   (let [~array-sym (fast-object-array ~(count params-code))]
-                     ~@(map-indexed
-                         (fn [i c]
-                          `(aset ~array-sym ~i ~c))
-                         params-code
-                         )
-                     ~array-sym
-                     ))))
+            params-maker (if-not (empty? params-code)
+                          (mk-params-maker params-code possible-params-code used-locals))
             ]
         ;; TODO: error if precompiled is compiledpath and there are params or
         ;; precompiled is paramsneededpath and there are no params...
