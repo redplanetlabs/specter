@@ -908,18 +908,24 @@
     [{:a 1 :b 2} {:a 10 :b 6} {:c 7 :b 8} {:c 1 :d 9} {:c 3 :d -1}]
     [[:a :b] [:b :a] [:c :d] [:b :c]]
     )
-  ;; TODO: test exception thrown when can't cache and must-cache-paths!
+
+  (s/must-cache-paths!)
+  (is (thrown? #+clj Exception #+cljs js/Error
+    (select (if true :a :b) nil)
+    ))
+  (is (thrown? #+clj Exception #+cljs js/Error
+    (select (*APATH* :a) nil)
+    ))
+  (is (thrown? #+clj Exception #+cljs js/Error
+    (select [:a (identity even?)] {:a 2})
+    ))
+  (let [p :a]
+    (is (thrown? #+clj Exception #+cljs js/Error
+      (select [p even?] {:a 2})
+      )))
+  (let [p :a]
+    (is (thrown? #+clj Exception #+cljs js/Error
+      (select [s/ALL (s/selected? p even?)] [{:a 2}])
+      )))
+  (s/must-cache-paths! false)
   )
-
-;;TODO: 
-;; make a macro to help with testing inline caching
-;;  - put into test-helpers
-;;  - do must-cache-paths!
-;;  - take in params vec, path expression, data, transform fn, and sequence of param vecs
-;;  - verify that functional version gets same result as inline
-;;    caching version run on the data multiple times (make sure same callsite)
-;;  - have another test that turns must-cache-paths on and verifies certain paths
-;;    don't cache (but still run with must-cache-paths off)
-
-
-
