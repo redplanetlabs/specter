@@ -1,6 +1,14 @@
-## 0.10.1 (unreleased)
-* Added `must` navigator
+## 0.11.0 (unreleased)
+* Added `must` navigator to navigate to a key if and only if it exists in the structure
 * Added `ATOM` navigator (thanks @rakeshp)
+* BREAKING CHANGE: defpath renamed to defnav
+* BREAKING CHANGE: path renamed to nav
+* BREAKING CHANGE: fixed-pathed-path and variable-pathed-path renamed to fixed-pathed-nav and variabled-pathed-nav
+* New `path` macro does intelligent inline caching of the provided path. The path is factored into a static portion and into params which may change on each usage of the path (e.g. local parameters). The static part is factored and compiled on the first run-through, and then re-used for all subsequent invocations. If it is not possible to precompile the path (e.g. [ALL some-local-variable]), nothing is cached and the path will be compiled on each run-through. As an example, `[ALL (keypath k)]` is factored into `[ALL keypath]`, which is compiled and cached, and `[k]`, which is provided on each execution.
+* Added `must-cache-paths!` function to throw an error if it is not possible to factor a path into a static portion and dynamic parameters.
+* BREAKING CHANGE: all select/transform/setval/replace-in functions changed to macros and moved to com.rpl.specter.macros namespace. The new macros now automatically wrap the provided path in `path` to enable inline caching. Expect upwards of a 100x performance improvement without using explicit precompilation, and to be within 2% to 15% of the performance of explicitly precompiled usage.
+* Added select*/transform*/setval*/replace-in*/etc. functions that have the same functionality as the old select/transform/setval/replace-in functions.
+
 
 ## 0.10.0
 * Make codebase bootstrap cljs compatible
