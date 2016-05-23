@@ -239,7 +239,7 @@
 
 (deftest atom-test
   (let [v (transform s/ATOM inc (atom 1))]
-    (is (instance? clojure.lang.Atom v))
+    (is (instance? #+clj clojure.lang.Atom #+cljs cljs.core/Atom v))
     (is (= 2 (select-one s/ATOM v) @v))))
 
 (defspec view-test

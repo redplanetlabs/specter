@@ -18,6 +18,7 @@
 
 
 (defn spy [e]
+  (println "SPY:")
   (println (pr-str e))
   e)
 
@@ -680,8 +681,9 @@
 #+cljs
 (defn handle-params [precompiled params-maker possible-params]
   (let [params (fast-object-array (count params-maker))]
-    (doseq [i params-maker]
-      (aset params i ((get possible-params i))))
+    ;;TODO: is there a faster way to do this in cljs?
+    (doseq [i (range (count params-maker))]
+      (aset params i ((get possible-params (get params-maker i)))))
     (bind-params* precompiled params 0)
     ))
 

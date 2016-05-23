@@ -350,7 +350,7 @@
     (mapcat
       (fn [e]
         (cond (i/fn-invocation? e)
-              (concat (-> e rest) (ic-possible-params e))
+              (concat (rest e) (ic-possible-params e))
 
               (vector? e)
               (ic-possible-params e)
@@ -368,6 +368,7 @@
         used-locals (vec (i/walk-select local-syms vector path))
         prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
         possible-params (vec (ic-possible-params path))
+
         ;; TODO: unclear if using long here versus string makes
         ;; a significant difference
         ;; - but using random longs creates possibility of collisions
@@ -410,12 +411,12 @@
 
            ~precompiled-sym (.-precompiled info#)
            ~params-maker-sym (.-params-maker info#)]
-       (if (some? ~precompiled-sym)
+       (if (nil? ~precompiled-sym)
+         (i/comp-paths* ~(vec path))
          (if (nil? ~params-maker-sym)
            ~precompiled-sym
            ~handle-params-code
            )
-         (i/comp-paths* ~(vec path))
          ))
   ))
 
