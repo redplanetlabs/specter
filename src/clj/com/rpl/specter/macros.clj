@@ -349,13 +349,22 @@
   (do
     (mapcat
       (fn [e]
-        (if (i/fn-invocation? e)
-          (concat (-> e rest) (ic-possible-params e))))
+        (cond (i/fn-invocation? e)
+              (concat (-> e rest) (ic-possible-params e))
+
+              (vector? e)
+              (ic-possible-params e)
+              ))
       path)))
 
 ;; still possible to mess this up with alter-var-root
 (defmacro path [& path] ; "inline cache"
-  (let [local-syms (-> &env keys set)
+  (let [;;this is a hack, but the composition of &env is considered stable for cljs
+        platform (if (contains? &env :locals) :cljs :clj)
+        local-syms (if (= platform :cljs)
+                    (-> &env :locals keys set) ;cljs
+                    (-> &env keys set) ;clj
+                    )
         used-locals (vec (i/walk-select local-syms vector path))
         prepared-path (ic-prepare-path local-syms (walk/macroexpand-all (vec path)))
         possible-params (vec (ic-possible-params path))
@@ -369,36 +378,45 @@
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
         cache-id (str (java.util.UUID/randomUUID))
-        ]
-    (binding [i/*used-locals* used-locals]
-      ;; in order to pass the used locals to the clj handle-params macro
-      (walk/macroexpand-all 
-        `(let [info# (i/get-path-cache ~cache-id)
-               
-               ^com.rpl.specter.impl.CachedPathInfo info#
-                (if (some? info#)
-                  info#
-                  (let [info# (i/magic-precompilation
-                               ~prepared-path
-                               (quote ~used-locals)
-                               (quote ~possible-params)
-                               )]
-                    (i/add-path-cache! ~cache-id info#)
-                    info#
-                    ))
 
-               precompiled# (.-precompiled info#)
-               params-maker# (.-params-maker info#)]
-           (if (some? precompiled#)
-             (if (nil? params-maker#)
-               precompiled#
-               (i/handle-params
-                precompiled#
-                params-maker#
-                ~(mapv (fn [p] `(fn [] ~p)) possible-params)
+        precompiled-sym (gensym "precompiled")
+        params-maker-sym (gensym "params-maker")
+
+        handle-params-code
+        (if (= platform :clj)
+          `(i/bind-params* ~precompiled-sym (~params-maker-sym ~@used-locals) 0)
+          `(i/handle-params
+             ~precompiled-sym
+             ~params-maker-sym
+             ~(mapv (fn [p] `(fn [] ~p)) possible-params)
+             ))
+        ]
+      ;; in order to pass the used locals to the clj handle-params macro
+    `(let [info# (i/get-path-cache ~cache-id)
+           
+           ^com.rpl.specter.impl.CachedPathInfo info#
+            (if (some? info#)
+              info#
+              (let [info# (i/magic-precompilation
+                           ~prepared-path
+                           (quote ~used-locals)
+                           ;;possible-params is wrong atm
+                           ;;as is used-locals in cljs...
+                           (quote ~possible-params)
+                           )]
+                (i/add-path-cache! ~cache-id info#)
+                info#
                 ))
-             (i/comp-paths* ~(vec path))
-             ))))
+
+           ~precompiled-sym (.-precompiled info#)
+           ~params-maker-sym (.-params-maker info#)]
+       (if (some? ~precompiled-sym)
+         (if (nil? ~params-maker-sym)
+           ~precompiled-sym
+           ~handle-params-code
+           )
+         (i/comp-paths* ~(vec path))
+         ))
   ))
 
 (defmacro select [apath structure]

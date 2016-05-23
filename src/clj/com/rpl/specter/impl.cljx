@@ -16,8 +16,9 @@
   (:import [com.rpl.specter Util])
   )
 
+
 (defn spy [e]
-  (println e)
+  (println (pr-str e))
   e)
 
 (defprotocol PathComposer
@@ -676,13 +677,6 @@
       (satisfies? p/Collector v)
       (instance? CompiledPath v)))
 
-#+clj
-(def ^:dynamic *used-locals*)
-
-#+clj
-(defmacro handle-params [precompiled params-maker possible-params]
-  `(bind-params* ~precompiled (~params-maker ~@*used-locals*) 0))
-
 #+cljs
 (defn handle-params [precompiled params-maker possible-params]
   (let [params (fast-object-array (count params-maker))]
@@ -830,7 +824,7 @@
       (let [precompiled (comp-paths* path)
             params-code (mapv extract-original-code @params-atom)
             params-maker (if-not (empty? params-code)
-                          (mk-params-maker params-code possible-params-code used-locals))
+                           (mk-params-maker params-code possible-params-code used-locals))
             ]
         ;; TODO: error if precompiled is compiledpath and there are params or
         ;; precompiled is paramsneededpath and there are no params...

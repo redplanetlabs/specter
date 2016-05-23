@@ -9,8 +9,8 @@
   :auto-clean false
   :dependencies [[org.clojure/tools.macro "0.1.2"]]
   :profiles {:provided {:dependencies
-                        [[org.clojure/clojure "1.7.0"]
-                         [org.clojure/clojurescript "1.7.122"]]}
+                        [[org.clojure/clojure "1.6.0"]
+                         [org.clojure/clojurescript "0.0-3211"]]}
              :dev {:dependencies
                    [[org.clojure/test.check "0.7.0"]]
                    :plugins
