@@ -317,6 +317,27 @@
 (defmacro defpathedfn [name & args]
   (let [[name args] (m/name-with-attributes name args)]
     `(def ~name (vary-meta (fn ~@args) assoc :pathedfn true))))
+
+(defmacro defnavconstructor [name & args]
+  (let [[name [anav & body-or-bodies]] (m/name-with-attributes name args)
+        bodies (if (-> body-or-bodies first vector?) [body-or-bodies] body-or-bodies)
+        
+        checked-code
+        (doall
+          (for [[args & body] bodies]
+            `(~args
+               (let [ret# (do ~@body)]
+                 (if (i/layered-nav? ret#)
+                    (i/layered-nav-underlying ret#)
+                    (i/throw-illegal "Expected result navigator '" (quote ~anav)
+                      "' from nav constructor '" (quote ~name) "'"))
+                 ))))]
+    `(def ~name
+       (vary-meta
+         (let [~anav (i/layered-wrapper ~anav)]
+           (fn ~@checked-code))
+         assoc :layerednav true))
+     ))
   
 
 (defn ic-prepare-path [locals-set path]

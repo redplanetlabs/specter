@@ -148,7 +148,6 @@
         explicit extend-protocol call. \n" obj))
 
 #+clj
-
 (defn find-protocol-impl! [prot obj]
   (let [ret (find-protocol-impl prot obj)]
     (if (= ret obj)
@@ -616,6 +615,36 @@
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
       (.-transformer tfns)))
 
+(defrecord LayeredNav [underlying])
+
+(defn layered-nav? [o] (instance? LayeredNav o))
+
+(defn layered-nav-underlying [^LayeredNav ln]
+  (.-underlying ln))
+
+(defn verify-layerable! [anav]
+  (if-not
+    (and (instance? ParamsNeededPath anav)
+         (> (:num-needed-params anav) 0))
+    (throw-illegal "defnavconstructor must be used on a navigator defined with
+      defnav with at least one parameter")
+    ))
+
+(defn layered-wrapper [anav]
+  (verify-layerable! anav)
+  (fn ([a1] (->LayeredNav (anav a1)))
+      ([a1 a2] (->LayeredNav (anav a1 a2)))
+      ([a1 a2 a3] (->LayeredNav (anav a1 a2 a3)))
+      ([a1 a2 a3 a4] (->LayeredNav (anav a1 a2 a3 a4)))
+      ([a1 a2 a3 a4 a5] (->LayeredNav (anav a1 a2 a3 a4 a5)))
+      ([a1 a2 a3 a4 a5 a6] (->LayeredNav (anav a1 a2 a3 a4 a5 a6)))
+      ([a1 a2 a3 a4 a5 a6 a7] (->LayeredNav (anav a1 a2 a3 a4 a5 a6 a7)))
+      ([a1 a2 a3 a4 a5 a6 a7 a8] (->LayeredNav (anav a1 a2 a3 a4 a5 a6 a7 a8)))
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9] (->LayeredNav (anav a1 a2 a3 a4 a5 a6 a7 a8 a9)))
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] (->LayeredNav (anav a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)))
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 & args]
+        (->LayeredNav (apply anav a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 args)))
+    ))
 
 (defrecord LocalSym
   [val sym])
@@ -704,6 +733,37 @@
     1
     ))
 
+(def rich-compiled-path-proxy
+  (->ParamsNeededPath
+    (->TransformFunctions
+      RichPathExecutor
+      (fn [params params-idx vals structure next-fn]
+        (let [apath ^CompiledPath (aget ^objects params params-idx)
+              transform-fns ^TransformFunctions (.-transform-fns apath)
+              selector (.-selector transform-fns)]
+          (selector
+            (.-params apath)
+            (.-params-idx apath)
+            vals
+            structure
+            (fn [_ _ vals-next structure-next]
+              (next-fn params params-idx vals-next structure-next))
+            )))
+      (fn [params params-idx vals structure next-fn]
+        (let [apath ^CompiledPath (aget ^objects params params-idx)
+              transform-fns ^TransformFunctions (.-transform-fns apath)
+              transformer (.-transformer transform-fns)]
+          (transformer
+            (.-params apath)
+            (.-params-idx apath)
+            vals
+            structure
+            (fn [_ _ vals-next structure-next]
+              (next-fn params params-idx vals-next structure-next))
+            ))))
+    1
+    ))
+
 (defn- magic-precompilation* [p params-atom failed-atom]
   (let [magic-fail! (fn [& reason]
                       (if (get-cell MUST-CACHE-PATHS)
@@ -762,6 +822,12 @@
                     nil
                     (apply vv subpath)
                     ))
+
+                (and (fn? vv) (-> vv meta :layerednav))
+                (do
+                  (swap! params-atom conj (:code p))
+                  rich-compiled-path-proxy
+                  )
 
                 :else
                 (magic-fail! "Var " (:sym op) " must be either a parameterized "
