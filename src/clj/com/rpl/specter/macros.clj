@@ -1,7 +1,7 @@
 (ns com.rpl.specter.macros
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as walk]
-            [clojure.tools.macro :as m])
+            [clojure.tools.macro :as m]
+            [riddley.walk :as walk])
   )
 
 (defn gensyms [amt]
@@ -398,6 +398,10 @@
                     (-> &env keys set) ;clj
                     )
         used-locals (vec (i/walk-select local-syms vector path))
+
+        ;; note: very important to use riddley's macroexpand-all here, so that
+        ;; &env is preserved in any potential nested calls to select (like via
+        ;; a view function)
         expanded (walk/macroexpand-all (vec path))
         prepared-path (ic-prepare-path local-syms expanded)
         possible-params (vec (ic-possible-params expanded))

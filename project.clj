@@ -7,7 +7,8 @@
   :test-paths ["test", "target/test-classes"]
   :jar-exclusions [#"\.cljx"]
   :auto-clean false
-  :dependencies [[org.clojure/tools.macro "0.1.2"]]
+  :dependencies [[org.clojure/tools.macro "0.1.2"]
+                 [riddley "0.1.12"]]
   :profiles {:provided {:dependencies
                         [[org.clojure/clojure "1.6.0"]
                          [org.clojure/clojurescript "0.0-3211"]]}

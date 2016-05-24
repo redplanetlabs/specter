@@ -957,3 +957,15 @@
       )))
   (s/must-cache-paths! false)
   )
+
+(deftest nested-inline-caching-test
+  (is (= [[1]]
+         (let [a :b]
+           (select
+             (s/view
+               (fn [v]
+                 (select [(s/keypath v) (s/keypath a)]
+                   {:a {:b 1}})))
+             :a
+             ))))
+  )
