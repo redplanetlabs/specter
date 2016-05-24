@@ -22,9 +22,6 @@
   (println (pr-str e))
   e)
 
-(defprotocol PathComposer
-  (comp-paths* [paths]))
-
 (defn- smart-str* [o]
   (if (coll? o)
     (pr-str o)
@@ -134,6 +131,13 @@
     params
     idx))
 
+(defprotocol PathComposer
+  (do-comp-paths [paths]))
+
+(defn comp-paths* [p]
+  (if (compiled-path? p) p (do-comp-paths p))
+  )
+
 (defn- seq-contains? [aseq val]
   (->> aseq
        (filter (partial = val))
@@ -238,7 +242,7 @@
   
   #+clj java.util.List #+cljs cljs.core/PersistentVector
   (coerce-path [this]
-    (comp-paths* this))
+    (do-comp-paths this))
 
   #+cljs cljs.core/IndexedSeq
   #+cljs (coerce-path [this]
@@ -331,13 +335,13 @@
 
 (extend-protocol PathComposer
   nil
-  (comp-paths* [sp]
+  (do-comp-paths [sp]
     (coerce-path sp))
   #+clj Object #+cljs default
-  (comp-paths* [sp]
+  (do-comp-paths [sp]
     (coerce-path sp))
   #+clj java.util.List #+cljs cljs.core/PersistentVector
-  (comp-paths* [structure-paths]
+  (do-comp-paths [structure-paths]
     (if (empty? structure-paths)
       (coerce-path nil)
       (let [coerced (->> structure-paths
