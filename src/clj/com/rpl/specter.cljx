@@ -26,7 +26,17 @@
 (defn comp-paths [& paths]
   (i/comp-paths* (vec paths)))
 
-(def must-cache-paths! i/must-cache-paths!)
+(def ^{:doc "Mandate that operations that do inline path factoring and compilation
+             (select/transform/setval/replace-in/path/etc.) must succeed in 
+             factoring the path into static and dynamic portions. If not, an
+             error will be thrown and the reasons for not being able to factor
+             will be printed. Defaults to false, and `(must-cache-paths! false)`
+             can be used to turn this feature off.
+
+             Reasons why it may not be able to factor a path include using
+             a local symbol, special form, or regular function invocation
+             where a navigator is expected."}
+  must-cache-paths! i/must-cache-paths!)
 
 ;; Selection functions
 

@@ -404,8 +404,7 @@
     `(let [info# (i/get-path-cache ~cache-id)
            
            ^com.rpl.specter.impl.CachedPathInfo info#
-            (if (some? info#)
-              info#
+            (if (nil? info#)
               (let [info# (i/magic-precompilation
                            ~prepared-path
                            (quote ~used-locals)
@@ -415,7 +414,9 @@
                            )]
                 (i/add-path-cache! ~cache-id info#)
                 info#
-                ))
+                )
+              info#
+              )
 
            ~precompiled-sym (.-precompiled info#)
            ~params-maker-sym (.-params-maker info#)]
