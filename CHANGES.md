@@ -8,6 +8,8 @@
 * Added select*/transform*/setval*/replace-in*/etc. functions that have the same functionality as the old select/transform/setval/replace-in functions.
 * Added `must` navigator to navigate to a key if and only if it exists in the structure
 * Added `ATOM` navigator (thanks @rakeshp)
+* Added "navigator constructors" that can be defined via `defnavconstructor`. These allow defining a flexible function to parameterize a defnav, and the
+  function integrates with inline caching for high performance.
 
 
 ## 0.10.0
