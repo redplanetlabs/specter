@@ -380,7 +380,8 @@
               [e]
 
               (i/fn-invocation? e)
-              (concat (rest e) (ic-possible-params e))
+              ;; the [e] here handles nav constructors
+              (concat [e] (rest e) (ic-possible-params e))
 
               (vector? e)
               (ic-possible-params e)
