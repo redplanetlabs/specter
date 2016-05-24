@@ -7,7 +7,7 @@
            [com.rpl.specter.macros
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
-                     select-first transform setval replace-in]])
+                     select-first transform setval replace-in defnavconstructor]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
@@ -15,7 +15,7 @@
     #+clj [com.rpl.specter.macros
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
-                  select-first transform setval replace-in]]
+                  select-first transform setval replace-in defnavconstructor]]
 
     )
 
@@ -859,6 +859,27 @@
                (= q1 q2)
                (= (type q1) (type q2))))))
 
+(defnavconstructor double-str-keypath
+  [p s/keypath]
+  [s1 s2]
+  (p (str s1 s2)))
+
+(defnavconstructor some-keypath
+  [p s/keypath]
+  ([] (p "a"))
+  ([k1] (p (str k1 "!")))
+  ([k & args] (p "bbb")))
+
+(deftest nav-constructor-test
+  ;; this also tests that the eval done by clj platform during inline
+  ;; caching rebinds to the correct namespace since this is run
+  ;; by clojure.test in a different namespace
+  (is (= 1 (select-one! (double-str-keypath "a" "b") {"ab" 1 "c" 2})))
+  (is (= 1 (select-one! (some-keypath) {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
+  (is (= 2 (select-one! (some-keypath "a") {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
+  (is (= 3 (select-one! (some-keypath 1 2 3 4 5) {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
+  )
+
 (def ^:dynamic *APATH* s/keypath)
 
 (deftest inline-caching-test
@@ -883,6 +904,13 @@
     inc
     {:a 1 :b 2}
     [[true] [false]])
+  (ic-test
+    true
+    [v]
+    [s/ALL (double-str-keypath v (inc v))]
+    str
+    [{"12" :a "1011" :b} {"1011" :c}]
+    [[1] [10]])
   (ic-test
     false
     [k]

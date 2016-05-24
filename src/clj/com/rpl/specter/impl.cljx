@@ -857,21 +857,23 @@
       )))
 
 #+clj
-(defn mk-params-maker [params-code possible-params-code used-locals]
-  (let [array-sym (gensym "array")]
-    (eval
-      `(fn [~@used-locals]
-         (let [~array-sym (fast-object-array ~(count params-code))]
-           ~@(map-indexed
-               (fn [i c]
-                `(aset ~array-sym ~i ~c))
-               params-code
-               )
-           ~array-sym
-           )))))
+(defn mk-params-maker [ns-str params-code possible-params-code used-locals]
+  (let [ns (find-ns (symbol ns-str))
+        array-sym (gensym "array")]
+    (binding [*ns* ns]
+      (eval
+        `(fn [~@used-locals]
+           (let [~array-sym (fast-object-array ~(count params-code))]
+             ~@(map-indexed
+                 (fn [i c]
+                  `(aset ~array-sym ~i ~c))
+                 params-code
+                 )
+             ~array-sym
+             ))))))
 
 #+cljs
-(defn mk-params-maker [params-code possible-params-code used-locals]
+(defn mk-params-maker [ns-str params-code possible-params-code used-locals]
   (let [indexed (->> possible-params-code
                      (map-indexed (comp vec reverse vector))
                      (into {}))]
@@ -879,7 +881,7 @@
     (mapv (fn [c] (get indexed c)) params-code)))
 
 ;; possible-params-code is for cljs impl that can't use eval
-(defn magic-precompilation [prepared-path used-locals possible-params-code]
+(defn magic-precompilation [prepared-path ns-str used-locals possible-params-code]
   (let [params-atom (atom [])
         failed-atom (atom false)
         path (magic-precompilation* prepared-path params-atom failed-atom)
@@ -891,7 +893,7 @@
       (let [precompiled (comp-paths* path)
             params-code (mapv extract-original-code @params-atom)
             params-maker (if-not (empty? params-code)
-                           (mk-params-maker params-code possible-params-code used-locals))
+                           (mk-params-maker ns-str params-code possible-params-code used-locals))
             ]
         ;; TODO: error if precompiled is compiledpath and there are params or
         ;; precompiled is paramsneededpath and there are no params...

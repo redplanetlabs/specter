@@ -319,7 +319,7 @@
     `(def ~name (vary-meta (fn ~@args) assoc :pathedfn true))))
 
 (defmacro defnavconstructor [name & args]
-  (let [[name [anav & body-or-bodies]] (m/name-with-attributes name args)
+  (let [[name [[csym anav] & body-or-bodies]] (m/name-with-attributes name args)
         bodies (if (-> body-or-bodies first vector?) [body-or-bodies] body-or-bodies)
         
         checked-code
@@ -330,11 +330,13 @@
                  (if (i/layered-nav? ret#)
                     (i/layered-nav-underlying ret#)
                     (i/throw-illegal "Expected result navigator '" (quote ~anav)
-                      "' from nav constructor '" (quote ~name) "'"))
+                      "' from nav constructor '" (quote ~name) "'"
+                      " constructed with the provided constructor '" (quote ~csym)
+                      "'"))
                  ))))]
     `(def ~name
        (vary-meta
-         (let [~anav (i/layered-wrapper ~anav)]
+         (let [~csym (i/layered-wrapper ~anav)]
            (fn ~@checked-code))
          assoc :layerednav true))
      ))
@@ -428,6 +430,7 @@
             (if (nil? info#)
               (let [info# (i/magic-precompilation
                            ~prepared-path
+                           ~(str *ns*)
                            (quote ~used-locals)
                            ;;possible-params is wrong atm
                            ;;as is used-locals in cljs...
