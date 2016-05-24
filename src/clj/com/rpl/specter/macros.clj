@@ -450,7 +450,7 @@
            ~precompiled-sym (.-precompiled info#)
            ~params-maker-sym (.-params-maker info#)]
        (if (nil? ~precompiled-sym)
-         (i/comp-paths* ~(vec path))
+         (i/comp-paths* ~(if (= (count path) 1) (first path) (vec path)))
          (if (nil? ~params-maker-sym)
            ~precompiled-sym
            ~handle-params-code
