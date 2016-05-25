@@ -8,7 +8,7 @@ lein cleantest
 
 ```
 rm -rf out/
-lein cljx
+lein do javac, cljx
 rlwrap java -cp `lein classpath` clojure.main repl.clj
 (require 'com.rpl.specter.cljs-test-runner)
 ```
