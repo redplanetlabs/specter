@@ -835,11 +835,13 @@
 
                 :else
                 (magic-fail! "Var " (:sym op) " must be either a parameterized "
-                  "navigator or a higher order pathed constructor function")
+                  "navigator, a higher order pathed constructor function, "
+                  "or a nav consructor")
                 )))
           (magic-fail! "Code at " (extract-original-code p) " is in "
             "function invocation position and must be either a parameterized "
-            "navigator or a higher order pathed constructor function"
+            "navigator, a higher order pathed constructor function, or a "
+            "nav constructor."
             )
           ))
 
