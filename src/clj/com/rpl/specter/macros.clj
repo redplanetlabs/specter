@@ -1,7 +1,5 @@
 (ns com.rpl.specter.macros
-  (:require [com.rpl.specter.impl :as i]
-            [clojure.tools.macro :as m]
-            [riddley.walk :as walk])
+  (:require [com.rpl.specter.impl :as i])
   )
 
 (defn gensyms [amt]
@@ -314,12 +312,38 @@
 (defmacro extend-protocolpath [protpath & extensions]
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
 
+;; copied from tools.macro to avoid the dependency
+(defn name-with-attributes
+  "To be used in macro definitions.
+   Handles optional docstrings and attribute maps for a name to be defined
+   in a list of macro arguments. If the first macro argument is a string,
+   it is added as a docstring to name and removed from the macro argument
+   list. If afterwards the first macro argument is a map, its entries are
+   added to the name's metadata map and the map is removed from the
+   macro argument list. The return value is a vector containing the name
+   with its extended metadata map and the list of unprocessed macro
+   arguments."
+  [name macro-args]
+  (let [[docstring macro-args] (if (string? (first macro-args))
+                                 [(first macro-args) (next macro-args)]
+                                 [nil macro-args])
+        [attr macro-args]          (if (map? (first macro-args))
+                                     [(first macro-args) (next macro-args)]
+                                     [{} macro-args])
+        attr                       (if docstring
+                                     (assoc attr :doc docstring)
+                                     attr)
+        attr                       (if (meta name)
+                                     (conj (meta name) attr)
+                                     attr)]
+    [(with-meta name attr) macro-args]))
+
 (defmacro defpathedfn [name & args]
-  (let [[name args] (m/name-with-attributes name args)]
+  (let [[name args] (name-with-attributes name args)]
     `(def ~name (vary-meta (fn ~@args) assoc :pathedfn true))))
 
 (defmacro defnavconstructor [name & args]
-  (let [[name [[csym anav] & body-or-bodies]] (m/name-with-attributes name args)
+  (let [[name [[csym anav] & body-or-bodies]] (name-with-attributes name args)
         bodies (if (-> body-or-bodies first vector?) [body-or-bodies] body-or-bodies)
         
         checked-code
@@ -402,7 +426,7 @@
         ;; note: very important to use riddley's macroexpand-all here, so that
         ;; &env is preserved in any potential nested calls to select (like via
         ;; a view function)
-        expanded (walk/macroexpand-all (vec path))
+        expanded (i/do-macroexpand-all (vec path))
         prepared-path (ic-prepare-path local-syms expanded)
         possible-params (vec (ic-possible-params expanded))
 
@@ -415,7 +439,7 @@
         ;; - with invokedynamic here, could go directly to the code
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
-        cache-id (str (java.util.UUID/randomUUID))
+        cache-id (i/gen-uuid-str)
 
         precompiled-sym (gensym "precompiled")
         params-maker-sym (gensym "params-maker")

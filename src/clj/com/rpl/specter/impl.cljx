@@ -11,11 +11,44 @@
             #+clj [clojure.core.reducers :as r]
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
+            #+clj [riddley.walk :as riddley]
             )
   #+clj
   (:import [com.rpl.specter Util])
   )
 
+;; these macroexpand functions are for path macro in bootstrap cljs
+;; environment
+#+cljs
+(defn macroexpand'
+  [form]
+  (binding [cljs/*eval-fn* cljs/js-eval]
+    (cljs/eval (cljs/empty-state)
+      `(macroexpand (quote ~form))
+      identity)))
+
+#+cljs
+(defn do-macroexpand-all
+  "Recursively performs all possible macroexpansions in form."
+  {:added "1.1"}
+  [form]
+  (walk/prewalk (fn [x]
+                  (if (seq? x)
+                    (macroexpand' x)
+                    x)) form))
+
+#+clj
+(defn do-macroexpand-all [form]
+  (riddley/macroexpand-all form))
+
+#+cljs
+(defn gen-uuid-str []
+  (apply str (repeatedly 50 #(rand-int 9)))
+  )
+
+#+clj
+(defn gen-uuid-str []
+  (str (java.util.UUID/randomUUID)))
 
 (defn spy [e]
   (println "SPY:")
@@ -435,8 +468,9 @@
     ))
 
 (defn fn-invocation? [f]
-  (or (instance? clojure.lang.Cons f)
-      (instance? clojure.lang.LazySeq f)
+  (or #+clj  (instance? clojure.lang.Cons f)
+      #+clj  (instance? clojure.lang.LazySeq f)
+      #+cljs (instance? cljs.core.LazySeq f)
       (list? f)))
 
 (defn codewalk-until [pred on-match-fn structure]
