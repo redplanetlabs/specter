@@ -181,6 +181,24 @@
     (i/srange-transform structure start end next-fn)
     ))
 
+(defnav
+  ^{:doc "Navigates to every continuous subsequence of elements matching `pred`"}
+  continuous-subseqs
+  [pred]
+  (select* [this structure next-fn]
+    (doall
+      (mapcat
+        (fn [[s e]] (i/srange-select structure s e next-fn))
+        (i/matching-ranges structure pred)
+        )))
+  (transform* [this structure next-fn]
+    (reduce
+      (fn [structure [s e]]
+        (i/srange-transform structure s e next-fn))
+      structure
+      (reverse (i/matching-ranges structure pred))
+      )))
+
 (def BEGINNING (srange 0 0))
 
 (def END (srange-dynamic count count))

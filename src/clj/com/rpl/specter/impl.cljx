@@ -575,6 +575,27 @@
       res
       )))
 
+(defn- matching-indices [aseq p]
+  (keep-indexed (fn [i e] (if (p e) i)) aseq))
+
+(defn matching-ranges [aseq p]
+  (first
+    (reduce
+      (fn [[ranges curr-start curr-last :as curr] i]
+        (cond
+          (nil? curr-start)
+          [ranges i i]
+
+          (= i (inc curr-last))
+          [ranges curr-start i]
+
+          :else
+          [(conj ranges [curr-start (inc curr-last)]) i i]
+          ))
+      [[] nil nil]
+      (concat (matching-indices aseq p) [-1])
+    )))
+
 (extend-protocol p/Navigator
   nil
   (select* [this structure next-fn]

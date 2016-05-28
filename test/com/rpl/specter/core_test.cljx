@@ -969,3 +969,25 @@
              :a
              ))))
   )
+
+(defspec continuous-subseqs-filter-equivalence
+  (for-all+
+    [aseq (gen/vector (gen/elements [1 2 3 :a :b :c 4 5 :d :e]))
+     pred (gen/elements [keyword? number?])]
+    (= (setval (s/continuous-subseqs pred) nil aseq)
+       (filter (complement pred) aseq))
+    ))
+
+(deftest continuous-subseqs-test
+  (is (= [1 "ab" 2 3 "c" 4 "def"]
+         (transform
+           (s/continuous-subseqs string?)
+           (fn [s] [(apply str s)])
+           [1 "a" "b" 2 3 "c" 4 "d" "e" "f"]
+           )))
+  (is (= [[] [2] [4 6]]
+         (select
+           [(s/continuous-subseqs number?) (s/filterer even?)]
+           [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"]
+           )))
+  )
