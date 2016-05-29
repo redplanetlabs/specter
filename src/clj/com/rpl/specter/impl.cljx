@@ -12,6 +12,7 @@
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             #+clj [riddley.walk :as riddley]
+;;            #+cljs [cljs.js :as cljs]
             )
   #+clj
   (:import [com.rpl.specter Util])

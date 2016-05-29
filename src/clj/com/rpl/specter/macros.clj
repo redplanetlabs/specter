@@ -445,15 +445,16 @@
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
         cache-id (if (= platform :clj) (i/gen-uuid-str))
-        cache-sym (gensym "pathcache") ;; used for cljs
+        cache-sym (if (= platform :cljs)
+                    (vary-meta
+                      (gensym "pathcache")
+                      assoc :cljs.analyzer/no-resolve true))
 
-        ;; this is used to avoid warnings in cljs code about undeclared var
-        cache-qualified-sym (symbol (str *ns* "." cache-sym))
         info-sym (gensym "info")
 
         get-cache-code (if (= platform :clj)
                          `(i/get-path-cache ~cache-id)
-                         cache-qualified-sym
+                         cache-sym
                          )
         add-cache-code (if (= platform :clj)
                          `(i/add-path-cache! ~cache-id ~info-sym)
@@ -480,8 +481,6 @@
                                ~prepared-path
                                ~(str *ns*)
                                (quote ~used-locals)
-                               ;;possible-params is wrong atm
-                               ;;as is used-locals in cljs...
                                (quote ~possible-params)
                                )]
                 ~add-cache-code
