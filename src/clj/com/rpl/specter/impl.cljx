@@ -41,6 +41,8 @@
 (defn do-macroexpand-all [form]
   (riddley/macroexpand-all form))
 
+;;this is not a secure way to generate uuids – the `path` implementation
+;;for cljs uses an alternative strategy
 #+cljs
 (defn gen-uuid-str []
   (apply str (repeatedly 50 #(rand-int 9)))
@@ -723,12 +725,8 @@
    params-maker ; can be null
    ])
 
-(defonce PATH-CACHE
-  #+clj (java.util.concurrent.ConcurrentHashMap.)
-  ;;TODO: according to @dnolen, can forgo this for instead doing
-  ;;inline defs at runtime
-  #+cljs (atom {})
-  )
+#+clj
+(defonce PATH-CACHE (java.util.concurrent.ConcurrentHashMap.))
 
 (def MUST-CACHE-PATHS (mutable-cell false))
 
@@ -743,14 +741,6 @@
 #+clj
 (defn get-path-cache [^String k]
   (.get ^java.util.concurrent.ConcurrentHashMap PATH-CACHE k))
-
-#+cljs
-(defn add-path-cache! [k v]
-  (swap! PATH-CACHE (fn [m] (assoc m k v))))
-
-#+cljs
-(defn get-path-cache [k]
-  (get @PATH-CACHE k))
 
 (defn- extract-original-code [p]
   (cond

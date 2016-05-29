@@ -414,7 +414,12 @@
       )))
 
 ;; still possible to mess this up with alter-var-root
-(defmacro path [& path] ; "inline cache"
+(defmacro path
+  "Same as calling comp-paths, except it caches the composition of the static part
+   of the path for later re-use (when possible). For almost all idiomatic uses
+   of Specter provides huge speedup. This macro is automatically used by the
+   select/transform/setval/replace-in/etc. macros."
+  [& path]
   (let [;;this is a hack, but the composition of &env is considered stable for cljs
         platform (if (contains? &env :locals) :cljs :clj)
         local-syms (if (= platform :cljs)
@@ -439,7 +444,18 @@
         ;; - with invokedynamic here, could go directly to the code
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
-        cache-id (i/gen-uuid-str)
+        cache-id (i/gen-uuid-str) ;; used for clj
+        cache-sym (gensym "pathcache") ;; used for cljs
+        info-sym (gensym "info")
+
+        get-cache-code (if (= platform :clj)
+                         `(i/get-path-cache ~cache-id)
+                         cache-sym
+                         )
+        add-cache-code (if (= platform :clj)
+                         `(i/add-path-cache! ~cache-id ~info-sym)
+                         `(def ~cache-sym ~info-sym))
+
 
         precompiled-sym (gensym "precompiled")
         params-maker-sym (gensym "params-maker")
@@ -453,20 +469,23 @@
              ~(mapv (fn [p] `(fn [] ~p)) possible-params)
              ))
         ]
-    `(let [info# (i/get-path-cache ~cache-id)
+    `(let [;;TODO: for cljs, use the dynamic def strategy + exists for a direct
+           ;; inline cache
+
+           info# ~get-cache-code
            
            ^com.rpl.specter.impl.CachedPathInfo info#
             (if (nil? info#)
-              (let [info# (i/magic-precompilation
-                           ~prepared-path
-                           ~(str *ns*)
-                           (quote ~used-locals)
-                           ;;possible-params is wrong atm
-                           ;;as is used-locals in cljs...
-                           (quote ~possible-params)
-                           )]
-                (i/add-path-cache! ~cache-id info#)
-                info#
+              (let [~info-sym (i/magic-precompilation
+                               ~prepared-path
+                               ~(str *ns*)
+                               (quote ~used-locals)
+                               ;;possible-params is wrong atm
+                               ;;as is used-locals in cljs...
+                               (quote ~possible-params)
+                               )]
+                ~add-cache-code
+                ~info-sym
                 )
               info#
               )
