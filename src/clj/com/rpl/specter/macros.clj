@@ -469,10 +469,7 @@
              ~(mapv (fn [p] `(fn [] ~p)) possible-params)
              ))
         ]
-    `(let [;;TODO: for cljs, use the dynamic def strategy + exists for a direct
-           ;; inline cache
-
-           info# ~get-cache-code
+    `(let [info# ~get-cache-code
            
            ^com.rpl.specter.impl.CachedPathInfo info#
             (if (nil? info#)
