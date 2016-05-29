@@ -444,7 +444,7 @@
         ;; - with invokedynamic here, could go directly to the code
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
-        cache-id (i/gen-uuid-str) ;; used for clj
+        cache-id (if (= platform :clj) (i/gen-uuid-str))
         cache-sym (gensym "pathcache") ;; used for cljs
 
         ;; this is used to avoid warnings in cljs code about undeclared var

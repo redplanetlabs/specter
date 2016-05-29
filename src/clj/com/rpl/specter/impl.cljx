@@ -17,41 +17,6 @@
   (:import [com.rpl.specter Util])
   )
 
-;; these macroexpand functions are for path macro in bootstrap cljs
-;; environment
-#+cljs
-(defn macroexpand'
-  [form]
-  (binding [cljs/*eval-fn* cljs/js-eval]
-    (cljs/eval (cljs/empty-state)
-      `(macroexpand (quote ~form))
-      identity)))
-
-#+cljs
-(defn do-macroexpand-all
-  "Recursively performs all possible macroexpansions in form."
-  {:added "1.1"}
-  [form]
-  (walk/prewalk (fn [x]
-                  (if (seq? x)
-                    (macroexpand' x)
-                    x)) form))
-
-#+clj
-(defn do-macroexpand-all [form]
-  (riddley/macroexpand-all form))
-
-;;this is not a secure way to generate uuids – the `path` implementation
-;;for cljs uses an alternative strategy
-#+cljs
-(defn gen-uuid-str []
-  (apply str (repeatedly 50 #(rand-int 9)))
-  )
-
-#+clj
-(defn gen-uuid-str []
-  (str (java.util.UUID/randomUUID)))
-
 (defn spy [e]
   (println "SPY:")
   (println (pr-str e))
@@ -76,8 +41,42 @@
 
 #+cljs
 (defn throw-illegal [& args]
-  (throw (js/Error. (apply str args)))
-  )
+  (throw (js/Error. (apply str args))))
+
+
+;; these macroexpand functions are for path macro in bootstrap cljs
+;; environment
+#+cljs
+(defn macroexpand'
+  [form]
+  (binding [cljs/*eval-fn* cljs/js-eval]
+    (cljs/eval (cljs/empty-state)
+      `(macroexpand (quote ~form))
+      identity)))
+
+#+cljs
+(defn do-macroexpand-all
+  "Recursively performs all possible macroexpansions in form."
+  {:added "1.1"}
+  [form]
+  (walk/prewalk (fn [x]
+                  (if (seq? x)
+                    (macroexpand' x)
+                    x)) form))
+
+#+clj
+(defn do-macroexpand-all [form]
+  (riddley/macroexpand-all form))
+
+;; so that macros.clj compiles appropriately when
+;; run in cljs (this code isn't called in that case)
+#+cljs
+(defn gen-uuid-str []
+  (throw-illegal "Cannot get UUID in Javascript"))
+
+#+clj
+(defn gen-uuid-str []
+  (str (java.util.UUID/randomUUID)))
 
 (defn benchmark [iters afn]
   (time
