@@ -446,11 +446,14 @@
         ;; a bunch of checks beforehand
         cache-id (i/gen-uuid-str) ;; used for clj
         cache-sym (gensym "pathcache") ;; used for cljs
+
+        ;; this is used to avoid warnings in cljs code about undeclared var
+        cache-qualified-sym (symbol (str *ns* "." cache-sym))
         info-sym (gensym "info")
 
         get-cache-code (if (= platform :clj)
                          `(i/get-path-cache ~cache-id)
-                         cache-sym
+                         cache-qualified-sym
                          )
         add-cache-code (if (= platform :clj)
                          `(i/add-path-cache! ~cache-id ~info-sym)
