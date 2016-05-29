@@ -12,7 +12,6 @@
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             #+clj [riddley.walk :as riddley]
-;;            #+cljs [cljs.js :as cljs]
             )
   #+clj
   (:import [com.rpl.specter Util])
@@ -50,8 +49,8 @@
 #+cljs
 (defn macroexpand'
   [form]
-  (binding [cljs/*eval-fn* cljs/js-eval]
-    (cljs/eval (cljs/empty-state)
+  (binding [cljs.js/*eval-fn* cljs.js/js-eval]
+    (cljs.js/eval (cljs.js/empty-state)
       `(macroexpand (quote ~form))
       identity)))
 
