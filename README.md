@@ -18,8 +18,13 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 - Introductory blog post: [Functional-navigational programming in Clojure(Script) with Specter](http://nathanmarz.com/blog/functional-navigational-programming-in-clojurescript-with-sp.html)
 - Presentation about Specter: [Specter: Powerful and Simple Data Structure Manipulation](https://www.youtube.com/watch?v=VTCy_DkAJGk)
+- Performance guide: The [Specter 0.11.0 announcement post](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) provides a comprehensive overview of how Specter achieves its performance and what you need to know as a user to enable Specter to perform its optimizations.
 
-Specter's API is contained in a single, well-documented file: [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx)
+Specter's API is contained in three files:
+
+- [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
+- [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx): This contains the build-in navigators and functional versions of `select/transform/etc.`
+- [zippers.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljx): This integrates zipper-based navigation into Specter.
 
 # Questions?
 
@@ -215,37 +220,6 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 
 ;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
 ```
-
-You can make `select` and `transform` work much faster by precompiling your selectors using the `comp-paths` function. There's about a 3x speed difference between the following two invocations of transform:
-
-```clojure
-(def precompiled (comp-paths ALL :a even?))
-
-(transform [ALL :a even?] inc structure)
-(compiled-transform precompiled inc structure)
-```
-
-Depending on the details of the selector and the data being transformed, precompiling can sometimes provide more than a 10x speedup. Using Specter with precompilation generally gets the speed within a few percentage points of hand-optimized code. 
-
-You can even precompile selectors that require parameters! For example, `keypath` can be used to navigate into a map by any arbitrary key, such as numbers, strings, or your own types. One way to use `keypath` would be to parameterize it at the time you use it, like so:
-
-```clojure
-(defn foo [data k]
-  (select [(keypath k) ALL odd?] data))
-```
-
-It seems difficult to precompile the entire path because it is dependent on the argument `k` of `foo`. Specter gets around this by allowing you to precompile a path without its parameters and bind the parameters to the selector later, like so:
-
-```clojure
-(def foo-path (comp-paths keypath ALL odd?))
-(defn foo [data k]
-  (compiled-select (foo-path k) data))
-```
-
-This code will execute extremely efficiently. 
-
-When `comp-paths` is used on selectors that require parameters, the result of `comp-paths` will require parameters equal to the sum of the number of parameters required by each selector. It expects to receive those parameters in the order in which the selectors were declared. This feature, called "late-bound parameterization", also works on selectors which themselves take in selector paths, such as `selected?`, `filterer`, and `transformed`.
-
 
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
