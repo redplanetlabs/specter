@@ -38,6 +38,7 @@ Here's how to increment all the even values for :a keys in a sequence of maps:
 
 ```clojure
 user> (use 'com.rpl.specter)
+user> (use 'com.rpl.specter.macros)
 user> (transform [ALL :a even?]
               inc
               [{:a 1} {:a 2} {:a 4} {:a 3}])
