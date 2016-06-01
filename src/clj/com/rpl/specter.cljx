@@ -155,9 +155,9 @@
 
 (def VAL (i/->ValCollect))
 
-(def LAST (comp-paths (i/->PosNavigator last i/set-last)))
+(def LAST (comp-paths (i/->PosNavigator i/get-last i/update-last)))
 
-(def FIRST (comp-paths (i/->PosNavigator first i/set-first)))
+(def FIRST (comp-paths (i/->PosNavigator i/get-first i/update-first)))
 
 (defnav
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence

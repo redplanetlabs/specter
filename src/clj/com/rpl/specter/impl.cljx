@@ -439,27 +439,47 @@
 (defn- append [coll elem]
   (-> coll vec (conj elem)))
 
-(defprotocol SetExtremes
-  (set-first [s val])
-  (set-last [s val]))
+(defprotocol UpdateExtremes
+  (update-first [s afn])
+  (update-last [s afn]))
 
-(defn- set-first-list [l v]
-  (cons v (rest l)))
+(defprotocol GetExtremes
+  (get-first [s])
+  (get-last [s]))
 
-(defn- set-last-list [l v]
-  (append (butlast l) v))
+(defn- update-first-list [l afn]
+  (cons (afn (first l)) (rest l)))
 
-(extend-protocol SetExtremes
+(defn- update-last-list [l afn]
+  (append (butlast l) (afn (last l))))
+
+(extend-protocol UpdateExtremes
   #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
-  (set-first [v val]
-    (assoc v 0 val))
-  (set-last [v val]
-    (assoc v (-> v count dec) val))
+  (update-first [v afn]
+    (let [val (get v 0)]
+      (assoc v 0 (afn val))
+      ))
+  (update-last [v afn]
+    (conj (pop v) (afn (peek v)))
+    )
   #+clj Object #+cljs default
-  (set-first [l val]
-    (set-first-list l val))
-  (set-last [l val]
-    (set-last-list l val)
+  (update-first [l val]
+    (update-first-list l val))
+  (update-last [l val]
+    (update-last-list l val)
+    ))
+
+(extend-protocol GetExtremes
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  (get-first [v]
+    (get v 0))
+  (get-last [v]
+    (peek v))
+  #+clj Object #+cljs default
+  (get-first [s]
+    (first s))
+  (get-last [s]
+    (last s)
     ))
 
 (defn walk-until [pred on-match-fn structure]
@@ -592,7 +612,7 @@
   (collect-val [this structure]
     structure))
 
-(deftype PosNavigator [getter setter])
+(deftype PosNavigator [getter updater])
 
 (extend-protocol p/Navigator
   PosNavigator
@@ -602,7 +622,7 @@
   (transform* [this structure next-fn]
     (if (empty? structure)
       structure
-      ((.-setter this) structure (next-fn ((.-getter this) structure))))))
+      ((.-updater this) structure next-fn))))
 
 (defn srange-select [structure start end next-fn]
   (next-fn (-> structure vec (subvec start end))))
