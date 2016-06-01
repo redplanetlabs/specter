@@ -553,7 +553,15 @@
           (doall (map next-fn structure))
 
           (map? structure)
-          (->> structure (r/map vec) (r/map next-fn) (into empty-structure))
+          ;; reduce-kv is much faster than doing r/map through call to (into ...)
+          (reduce-kv
+            (fn [m k v]
+              (let [[newk newv] (next-fn [k v])]
+                (assoc m newk newv)
+                ))
+            empty-structure
+            structure
+            )
 
           :else
           (->> structure (r/map next-fn) (into empty-structure))

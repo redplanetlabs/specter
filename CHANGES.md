@@ -1,5 +1,6 @@
 ## 0.11.1 (unreleased)
 * More efficient inline caching for Clojure version, now inline caching is always within 5% of manually precompiled code
+* Significant performance improvement for ALL transform on maps for Clojure version (25% on simple benchmarks)
 
 ## 0.11.0
 * New `path` macro does intelligent inline caching of the provided path. The path is factored into a static portion and into params which may change on each usage of the path (e.g. local parameters). The static part is factored and compiled on the first run-through, and then re-used for all subsequent invocations. As an example, `[ALL (keypath k)]` is factored into `[ALL keypath]`, which is compiled and cached, and `[k]`, which is provided on each execution. If it is not possible to precompile the path (e.g. [ALL some-local-variable]), nothing is cached and the path will be compiled on each run-through.
