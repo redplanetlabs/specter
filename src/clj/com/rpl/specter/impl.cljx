@@ -724,22 +724,11 @@
    params-maker ; can be null
    ])
 
-#+clj
-(defonce PATH-CACHE (java.util.concurrent.ConcurrentHashMap.))
-
 (def MUST-CACHE-PATHS (mutable-cell false))
 
 (defn must-cache-paths!
   ([] (must-cache-paths! true))
   ([v] (set-cell! MUST-CACHE-PATHS v)))
-
-#+clj
-(defn add-path-cache! [k v]
-  (.put ^java.util.concurrent.ConcurrentHashMap PATH-CACHE k v))
-
-#+clj
-(defn get-path-cache [^String k]
-  (.get ^java.util.concurrent.ConcurrentHashMap PATH-CACHE k))
 
 (defn- extract-original-code [p]
   (cond

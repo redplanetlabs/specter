@@ -435,29 +435,21 @@
         prepared-path (ic-prepare-path local-syms expanded)
         possible-params (vec (ic-possible-params expanded))
 
-        ;; TODO: unclear if using long here versus string makes
-        ;; a significant difference
-        ;; - but using random longs creates possibility of collisions
-        ;; (birthday problem)
-        ;; - ideally could have a real inline cache that wouldn't
-        ;; have to do any hashing/equality checking at all
         ;; - with invokedynamic here, could go directly to the code
         ;; to invoke and/or parameterize the precompiled path without
         ;; a bunch of checks beforehand
-        cache-id (if (= platform :clj) (i/gen-uuid-str))
-        cache-sym (if (= platform :cljs)
-                    (vary-meta
-                      (gensym "pathcache")
-                      assoc :cljs.analyzer/no-resolve true))
+        cache-sym (vary-meta
+                    (gensym "pathcache")
+                      assoc :cljs.analyzer/no-resolve true)
 
         info-sym (gensym "info")
 
         get-cache-code (if (= platform :clj)
-                         `(i/get-path-cache ~cache-id)
+                         `(i/get-cell ~cache-sym)
                          cache-sym
                          )
         add-cache-code (if (= platform :clj)
-                         `(i/add-path-cache! ~cache-id ~info-sym)
+                         `(i/set-cell! ~cache-sym ~info-sym)
                          `(def ~cache-sym ~info-sym))
 
 
@@ -473,6 +465,8 @@
              ~(mapv (fn [p] `(fn [] ~p)) possible-params)
              ))
         ]
+    (if (= platform :clj)
+      (intern *ns* cache-sym (i/mutable-cell)))
     `(let [info# ~get-cache-code
            
            ^com.rpl.specter.impl.CachedPathInfo info#
