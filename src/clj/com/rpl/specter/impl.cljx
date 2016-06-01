@@ -467,7 +467,7 @@
 (extend-protocol UpdateExtremes
   #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (update-first [v afn]
-    (let [val (get v 0)]
+    (let [val (nth v 0)]
       (assoc v 0 (afn val))
       ))
   (update-last [v afn]
@@ -487,7 +487,7 @@
 (extend-protocol GetExtremes
   #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (get-first [v]
-    (get v 0))
+    (nth v 0))
   (get-last [v]
     (peek v))
   #+clj Object #+cljs default
