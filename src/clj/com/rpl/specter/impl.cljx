@@ -457,15 +457,15 @@
   (append (butlast l) (afn (last l))))
 
 #+clj
-(defn vec-count [^clojure.lang.PersistentVector v]
-  (.count v))
+(defn vec-count [^clojure.lang.IPersistentVector v]
+  (.length v))
 
 #+cljs
 (defn vec-count [v]
   (count v))
 
 (extend-protocol UpdateExtremes
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (update-first [v afn]
     (let [val (get v 0)]
       (assoc v 0 (afn val))
@@ -485,7 +485,7 @@
     ))
 
 (extend-protocol GetExtremes
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (get-first [v]
     (get v 0))
   (get-last [v]
@@ -499,7 +499,7 @@
 
 
 (extend-protocol FastEmpty
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (fast-empty? [v]
     (= 0 (vec-count v)))
   #+clj Object #+cljs default
