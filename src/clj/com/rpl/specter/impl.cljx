@@ -465,7 +465,7 @@
   (count v))
 
 (extend-protocol UpdateExtremes
-  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
   (update-first [v afn]
     (let [val (nth v 0)]
       (assoc v 0 (afn val))
@@ -475,8 +475,9 @@
       (case c
         1 (let [[e] v] [(afn e)])
         2 (let [[e1 e2] v] [e1 (afn e2)])
-        (conj (pop v) (afn (peek v)))
-      )))
+        (let [i (dec c)]
+          (assoc v i (afn (nth v i)))
+          ))))
   #+clj Object #+cljs default
   (update-first [l val]
     (update-first-list l val))
