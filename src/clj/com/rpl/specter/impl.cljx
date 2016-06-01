@@ -447,11 +447,22 @@
   (get-first [s])
   (get-last [s]))
 
+(defprotocol FastEmpty
+  (fast-empty? [s]))
+
 (defn- update-first-list [l afn]
   (cons (afn (first l)) (rest l)))
 
 (defn- update-last-list [l afn]
   (append (butlast l) (afn (last l))))
+
+#+clj
+(defn vec-count [^clojure.lang.PersistentVector v]
+  (.count v))
+
+#+cljs
+(defn vec-count [v]
+  (count v))
 
 (extend-protocol UpdateExtremes
   #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
@@ -460,8 +471,12 @@
       (assoc v 0 (afn val))
       ))
   (update-last [v afn]
-    (conj (pop v) (afn (peek v)))
-    )
+    (let [c (vec-count v)]
+      (case c
+        1 (let [[e] v] [(afn e)])
+        2 (let [[e1 e2] v] [e1 (afn e2)])
+        (conj (pop v) (afn (peek v)))
+      )))
   #+clj Object #+cljs default
   (update-first [l val]
     (update-first-list l val))
@@ -481,6 +496,16 @@
   (get-last [s]
     (last s)
     ))
+
+
+(extend-protocol FastEmpty
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  (fast-empty? [v]
+    (= 0 (vec-count v)))
+  #+clj Object #+cljs default
+  (fast-empty? [s]
+    (empty? s))
+  )
 
 (defn walk-until [pred on-match-fn structure]
   (if (pred structure)
@@ -617,10 +642,10 @@
 (extend-protocol p/Navigator
   PosNavigator
   (select* [this structure next-fn]
-    (if-not (empty? structure)
+    (if-not (fast-empty? structure)
       (next-fn ((.-getter this) structure))))
   (transform* [this structure next-fn]
-    (if (empty? structure)
+    (if (fast-empty? structure)
       structure
       ((.-updater this) structure next-fn))))
 
