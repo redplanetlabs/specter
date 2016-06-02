@@ -14,8 +14,9 @@
                        com.rpl.specter.macros
                        com.rpl.specter.zipper]
           :source-uri
-            {#"target/classes" "https://github.com/foo/bar/blob/master/src/{classpath}x#L{line}"
-             #".*"             "https://github.com/foo/bar/blob/master/{filepath}#L{line}"}
+            {#"target/classes" "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}x#L{line}"
+             #".*"             "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}#L{line}"
+             }
           }
   :profiles {:provided {:dependencies
                         [[org.clojure/clojure "1.7.0"]
