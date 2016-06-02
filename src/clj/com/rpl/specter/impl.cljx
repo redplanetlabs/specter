@@ -43,14 +43,14 @@
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args))))
 
-
 ;; these macroexpand functions are for path macro in bootstrap cljs
 ;; environment
 #+cljs
 (defn macroexpand'
   [form]
-  (binding [cljs.js/*eval-fn* cljs.js/js-eval]
-    (cljs.js/eval (cljs.js/empty-state)
+  (binding [^:cljs.analyzer/no-resolve cljs.js/*eval-fn*
+            ^:cljs.analyzer/no-resolve cljs.js/js-eval]
+    (^:cljs.analyzer/no-resolve cljs.js/eval (^:cljs.analyzer/no-resolve cljs.js/empty-state)
       `(macroexpand (quote ~form))
       identity)))
 
