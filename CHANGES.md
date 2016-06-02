@@ -3,6 +3,9 @@
 * Significant performance improvement for ALL transform on maps for Clojure version (25% on simple benchmarks)
 * Significant performance improvements for FIRST/LAST for vectors
 * Eliminated compiler warnings when used in ClojureScript
+* Dropped support for Clojurescript below v1.7.10
+* Bug fix: `transformed` transform-fn no longer factors into `pred` when an anonymous function during inline factoring
+* Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or a non-collection value, the path will not factor. 
 
 ## 0.11.0
 * New `path` macro does intelligent inline caching of the provided path. The path is factored into a static portion and into params which may change on each usage of the path (e.g. local parameters). The static part is factored and compiled on the first run-through, and then re-used for all subsequent invocations. As an example, `[ALL (keypath k)]` is factored into `[ALL keypath]`, which is compiled and cached, and `[k]`, which is provided on each execution. If it is not possible to precompile the path (e.g. [ALL some-local-variable]), nothing is cached and the path will be compiled on each run-through.
