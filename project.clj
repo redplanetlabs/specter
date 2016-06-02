@@ -8,6 +8,15 @@
   :jar-exclusions [#"\.cljx"]
   :auto-clean false
   :dependencies [[riddley "0.1.12"]]
+  :plugins [[lein-codox "0.9.5"]]
+  :codox {:source-paths ["target/classes" "src/clj"]
+          :namespaces [com.rpl.specter
+                       com.rpl.specter.macros
+                       com.rpl.specter.zipper]
+          :source-uri
+            {#"target/classes" "https://github.com/foo/bar/blob/master/src/{classpath}x#L{line}"
+             #".*"             "https://github.com/foo/bar/blob/master/{filepath}#L{line}"}
+          }
   :profiles {:provided {:dependencies
                         [[org.clojure/clojure "1.7.0"]
                          [org.clojure/clojurescript "1.7.10"]]}

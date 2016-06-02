@@ -2,10 +2,10 @@
   (:require [com.rpl.specter.impl :as i])
   )
 
-(defn gensyms [amt]
+(defn ^:no-doc gensyms [amt]
   (vec (repeatedly amt gensym)))
 
-(defn determine-params-impls [[name1 & impl1] [name2 & impl2]]
+(defn ^:no-doc determine-params-impls [[name1 & impl1] [name2 & impl2]]
   (if-not (= #{name1 name2} #{'select* 'transform*})
     (i/throw-illegal "defpath must implement select* and transform*, instead got "
       name1 " and " name2))
@@ -14,10 +14,10 @@
     [impl2 impl1]))
 
 
-(def PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
-(def PARAMS-IDX-SYM (gensym "params-idx"))
+(def ^:no-doc PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
+(def ^:no-doc PARAMS-IDX-SYM (gensym "params-idx"))
 
-(defn paramsnav* [bindings num-params [impl1 impl2]]
+(defn ^:no-doc paramsnav* [bindings num-params [impl1 impl2]]
   (let [[[[_ s-structure-sym s-next-fn-sym] & select-body]
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
          (determine-params-impls impl1 impl2)]
@@ -56,7 +56,7 @@
          ~num-params
          ))))
 
-(defn paramscollector* [post-bindings num-params [_ [_ structure-sym] & body]]
+(defn ^:no-doc paramscollector* [post-bindings num-params [_ [_ structure-sym] & body]]
   `(let [collector# (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
                       (let [~@post-bindings ~@[] ; to avoid syntax highlighting issues
                             c# (do ~@body)]
@@ -74,7 +74,7 @@
        ~num-params
        )))
 
-(defn pathed-nav* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
+(defn ^:no-doc pathed-nav* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
     `(let [paths# (map i/comp-paths* ~paths-seq)
            needed-params# (map i/num-needed-params paths#)
@@ -102,7 +102,7 @@
       ret#
       ))))
 
-(defn make-param-retrievers [params]
+(defn ^:no-doc make-param-retrievers [params]
   (->> params
        (map-indexed
          (fn [i p]
@@ -255,8 +255,9 @@
               ))))))
 
 
-(defn declared-name [name]
-  (symbol (str name "-declared")))
+(defn ^:no-doc declared-name [name]
+  (vary-meta (symbol (str name "-declared"))
+             assoc :no-doc true))
 
 (defmacro declarepath
   ([name]
@@ -313,7 +314,7 @@
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
 
 ;; copied from tools.macro to avoid the dependency
-(defn name-with-attributes
+(defn ^:no-doc name-with-attributes
   "To be used in macro definitions.
    Handles optional docstrings and attribute maps for a name to be defined
    in a list of macro arguments. If the first macro argument is a string,
@@ -367,7 +368,7 @@
      ))
   
 
-(defn ic-prepare-path [locals-set path]
+(defn ^:no-doc ic-prepare-path [locals-set path]
   (cond
     (vector? path)
     (mapv #(ic-prepare-path locals-set %) path)
@@ -395,7 +396,7 @@
     `(quote ~path)
     ))
 
-(defn ic-possible-params [path]
+(defn ^:no-doc ic-possible-params [path]
   (do
     (mapcat
       (fn [e]
