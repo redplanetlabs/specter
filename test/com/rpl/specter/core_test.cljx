@@ -936,6 +936,14 @@
     [{:a 1 :b 2} {:a 10 :b 6} {:c 7 :b 8} {:c 1 :d 9} {:c 3 :d -1}]
     [[:a :b] [:b :a] [:c :d] [:b :c]]
     )
+  (ic-test
+    true
+    []
+    [(s/transformed s/STAY inc)]
+    inc
+    10
+    []
+    )
 
   (s/must-cache-paths!)
   (is (thrown? #+clj Exception #+cljs js/Error
@@ -946,6 +954,11 @@
     ))
   (is (thrown? #+clj Exception #+cljs js/Error
     (select [:a (identity even?)] {:a 2})
+    ))
+  ;; this tests a bug that existed before ^:staticparam annotation
+  ;; for pathedfns
+  (is (thrown? #+clj Exception #+cljs js/Error
+    (select [(s/putval 10) (s/transformed s/STAY #(inc %))] 10)
     ))
   (let [p :a]
     (is (thrown? #+clj Exception #+cljs js/Error
@@ -991,3 +1004,10 @@
            [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"]
            )))
   )
+
+;; there was a bug where the transform-fn was being factored by inline caching
+;; this verifies that it doesn't do inline caching
+(deftest transformed-inline-caching
+  (dotimes [i 10]
+    (is (= [(inc i)] (select (s/transformed s/STAY #(+ % i)) 1)))
+    ))

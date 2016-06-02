@@ -339,8 +339,9 @@
     [(with-meta name attr) macro-args]))
 
 (defmacro defpathedfn [name & args]
-  (let [[name args] (name-with-attributes name args)]
-    `(def ~name (vary-meta (fn ~@args) assoc :pathedfn true))))
+  (let [[name args] (name-with-attributes name args)
+        name (vary-meta name assoc :pathedfn true)]
+    `(defn ~name ~@args)))
 
 (defmacro defnavconstructor [name & args]
   (let [[name [[csym anav] & body-or-bodies]] (name-with-attributes name args)

@@ -9,8 +9,8 @@
   :auto-clean false
   :dependencies [[riddley "0.1.12"]]
   :profiles {:provided {:dependencies
-                        [[org.clojure/clojure "1.6.0"]
-                         [org.clojure/clojurescript "0.0-3211"]]}
+                        [[org.clojure/clojure "1.7.0"]
+                         [org.clojure/clojurescript "1.7.10"]]}
              :dev {:dependencies
                    [[org.clojure/test.check "0.7.0"]]
                    :plugins

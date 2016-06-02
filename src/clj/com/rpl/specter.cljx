@@ -374,7 +374,7 @@
    The input path may be parameterized, in which case the result of transformed
    will be parameterized in the order of which the parameterized navigators
    were declared."
-  [path update-fn]
+  [path ^:notpath update-fn]
   (fixed-pathed-nav [late path]
     (select* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))

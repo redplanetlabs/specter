@@ -857,6 +857,26 @@
     1
     ))
 
+(defn- variadic-arglist? [al]
+  (contains? (set al) '&))
+
+(defn- arglist-for-params-count [arglists c code]
+  (let [ret (->> arglists
+                 (filter
+                   (fn [al]
+                     (or (= (count al) c)
+                         (variadic-arglist? al))
+                     ))
+                 first)
+        len (count ret)]
+    (when-not ret
+      (throw-illegal "Invalid # arguments at " code))
+    (if (variadic-arglist? ret)
+      (srange-transform ret (- len 2) len
+        (fn [_] (repeatedly (- c (- len 2)) gensym)))
+      ret
+      )))
+
 (defn- magic-precompilation* [p params-atom failed-atom]
   (let [magic-fail! (fn [& reason]
                       (if (get-cell MUST-CACHE-PATHS)
@@ -908,9 +928,37 @@
                   vv
                   )
 
-                (and (fn? vv) (-> vv meta :pathedfn))
-                (let [subpath (mapv #(magic-precompilation* % params-atom failed-atom)
-                                    ps)]
+                (and (fn? vv) (-> v meta :pathedfn))
+                ;;TODO: update this to ignore args that aren't symbols or have :nopath
+                ;;metadata on them (in the arglist)
+                (let [arglists (-> v meta :arglists)
+                      al (arglist-for-params-count arglists (count ps) (:code p))
+                      subpath (vec
+                                (map
+                                  (fn [pdecl p]
+                                   (if (and (symbol? pdecl)
+                                            (-> pdecl meta :notpath not))
+                                     (magic-precompilation* p params-atom failed-atom)
+
+                                     (cond (and (instance? VarUse p)
+                                                (-> p :var meta :dynamic not))
+                                           (:val p)
+
+                                           (and (not (instance? LocalSym p))
+                                                (not (instance? VarUse p))
+                                                (not (instance? SpecialFormUse p))
+                                                (not (instance? FnInvocation p))
+                                                (not (coll? p)))
+                                           p
+
+                                           :else
+                                           (magic-fail! "Could not factor static param "
+                                            "of pathedfn because it's not a static var "
+                                            " or non-collection value: "
+                                            (extract-original-code p))
+                                       )))
+                                   al
+                                   ps))]
                   (if @failed-atom
                     nil
                     (apply vv subpath)
