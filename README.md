@@ -2,7 +2,7 @@
 
 Specter is library for Clojure and ClojureScript for querying and manipulating arbitrarily complicated data structures very concisely. Its use cases range from transforming the values of a map to manipulating deeply nested data structures to performing sophisticated recursive tree transformations. Without Specter, writing these manipulations in Clojure manually is cumbersome and prone to error. 
 
-Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
+Specter is fully extensible. At its core, it's just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
 Even though Specter is so generic and flexible, [its performance](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) rivals hand-optimized code. The only comparable functions in Clojure's core library are `get-in` and `update-in`. The equivalent Specter code is effectively identical (just different order of arguments), but Specter runs 30% faster than `get-in` and 5x faster than `update-in`. 
 
@@ -33,25 +33,50 @@ You can also find help in the #specter channel on [Clojurians](http://clojurians
 
 # Examples
 
-Here's how to increment all the even values for :a keys in a sequence of maps:
-
+Increment all the values in a map:
 ```clojure
 user> (use 'com.rpl.specter)
 user> (use 'com.rpl.specter.macros)
+user> (transform [ALL LAST]
+              inc
+              {:a 1 :b 2 :c 3})
+{:a 2, :b 3, :c 4}
+```
+
+Increment all the values in maps of maps:
+```clojure
+user> (transform [ALL LAST ALL LAST]
+              inc
+              {:a {:aa 1} :b {:ba -1 :bb 2}})
+{:a {:aa 2}, :b {:ba 0, :bb 3}}
+```
+
+Do the previous example more concisely:
+```clojure
+user> (def MAP-VALS (comp-paths ALL LAST))
+user> (transform [MAP-VALS MAP-VALS]
+              inc
+              {:a {:aa 1} :b {:ba -1 :bb 2}})
+{:a {:aa 2}, :b {:ba 0, :bb 3}}
+```
+
+Increment all the even values for :a keys in a sequence of maps:
+
+```clojure
 user> (transform [ALL :a even?]
               inc
               [{:a 1} {:a 2} {:a 4} {:a 3}])
 [{:a 1} {:a 3} {:a 5} {:a 3}]
 ```
 
-Here's how to retrieve every number divisible by 3 out of a sequence of sequences:
+Retrieve every number divisible by 3 out of a sequence of sequences:
 ```clojure
 user> (select [ALL ALL #(= 0 (mod % 3))]
               [[1 2 3 4] [] [5 3 2 18] [2 4 6] [12]])
 [3 3 18 6 12]
 ```
 
-Here's how to increment the last odd number in a sequence:
+Increment the last odd number in a sequence:
 
 ```clojure
 user> (transform [(filterer odd?) LAST]
@@ -60,28 +85,28 @@ user> (transform [(filterer odd?) LAST]
 [2 1 3 6 10 4 8]
 ```
 
-Here's how to increment all the odd numbers between indexes 1 (inclusive) and 4 (exclusive):
+Increment all the odd numbers between indices 1 (inclusive) and 4 (exclusive):
 
 ```clojure
 user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
 [0 2 2 4 4 5 6 7]
 ```
 
-Here's how to replace the subsequence from index 2 to 4 with [:a :b :c :d :e]:
+Replace the subsequence from index 2 to 4 with [:a :b :c :d :e]:
 
 ```clojure
 user> (setval (srange 2 4) [:a :b :c :d :e] [0 1 2 3 4 5 6 7 8 9])
 [0 1 :a :b :c :d :e 4 5 6 7 8 9]
 ```
 
-Here's how to concatenate the sequence [:a :b] to every nested sequence of a sequence:
+Concatenate the sequence [:a :b] to every nested sequence of a sequence:
 
 ```clojure
 user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
 [[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
-Here's how to get all the numbers out of a map, no matter how they're nested:
+Get all the numbers out of a map, no matter how they're nested:
 
 ```clojure
 user> (select (walker number?)
@@ -89,7 +114,7 @@ user> (select (walker number?)
 [2 1 2 1 2 6 7 4]
 ```
 
-Here's now to navigate via non-keyword keys:
+Navigate via non-keyword keys:
 
 ```clojure
 user> (select [(keypath "a") (keypath "b")]
@@ -97,7 +122,7 @@ user> (select [(keypath "a") (keypath "b")]
 [10]
 ```
 
-Here's how to reverse the positions of all even numbers between indexes 4 and 11:
+Reverse the positions of all even numbers between indices 4 and 11:
 
 ```clojure
 user> (transform [(srange 4 11) (filterer even?)]
@@ -106,7 +131,7 @@ user> (transform [(srange 4 11) (filterer even?)]
 [0 1 2 3 10 5 8 7 6 9 4 11 12 13 14 15]
 ```
 
-Here's how to decrement every value in a map:
+Decrement every value in a map:
 
 ```clojure
 user> (transform [ALL LAST]
@@ -115,7 +140,7 @@ user> (transform [ALL LAST]
 {:b 2 :a 0}
 ```
 
-Here's how to append [:c :d] to every subsequence that has at least two even numbers:
+Append [:c :d] to every subsequence that has at least two even numbers:
 ```clojure
 user> (setval [ALL
                (selected? (filterer even?) (view count) #(>= % 2))
@@ -139,7 +164,7 @@ The transform function receives as arguments all the collected values followed b
 The four built-in ways for collecting values are `VAL`, `collect`, `collect-one`, and `putval`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value. Finally, `putval` adds an external value into the collected values list.
 
 
-Here's how to increment the value for :a key by 10:
+Increment the value for :a key by 10:
 ```clojure
 user> (transform [:a (putval 10)]
               +
