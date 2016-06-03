@@ -1011,3 +1011,9 @@
   (dotimes [i 10]
     (is (= [(inc i)] (select (s/transformed s/STAY #(+ % i)) 1)))
     ))
+
+;; test for issue #103
+(deftest nil->val-regression-test
+  (is (= false (transform (s/nil->val true) identity false)))
+  (is (= false (select-one! (s/nil->val true) false)))
+  )

@@ -416,9 +416,9 @@
   nil->val
   [v]
   (select* [this structure next-fn]
-    (next-fn (if structure structure v)))
+    (next-fn (if (nil? structure) v structure)))
   (transform* [this structure next-fn]
-    (next-fn (if structure structure v))))
+    (next-fn (if (nil? structure) v structure))))
 
 (def NIL->SET (nil->val #{}))
 (def NIL->LIST (nil->val '()))
