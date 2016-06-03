@@ -1,12 +1,10 @@
 # Specter [![Build Status](https://travis-ci.org/nathanmarz/specter.svg?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Most of Clojure programming involves creating, manipulating, and transforming immutable values. However, as soon as your values become more complicated than a simple map or list – like a list of maps of maps – transforming these data structures becomes extremely cumbersome. 
-
-Specter is a library (for both Clojure and ClojureScript) for doing these queries and transformations concisely, elegantly, and efficiently. These kinds of manipulations are so common when using Clojure – and so cumbersome without Specter – that Specter is in many ways Clojure's missing piece.
+Specter is library for Clojure and ClojureScript for querying and manipulating arbitrarily complicated data structures very concisely. Its use cases range from transforming the values of a map to manipulating deeply nested data structures to performing sophisticated recursive tree transformations. Without Specter, writing these manipulations in Clojure manually is cumbersome and prone to error. 
 
 Specter is fully extensible. At its core, its just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
 
-Specter does not sacrifice performance to achieve its elegance. Actually, Specter is faster than the limited facilities Clojure provides for doing nested operations. For example: the Specter equivalent to get-in runs 30% faster than get-in, and the Specter equivalent to update-in runs 5x faster than update-in. In each case the Specter code is equally as convenient. 
+Even though Specter is so generic and flexible, [its performance](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) rivals hand-optimized code. The only comparable functions in Clojure's core library are `get-in` and `update-in`. The equivalent Specter code is effectively identical (just different order of arguments), but Specter runs 30% faster than `get-in` and 5x faster than `update-in`. 
 
 # Latest Version
 
