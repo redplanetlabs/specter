@@ -2,6 +2,7 @@
 * More efficient inline caching for Clojure version, now inline caching is always within 5% of manually precompiled code
 * Significant performance improvement for ALL transform on maps for Clojure version (25% on simple benchmarks)
 * Significant performance improvements for FIRST/LAST for vectors
+* Huge performance improvements for `if-path` and `cond-path`
 * Eliminated compiler warnings for ClojureScript version
 * Dropped support for Clojurescript below v1.7.10
 * Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or a non-collection value, the path will not factor. 
