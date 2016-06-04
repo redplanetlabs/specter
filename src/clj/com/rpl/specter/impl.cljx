@@ -696,15 +696,18 @@
     ))
 
 (defn retrieve-cond-selector [cond-paths structure]
-  (->> cond-paths
-       (partition 2)
-       (drop-while (fn [[c-selector _]]
-                     (->> structure
-                          (compiled-select* c-selector)
-                          empty?)))
-       first
-       second
-       ))
+  (let [aseq (seq cond-paths)]
+    (if aseq
+      (loop [s aseq]
+        (let [tester (first s)
+              s2 (next s)
+              res (first s2)]
+          (if (empty? (compiled-select* tester structure))
+            (let [s3 (next s2)]
+              (if s3 (recur s3))
+              )
+            res
+            ))))))
 
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
