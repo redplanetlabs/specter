@@ -1017,3 +1017,11 @@
   (is (= false (transform (s/nil->val true) identity false)))
   (is (= false (select-one! (s/nil->val true) false)))
   )
+
+#+clj
+(deftest all-map-entry
+  (let [e (transform s/ALL inc (first {1 3}))]
+    (is (instance? clojure.lang.MapEntry e))
+    (is (= 2 (key e)))
+    (is (= 4 (val e)))
+    ))
