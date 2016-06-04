@@ -40,7 +40,7 @@
 
 ;; Selection functions
 
-(def ^{:doc "Version of select that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of select that takes in a path precompiled with comp-paths"}
   compiled-select i/compiled-select*)
 
 (defn select*
