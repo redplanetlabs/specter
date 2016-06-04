@@ -339,7 +339,17 @@
                                      attr)]
     [(with-meta name attr) macro-args]))
 
-(defmacro defpathedfn [name & args]
+(defmacro defpathedfn
+  "Defines a higher order navigator that itself takes in one or more paths
+   as input. This macro is generally used in conjunction with fixed-pathed-nav
+   or variable-pathed-nav. When inline factoring is applied to a path containing
+   one of these higher order navigators, it will automatically interepret all 
+   arguments as paths, factor them accordingly, and set up the callsite to 
+   provide the parameters dynamically. Use ^:notpath metadata on arguments 
+   to indicate non-path arguments that should not be factored – note that in order
+   to be inline factorable, these arguments must be statically resolvable (e.g. a 
+   top level var). See `transformed` for an example."
+  [name & args]
   (let [[name args] (name-with-attributes name args)
         name (vary-meta name assoc :pathedfn true)]
     `(defn ~name ~@args)))
