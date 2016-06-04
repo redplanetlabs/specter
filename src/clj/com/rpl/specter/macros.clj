@@ -210,6 +210,22 @@
   (-> name (str "-prot") symbol))
 
 (defmacro defprotocolpath
+  "Defines a navigator that chooses the path to take based on the type
+   of the value at the current point. May be specified with parameters to
+   specify that all extensions must require that number of parameters.
+
+   Currently not available for ClojureScript. 
+
+   Example of usage:
+   (defrecord SingleAccount [funds])
+   (defrecord FamilyAccount [single-accounts])
+
+   (defprotocolpath FundsPath)
+   (extend-protocolpath FundsPath
+    SingleAccount :funds
+    FamilyAccount [ALL FundsPath]
+    )
+   "
   ([name]
     `(defprotocolpath ~name []))
   ([name params]
@@ -310,7 +326,9 @@
                   i/coerce-tfns-rich)
        )))
 
-(defmacro extend-protocolpath [protpath & extensions]
+(defmacro extend-protocolpath
+  "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
+  [protpath & extensions]
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
 
 ;; copied from tools.macro to avoid the dependency
@@ -341,8 +359,8 @@
 
 (defmacro defpathedfn
   "Defines a higher order navigator that itself takes in one or more paths
-   as input. This macro is generally used in conjunction with fixed-pathed-nav
-   or variable-pathed-nav. When inline factoring is applied to a path containing
+   as input. This macro is generally used in conjunction with [[fixed-pathed-nav]]
+   or [[variable-pathed-nav]]. When inline factoring is applied to a path containing
    one of these higher order navigators, it will automatically interepret all 
    arguments as paths, factor them accordingly, and set up the callsite to 
    provide the parameters dynamically. Use ^:notpath metadata on arguments 
