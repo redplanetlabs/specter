@@ -607,6 +607,11 @@
     ))
 
 (extend-protocol AllTransformProtocol
+  nil
+  (all-transform [structure next-fn]
+    nil
+    )
+
   ;; in cljs they're PersistentVector so don't need a special case
   #+clj clojure.lang.MapEntry
   #+clj
