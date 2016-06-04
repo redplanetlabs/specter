@@ -528,9 +528,21 @@
 
 (defpathedfn if-path
   "Like cond-path, but with if semantics."
-  ([cond-p if-path] (cond-path cond-p if-path))
-  ([cond-p if-path else-path]
-    (cond-path cond-p if-path nil else-path)))
+  ([cond-p then-path]
+    (fixed-pathed-nav [late-cond cond-p
+                       late-then then-path]
+      (select* [this structure next-fn]
+        (i/if-select structure next-fn late-cond late-then STOP))
+      (transform* [this structure next-fn]
+        (i/if-transform structure next-fn late-cond late-then STOP))))
+  ([cond-p then-path else-path]
+    (fixed-pathed-nav [late-cond cond-p
+                       late-then then-path
+                       late-else else-path]
+      (select* [this structure next-fn]
+        (i/if-select structure next-fn late-cond late-then late-else))
+      (transform* [this structure next-fn]
+        (i/if-transform structure next-fn late-cond late-then late-else)))))
 
 (defpathedfn multi-path
   "A path that branches on multiple paths. For updates,

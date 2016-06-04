@@ -709,6 +709,20 @@
             res
             ))))))
 
+(defn if-select [structure next-fn late-cond late-then late-else]
+  (let [apath (if (empty? (compiled-select* late-cond structure))
+                late-else
+                late-then)]
+    (doall (mapcat next-fn (compiled-select* apath structure)))
+    ))
+
+(defn if-transform [structure next-fn late-cond late-then late-else]
+  (let [apath (if (empty? (compiled-select* late-cond structure))
+                late-else
+                late-then)]
+    (compiled-transform* apath next-fn structure)
+    ))
+
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)))
