@@ -593,36 +593,84 @@
 (defn queue? [coll]
   (instance? clojure.lang.PersistentQueue coll))
 
-#+clj
-(defn all-transform [structure next-fn]
-  (let [empty-structure (empty structure)]
-    (cond (and (list? empty-structure) (not (queue? empty-structure)))
-          ;; this is done to maintain order, otherwise lists get reversed
-          (doall (map next-fn structure))
+(defprotocol AllTransformProtocol
+  (all-transform [structure next-fn]))
 
-          (map? structure)
-          ;; reduce-kv is much faster than doing r/map through call to (into ...)
-          (reduce-kv
-            (fn [m k v]
-              (let [[newk newv] (next-fn [k v])]
-                (assoc m newk newv)
-                ))
-            empty-structure
-            structure
-            )
+(defn- non-transient-map-all-transform [structure next-fn empty-map]
+  (reduce-kv
+    (fn [m k v]
+      (let [[newk newv] (next-fn [k v])]
+        (assoc m newk newv)
+        ))
+    empty-map
+    structure
+    ))
 
-          :else
-          (->> structure (r/map next-fn) (into empty-structure))
-      )))
+(extend-protocol AllTransformProtocol
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  (all-transform [structure next-fn]
+    (mapv next-fn structure))
 
-#+cljs
-(defn all-transform [structure next-fn]
-  (let [empty-structure (empty structure)]
-    (if (and (list? empty-structure) (not (queue? empty-structure)))
+  #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
+  (all-transform [structure next-fn]
+    (non-transient-map-all-transform structure next-fn {})
+    )
+
+  #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
+  (all-transform [structure next-fn]
+    (non-transient-map-all-transform structure next-fn (sorted-map))
+    )
+
+  #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
+  (all-transform [structure next-fn]
+    (persistent!
+      (reduce-kv
+        (fn [m k v]
+          (let [[newk newv] (next-fn [k v])]
+            (assoc! m newk newv)
+            ))
+        (transient
+          #+clj clojure.lang.PersistentHashMap/EMPTY #+cljs cljs.core.PersistentHashMap.EMPTY
+          )
+        structure
+        )))
+
+
+  #+clj
+  Object
+  #+clj
+  (all-transform [structure next-fn]
+    (let [empty-structure (empty structure)]
+      (cond (and (list? empty-structure) (not (queue? empty-structure)))
+            ;; this is done to maintain order, otherwise lists get reversed
+            (doall (map next-fn structure))
+
+            (map? structure)
+            ;; reduce-kv is much faster than doing r/map through call to (into ...)
+            (reduce-kv
+              (fn [m k v]
+                (let [[newk newv] (next-fn [k v])]
+                  (assoc m newk newv)
+                  ))
+              empty-structure
+              structure
+              )
+
+            :else
+            (->> structure (r/map next-fn) (into empty-structure))
+        )))
+
+  #+cljs
+  default
+  #+cljs 
+  (all-transform [structure next-fn]
+    (let [empty-structure (empty structure)]
+      (if (and (list? empty-structure) (not (queue? empty-structure)))
         ;; this is done to maintain order, otherwise lists get reversed
         (doall (map next-fn structure))
         (into empty-structure (map #(next-fn %)) structure)
         )))
+  )
 
 (deftype AllNavigator [])
 
