@@ -23,8 +23,14 @@
             [clojure.set :as set])
   )
 
-(defn comp-paths [& paths]
-  (i/comp-paths* (vec paths)))
+(defn comp-paths
+  "Returns a compiled version of the given path for use with
+   compiled-{select/transform/setval/etc.} functions. This can compile navigators
+   (defined with `defnav`) without their parameters, and the resulting compiled
+   path will require parameters for all such navigators in the order in which
+   they were declared."
+  [& apath]
+  (i/comp-paths* (vec apath)))
 
 (def ^{:doc "Mandate that operations that do inline path factoring and compilation
              (select/transform/setval/replace-in/path/etc.) must succeed in 
@@ -151,13 +157,25 @@
   (transform* [this structure next-fn]
     (next-fn structure)))
 
-(def ALL (comp-paths (i/->AllNavigator)))
+(def
+  ^{:doc "Navigate to every element of the collection. For maps navigates to
+          a vector of `[key value]`."}
+  ALL
+  (comp-paths (i/->AllNavigator)))
 
 (def VAL (i/->ValCollect))
 
-(def LAST (comp-paths (i/->PosNavigator i/get-last i/update-last)))
+(def
+  ^{:doc "Navigate to the last element of the collection. If the collection is
+          empty navigation is stopped at this point."}
+  LAST
+  (comp-paths (i/->PosNavigator i/get-last i/update-last)))
 
-(def FIRST (comp-paths (i/->PosNavigator i/get-first i/update-first)))
+(def
+  ^{:doc "Navigate to the first element of the collection. If the collection is
+          empty navigation is stopped at this point."}
+  FIRST
+  (comp-paths (i/->PosNavigator i/get-first i/update-first)))
 
 (defnav
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
@@ -199,9 +217,15 @@
       (reverse (i/matching-ranges structure pred))
       )))
 
-(def BEGINNING (srange 0 0))
+(def
+  ^{:doc "Navigate to the empty subsequence before the first element of the collection."}
+  BEGINNING
+  (srange 0 0))
 
-(def END (srange-dynamic count count))
+(def
+ ^{:doc "Navigate to the empty subsequence after the last element of the collection."}
+  END
+  (srange-dynamic count count))
 
 (defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
@@ -235,6 +259,8 @@
              newmap))))
 
 (defnav
+  ^{:doc "Using clojure.walk, navigate the data structure until reaching
+          a value for which `afn` returns truthy."}
   walker
   [afn]
   (select* [this structure next-fn]
@@ -243,6 +269,7 @@
     (i/walk-until afn next-fn structure)))
 
 (defnav
+  ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
   [afn]
   (select* [this structure next-fn]
@@ -304,7 +331,12 @@
     (next-fn (afn structure))
     ))
 
-(defnav parser [parse-fn unparse-fn]
+(defnav
+  ^{:doc "Navigate to the result of running `parse-fn` on the value. For 
+          transforms, the transformed value then has `unparse-fn` run on 
+          it to get the final value at this point."}
+  parser
+  [parse-fn unparse-fn]
   (select* [this structure next-fn]
     (next-fn (parse-fn structure)))
   (transform* [this structure next-fn]
@@ -420,17 +452,39 @@
   (transform* [this structure next-fn]
     (next-fn (if (nil? structure) v structure))))
 
-(def NIL->SET (nil->val #{}))
-(def NIL->LIST (nil->val '()))
-(def NIL->VECTOR (nil->val []))
+(def
+  ^{:doc "Navigates to #{} if the value is nil. Otherwise it stays
+          navigated at the current value."}
+  NIL->SET
+  (nil->val #{}))
 
-(defpathedfn collect [& path]
+(def
+  ^{:doc "Navigates to '() if the value is nil. Otherwise it stays
+          navigated at the current value."}
+  NIL->LIST
+  (nil->val '()))
+
+(def
+  ^{:doc "Navigates to [] if the value is nil. Otherwise it stays
+          navigated at the current value."}
+  NIL->VECTOR
+  (nil->val []))
+
+(defpathedfn
+  ^{:doc "Adds the result of running select with the given path on the
+          current value to the collected vals."}
+  collect
+  [& path]
   (pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select late structure)
       )))
 
-(defpathedfn collect-one [& path]
+(defpathedfn
+  ^{:doc "Adds the result of running select-one with the given path on the
+          current value to the collected vals."}
+  collect-one
+  [& path]
   (pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select-one late structure)
