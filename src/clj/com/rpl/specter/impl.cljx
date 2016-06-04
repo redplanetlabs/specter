@@ -695,20 +695,6 @@
     (next-fn structure)
     ))
 
-(defn retrieve-cond-selector [cond-paths structure]
-  (let [aseq (seq cond-paths)]
-    (if aseq
-      (loop [s aseq]
-        (let [tester (first s)
-              s2 (next s)
-              res (first s2)]
-          (if (empty? (compiled-select* tester structure))
-            (let [s3 (next s2)]
-              (if s3 (recur s3))
-              )
-            res
-            ))))))
-
 (defn if-select [structure next-fn late-cond late-then late-else]
   (let [apath (if (empty? (compiled-select* late-cond structure))
                 late-else

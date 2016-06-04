@@ -503,29 +503,6 @@
   (collect-val [this structure]
     val ))
 
-(defpathedfn cond-path
-  "Takes in alternating cond-path path cond-path path...
-   Tests the structure if selecting with cond-path returns anything.
-   If so, it uses the following path for this portion of the navigation.
-   Otherwise, it tries the next cond-path. If nothing matches, then the structure
-   is not selected.
-
-   The input paths may be parameterized, in which case the result of cond-path
-   will be parameterized in the order of which the parameterized navigators
-   were declared."
-  [& conds]
-  (variable-pathed-nav [compiled-paths conds]
-    (select* [this structure next-fn]
-      (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
-        (->> (compiled-select selector structure)
-             (mapcat next-fn)
-             doall)))
-    (transform* [this structure next-fn]
-      (if-let [selector (i/retrieve-cond-selector compiled-paths structure)]
-        (compiled-transform selector next-fn structure)
-        structure
-        ))))
-
 (defpathedfn if-path
   "Like cond-path, but with if semantics."
   ([cond-p then-path]
@@ -543,6 +520,25 @@
         (i/if-select structure next-fn late-cond late-then late-else))
       (transform* [this structure next-fn]
         (i/if-transform structure next-fn late-cond late-then late-else)))))
+
+(defpathedfn cond-path
+  "Takes in alternating cond-path path cond-path path...
+   Tests the structure if selecting with cond-path returns anything.
+   If so, it uses the following path for this portion of the navigation.
+   Otherwise, it tries the next cond-path. If nothing matches, then the structure
+   is not selected.
+
+   The input paths may be parameterized, in which case the result of cond-path
+   will be parameterized in the order of which the parameterized navigators
+   were declared."
+  [& conds]
+  (let [pairs (reverse (partition 2 conds))]
+    (reduce
+      (fn [p [tester apath]]
+        (if-path tester apath p))
+      STOP
+      pairs
+      )))
 
 (defpathedfn multi-path
   "A path that branches on multiple paths. For updates,
