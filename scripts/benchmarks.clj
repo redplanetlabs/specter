@@ -29,10 +29,10 @@
     (for [i (range iters)]
       (time-ms amt-per-iter afn))))
 
-(defn compare-benchmark [iters amt-per-iter afn-map]
+(defn compare-benchmark [amt-per-iter afn-map]
   (let [results (transform [ALL LAST]
                   (fn [afn]
-                    (average-time-ms iters amt-per-iter afn))
+                    (average-time-ms 8 amt-per-iter afn))
                   afn-map)
         [[_ best-time] & _ :as sorted] (sort-by last results)
         ]
@@ -41,11 +41,11 @@
       (println (pretty-float5 t) "\t\t" (pretty-float3 (/ t best-time 1.0)) "\t\t" k)
       )))
 
-(defmacro run-benchmark [name iters amt-per-iter & exprs]
+(defmacro run-benchmark [name amt-per-iter & exprs]
   (let [afn-map (->> exprs (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
     `(do
        (println "Benchmark:" ~name)
-       (compare-benchmark ~iters ~amt-per-iter ~afn-map)
+       (compare-benchmark ~amt-per-iter ~afn-map)
        (println "\n********************************\n")
        )))
 
@@ -53,7 +53,7 @@
 
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
-  (run-benchmark "get value in nested map" 6 10000000
+  (run-benchmark "get value in nested map" 10000000
     (get-in data [:a :b :c])
     (select [:a :b :c] data)
     (compiled-select p data)
@@ -74,14 +74,14 @@
           (my-update m3 :c afn))))))
 
 (let [data {:a {:b {:c 1}}}]
-  (run-benchmark "update value in nested map" 6 1000000
+  (run-benchmark "update value in nested map" 1000000
     (update-in data [:a :b :c] inc)
     (transform [:a :b :c] inc data)
     (manual-transform data inc)
     ))
 
 (let [data [1 2 3 4 5]]
-  (run-benchmark "map a function over a vector" 6 1000000
+  (run-benchmark "map a function over a vector" 1000000
     (vec (map inc data))
     (mapv inc data)
     (transform ALL inc data)
@@ -101,13 +101,20 @@
     ))
 
 (let [data {:a 1 :b 2 :c 3 :d 4}]
-  (run-benchmark "transform values of a map" 6 1000000
+  (run-benchmark "transform values of a map" 1000000
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (manual-similar-reduce-kv data)
     (transform [ALL LAST] inc data)
     ))
 
+(let [data (->> (for [i (range 1000)] [i i]) (into {}))]
+  (run-benchmark "transform values of large map" 1000
+    (into {} (for [[k v] data] [k (inc v)]))
+    (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (manual-similar-reduce-kv data)
+    (transform [ALL LAST] inc data)
+    ))
 
 
 (declarepath TreeValues)
@@ -132,7 +139,6 @@
 
 (let [data [1 2 [[3]] [4 6 [7 [8]] 10]]]
   (run-benchmark "update every value in a tree (represented with vectors)"
-    6
     100000
     (walk/postwalk (fn [e] (if (and (number? e) (even? e)) (inc e) e)) data)
     (transform [(walker number?) even?] inc data)
