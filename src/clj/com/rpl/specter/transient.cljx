@@ -9,7 +9,7 @@
          [defnav
           defpathedfn]])
   (:require [com.rpl.specter.impl :as i]
-            [com.rpl.specter :refer [subselect]]))
+            [com.rpl.specter :refer [subselect selected?]]))
 
 (defnav
   ^{:doc "Navigates to the specified key of a transient collection,
@@ -32,18 +32,6 @@
 (def LAST!
   "Navigates to the last element of a transient vector."
   (i/comp-paths* [(i/->TransientLastNavigator)]))
-
-(def ALL!
-  ;; TODO: only works on transient vectors, not sets / maps; need a
-  ;; different name?
-  "Navigates to each element of a transient vector."
-  (i/comp-paths* [(i/->TransientAllNavigator)]))
-
-(defpathedfn filterer!
-  "Navigates to a view of the current transient vector that only
-  contains elements that match the given path."
-  [& path]
-  (subselect ALL! (selected? path)))
 
 (defn- select-keys-from-transient-map
   "Selects keys from transient map, because built-in select-keys uses

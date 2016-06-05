@@ -797,15 +797,6 @@
           structure
           (range (count structure))))
 
-(deftype TransientAllNavigator [])
-
-(extend-protocol p/Navigator
-  TransientAllNavigator
-  (select* [this structure next-fn]
-    (transient-all-select structure next-fn))
-  (transform* [this structure next-fn]
-    (transient-all-transform! structure next-fn)))
-
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
         path
