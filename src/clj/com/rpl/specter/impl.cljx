@@ -757,6 +757,55 @@
     (next-fn structure)
     ))
 
+(deftype TransientEndNavigator [])
+
+(extend-protocol p/Navigator
+  TransientEndNavigator
+  (select* [this structure next-fn]
+    [])
+  (transform* [this structure next-fn]
+    (let [res (next-fn [])]
+      (reduce conj! structure res))))
+
+(deftype TransientLastNavigator [])
+
+(extend-protocol p/Navigator
+  TransientLastNavigator
+  (select* [this structure next-fn]
+    (next-fn (nth structure (dec (count structure)))))
+  (transform* [this structure next-fn]
+    (let [i (dec (count structure))]
+      (assoc! structure i (next-fn (nth structure i))))))
+
+#+clj
+(defn transient-all-select
+  [structure next-fn]
+  (into [] (r/mapcat #(next-fn (nth structure %))
+                     (range (count structure)))))
+
+#+cljs
+(defn transient-all-select
+  [structure next-fn]
+  (into []
+        (r/mapcat #(next-fn (nth structure %)))
+        (range (count structure))))
+
+(defn transient-all-transform!
+  [structure next-fn]
+  (reduce (fn [structure i]
+            (assoc! structure i (next-fn (nth structure i))))
+          structure
+          (range (count structure))))
+
+(deftype TransientAllNavigator [])
+
+(extend-protocol p/Navigator
+  TransientAllNavigator
+  (select* [this structure next-fn]
+    (transient-all-select structure next-fn))
+  (transform* [this structure next-fn]
+    (transient-all-transform! structure next-fn)))
+
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
         path
