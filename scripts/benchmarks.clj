@@ -88,10 +88,23 @@
     ))
 
 
+(defn- update-pair [[k v]]
+  [k (inc v)])
+
+(defn manual-similar-reduce-kv [data]
+  (reduce-kv
+    (fn [m k v]
+      (let [[newk newv] (update-pair [k v])]
+        (assoc m newk newv)))
+    {}
+    data
+    ))
+
 (let [data {:a 1 :b 2 :c 3 :d 4}]
   (run-benchmark "transform values of a map" 6 1000000
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (manual-similar-reduce-kv data)
     (transform [ALL LAST] inc data)
     ))
 
