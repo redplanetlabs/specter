@@ -1,5 +1,5 @@
 ## 0.11.1 (unreleased)
-* More efficient inline caching for Clojure version, now inline caching is always within 5% of manually precompiled code
+* More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
 * Huge performance improvement for ALL transform on maps and vectors
 * Significant performance improvements for FIRST/LAST for vectors
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
