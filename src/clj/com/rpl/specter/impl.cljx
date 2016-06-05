@@ -93,11 +93,11 @@
     (fn [params params-idx selector structure]
       (selector params params-idx [] structure
         (fn [_ _ vals structure]
-          (if-not (empty? vals) [(conj vals structure)] [structure]))))
+          (if-not (identical? [] vals) [(conj vals structure)] [structure]))))
     (fn [params params-idx transformer transform-fn structure]
       (transformer params params-idx [] structure
         (fn [_ _ vals structure]
-          (if (empty? vals)
+          (if (identical? [] vals)
             (transform-fn structure)
             (apply transform-fn (conj vals structure))))))
     ))
@@ -757,17 +757,28 @@
     (next-fn structure)
     ))
 
-(defn if-select [structure next-fn late-cond late-then late-else]
-  (let [apath (if (empty? (compiled-select* late-cond structure))
-                late-else
-                late-then)]
+(defn extract-basic-filter-fn [path]
+  (cond (fn? path)
+        path
+
+        (and (coll? path)
+             (= 1 (count path))
+             (fn? (first path)))
+        (first path)
+    ))
+
+
+(defn if-select [structure next-fn then-tester late-then late-else]
+  (let [apath (if (then-tester structure)
+                late-then
+                late-else)]
     (doall (mapcat next-fn (compiled-select* apath structure)))
     ))
 
-(defn if-transform [structure next-fn late-cond late-then late-else]
-  (let [apath (if (empty? (compiled-select* late-cond structure))
-                late-else
-                late-then)]
+(defn if-transform [structure next-fn then-tester late-then late-else]
+  (let [apath (if (then-tester structure)
+                late-then
+                late-else)]
     (compiled-transform* apath next-fn structure)
     ))
 

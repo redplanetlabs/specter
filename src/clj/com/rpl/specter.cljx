@@ -506,20 +506,23 @@
 (defpathedfn if-path
   "Like cond-path, but with if semantics."
   ([cond-p then-path]
-    (fixed-pathed-nav [late-cond cond-p
-                       late-then then-path]
-      (select* [this structure next-fn]
-        (i/if-select structure next-fn late-cond late-then STOP))
-      (transform* [this structure next-fn]
-        (i/if-transform structure next-fn late-cond late-then STOP))))
+    (if-path cond-p then-path STOP))
   ([cond-p then-path else-path]
-    (fixed-pathed-nav [late-cond cond-p
-                       late-then then-path
-                       late-else else-path]
-      (select* [this structure next-fn]
-        (i/if-select structure next-fn late-cond late-then late-else))
-      (transform* [this structure next-fn]
-        (i/if-transform structure next-fn late-cond late-then late-else)))))
+    (if-let [afn (i/extract-basic-filter-fn cond-p)]
+      (fixed-pathed-nav [late-then then-path
+                         late-else else-path]
+        (select* [this structure next-fn]
+          (i/if-select structure next-fn afn late-then late-else))
+        (transform* [this structure next-fn]
+          (i/if-transform structure next-fn afn late-then late-else)))
+      (fixed-pathed-nav [late-cond cond-p
+                         late-then then-path
+                         late-else else-path]
+        (select* [this structure next-fn]
+          (i/if-select structure next-fn #(i/selected?* late-cond %) late-then late-else))
+        (transform* [this structure next-fn]
+          (i/if-transform structure next-fn #(i/selected?* late-cond %) late-then late-else))
+        ))))
 
 (defpathedfn cond-path
   "Takes in alternating cond-path path cond-path path...
