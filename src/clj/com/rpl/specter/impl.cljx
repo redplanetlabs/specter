@@ -762,11 +762,14 @@
         path
 
         (and (coll? path)
-             (= 1 (count path))
-             (fn? (first path)))
-        (first path)
-    ))
-
+             (every? fn? path))
+        (reduce
+          (fn [combined afn]
+            (fn [structure]
+              (and (combined structure) (afn structure))
+              ))
+          path
+          )))
 
 (defn if-select [structure next-fn then-tester late-then late-else]
   (let [apath (if (then-tester structure)

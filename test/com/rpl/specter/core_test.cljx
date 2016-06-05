@@ -400,6 +400,14 @@
           (select k m))
        ))))
 
+(deftest optimized-if-path-test
+  (is (= [-4 -2] (select [s/ALL (s/if-path [even? neg?] s/STAY)]
+                   [1 2 -3 -4 0 -2])))
+  (is (= [1 2 -3 4 0 2] (transform [s/ALL (s/if-path [even? neg?] s/STAY)]
+                          -
+                          [1 2 -3 -4 0 -2])))
+  )
+
 (defspec multi-path-test
   (for-all+
     [k1 (limit-size 3 gen/keyword)
