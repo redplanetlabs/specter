@@ -363,30 +363,34 @@
   will be parameterized in the order of which the parameterized navigators
   were declared."
   [& path]
-  (fixed-pathed-nav [late path]
-    (select* [this structure next-fn]
-      (i/filter-select
-        #(i/selected?* late %)
-        structure
-        next-fn))
-    (transform* [this structure next-fn]
-      (i/filter-transform
-        #(i/selected?* late %)
-        structure
-        next-fn))))
+  (if-let [afn (i/extract-basic-filter-fn path)]
+    afn
+    (fixed-pathed-nav [late path]
+      (select* [this structure next-fn]
+        (i/filter-select
+          #(i/selected?* late %)
+          structure
+          next-fn))
+      (transform* [this structure next-fn]
+        (i/filter-transform
+          #(i/selected?* late %)
+          structure
+          next-fn)))))
 
 (defpathedfn not-selected? [& path]
-  (fixed-pathed-nav [late path]
-    (select* [this structure next-fn]
-      (i/filter-select
-        #(i/not-selected?* late %)
-        structure
-        next-fn))
-    (transform* [this structure next-fn]
-      (i/filter-transform
-        #(i/not-selected?* late %)
-        structure
-        next-fn))))
+  (if-let [afn (i/extract-basic-filter-fn path)]
+    (fn [s] (not (afn s)))
+    (fixed-pathed-nav [late path]
+      (select* [this structure next-fn]
+        (i/filter-select
+          #(i/not-selected?* late %)
+          structure
+          next-fn))
+      (transform* [this structure next-fn]
+        (i/filter-transform
+          #(i/not-selected?* late %)
+          structure
+          next-fn)))))
 
 (defpathedfn filterer
   "Navigates to a view of the current sequence that only contains elements that

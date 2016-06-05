@@ -284,7 +284,10 @@
          (setval [s/ALL (s/selected? s/ALL even?) s/END]
                  [:a]
                  [[1 3 5] [2] [7 11 4 2] [10 1] []]
-                 ))))
+                 )))
+  (is (= [2 4] (select [s/ALL (s/selected? even?)] [1 2 3 4])))
+  (is (= [1 3] (select [s/ALL (s/not-selected? even?)] [1 2 3 4])))
+  )
 
 (defspec identity-test
   (for-all+
