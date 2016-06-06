@@ -5,9 +5,9 @@
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
 * Eliminated compiler warnings for ClojureScript version
 * Dropped support for Clojurescript below v1.7.10
-* Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or a non-collection value, the path will not factor. 
+* Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or non-collection value, the path will not factor. 
 * Bug fix: `transformed` transform-fn no longer factors into `pred` when an anonymous function during inline factoring
-* Bug fix: Fixed nil->val to not navigate to the val on `false`
+* Bug fix: Fixed nil->val to not replace the val on `false`
 * Bug fix: Eliminate reflection when using primitive paramaters in an inline cached path
 
 ## 0.11.0
