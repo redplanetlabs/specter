@@ -1,6 +1,6 @@
 # Specter [![Build Status](https://travis-ci.org/nathanmarz/specter.svg?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that – because of its far-ranging applicability – is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly this is used for querying and transfoming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs more rapidly and in a much more maintainable way. 
+Specter is a Clojure and ClojureScript library that – because of its far-ranging applicability – is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transfoming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly and in a much more maintainable way. 
 
 Here are three areas where Specter greatly improves Clojure programming:
 
@@ -18,7 +18,7 @@ Example 1: Increment every value in a map
 (transform [ALL LAST] inc data)
 ```
 
-Example 2: Increment every value nested within map of vector of maps
+Example 2: Increment every even number nested within map of vector of maps
 
 ```clojure
 (def data {:a [{:aa 1 :bb 2}
@@ -28,11 +28,18 @@ Example 2: Increment every value nested within map of vector of maps
 ;; Manual Clojure:
 (defn map-vals [m afn]
   (->> m (map (fn [[k v]] [k (afn v)])) (into {})))
-(map-vals data (fn [v] (mapv (fn [m] (map-vals m inc)) v)))
+(map-vals data
+  (fn [v]
+    (mapv 
+      (fn [m]
+        (map-vals
+          m
+          (fn [v] (if (even? v) (inc v) v))))
+      v)))
 
 ;; Specter:
 (def MAP-VALS (comp-paths ALL LAST))
-(transform [MAP-VALS ALL MAP-VALS] inc data)
+(transform [MAP-VALS ALL MAP-VALS even?] inc data)
 ```
 
 **Specter is much faster than Clojure's limited built-in alternatives**
@@ -119,18 +126,10 @@ You can also find help in the #specter channel on [Clojurians](http://clojurians
 
 # Examples
 
-Increment all the values in a map:
+Increment all the values in maps of maps:
 ```clojure
 user> (use 'com.rpl.specter)
 user> (use 'com.rpl.specter.macros)
-user> (transform [ALL LAST]
-              inc
-              {:a 1 :b 2 :c 3})
-{:a 2, :b 3, :c 4}
-```
-
-Increment all the values in maps of maps:
-```clojure
 user> (transform [ALL LAST ALL LAST]
               inc
               {:a {:aa 1} :b {:ba -1 :bb 2}})
@@ -178,7 +177,7 @@ user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
 [0 2 2 4 4 5 6 7]
 ```
 
-Replace the subsequence from index 2 to 4 with [:a :b :c :d :e]:
+Replace the subsequence from indices 2 to 4 with [:a :b :c :d :e]:
 
 ```clojure
 user> (setval (srange 2 4) [:a :b :c :d :e] [0 1 2 3 4 5 6 7 8 9])
@@ -192,7 +191,7 @@ user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
 [[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
-Get all the numbers out of a map, no matter how they're nested:
+Get all the numbers out of a data structure, no matter how they're nested:
 
 ```clojure
 user> (select (walker number?)
