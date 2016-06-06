@@ -778,26 +778,6 @@
     (let [res (next-fn [])]
       (reduce conj! structure res))))
 
-#+clj
-(defn transient-all-select
-  [structure next-fn]
-  (into [] (r/mapcat #(next-fn (nth structure %))
-                     (range (count structure)))))
-
-#+cljs
-(defn transient-all-select
-  [structure next-fn]
-  (into []
-        (r/mapcat #(next-fn (nth structure %)))
-        (range (count structure))))
-
-(defn transient-all-transform!
-  [structure next-fn]
-  (reduce (fn [structure i]
-            (assoc! structure i (next-fn (nth structure i))))
-          structure
-          (range (count structure))))
-
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
         path
