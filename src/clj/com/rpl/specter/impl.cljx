@@ -67,6 +67,13 @@
                     x)) form))
 
 #+clj
+(defn intern* [ns name val] (intern ns name val))
+
+#+cljs
+(defn intern* [ns name val]
+  (throw-illegal "intern not supported in ClojureScript"))
+
+#+clj
 (defn do-macroexpand-all [form]
   (riddley/macroexpand-all form))
 

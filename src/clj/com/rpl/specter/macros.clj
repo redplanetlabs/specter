@@ -496,7 +496,7 @@
              ))
         ]
     (if (= platform :clj)
-      (intern *ns* cache-sym (i/mutable-cell)))
+      (i/intern* *ns* cache-sym (i/mutable-cell)))
     `(let [info# ~get-cache-code
            
            ^com.rpl.specter.impl.CachedPathInfo info#
