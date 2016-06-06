@@ -50,6 +50,7 @@
   "Navigates to the last element of a transient vector."
   (i/->PosNavigator t-get-last t-update-last))
 
+#+clj
 (defn- select-keys-from-transient-map
   "Selects keys from transient map, because built-in select-keys uses
   `find` which is unsupported."
@@ -65,6 +66,12 @@
                  (assoc result k item)
                  result)
                (rest m-keys))))))
+
+#+cljs
+(defn- select-keys-from-transient-map
+  "Uses select-keys on a transient map."
+  [m m-keys]
+  (select-keys m m-keys))
 
 (defnav
   ^{:doc "Navigates to the specified persistent submap of a transient map."}

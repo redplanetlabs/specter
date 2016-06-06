@@ -1054,7 +1054,7 @@
 
 (defspec transient-map-test
   (for-all+
-    [m (gen/not-empty (gen/map gen/keyword gen/int))
+    [m (limit-size 5 (gen/not-empty (gen/map gen/keyword gen/int)))
      new-key gen/keyword]
     (let [existing-key (first (keys m))]
       (every? identity
