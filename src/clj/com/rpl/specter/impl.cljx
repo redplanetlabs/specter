@@ -1085,6 +1085,13 @@
             )
       )))
 
+
+;; This is needed when aset is used on primitive values in mk-params-maker
+;; to avoid reflection
+#+clj
+(defn aset-object [^objects a i ^Object v]
+  (aset a i v))
+
 #+clj
 (defn mk-params-maker [ns-str params-code possible-params-code used-locals]
   (let [ns (find-ns (symbol ns-str))
@@ -1095,7 +1102,7 @@
            (let [~array-sym (fast-object-array ~(count params-code))]
              ~@(map-indexed
                  (fn [i c]
-                  `(aset ~array-sym ~i ~c))
+                  `(aset-object ~array-sym ~i ~c))
                  params-code
                  )
              ~array-sym
