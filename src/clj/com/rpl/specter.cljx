@@ -163,6 +163,14 @@
   ALL
   (comp-paths (i/->AllNavigator)))
 
+(defnav MAP-VALS []
+  (select* [this structure next-fn]
+    (doall (mapcat next-fn (vals structure))))
+  (transform* [this structure next-fn]
+    (i/map-vals-transform structure next-fn)
+    ))
+
+
 (def VAL (i/->ValCollect))
 
 (def

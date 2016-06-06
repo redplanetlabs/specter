@@ -106,6 +106,7 @@
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (manual-similar-reduce-kv data)
     (transform [ALL LAST] inc data)
+    (transform MAP-VALS inc data)
     ))
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
@@ -114,6 +115,7 @@
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (manual-similar-reduce-kv data)
     (transform [ALL LAST] inc data)
+    (transform MAP-VALS inc data)
     ))
 
 

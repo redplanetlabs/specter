@@ -64,8 +64,9 @@
 
 (defspec select-all-on-map
   (for-all+
-    [m (limit-size 5 (gen/map gen/keyword gen/int))]
-    (= (select [s/ALL s/LAST] m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))
+     p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
+    (= (select p m)
        (for [[k v] m] v))
     ))
 
@@ -81,8 +82,9 @@
 
 (defspec transform-all-on-map
   (for-all+
-    [m (limit-size 5 (gen/map gen/keyword gen/int))]
-    (= (transform [s/ALL s/LAST] inc m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))
+     p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
+    (= (transform p inc m)
        (into {} (for [[k v] m] [k (inc v)]))
        )))
 

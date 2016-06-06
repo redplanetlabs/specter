@@ -702,6 +702,49 @@
   (transform* [this structure next-fn]
     (all-transform structure next-fn)))
 
+(defprotocol MapValsTransformProtocol
+  (map-vals-transform [structure next-fn]))
+
+(defn map-vals-non-transient-transform [structure empty-map next-fn]
+  (reduce-kv
+    (fn [m k v]
+      (assoc m k (next-fn v)))
+    empty-map
+    structure))
+
+(extend-protocol MapValsTransformProtocol
+  #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
+  (map-vals-transform [structure next-fn]
+    (map-vals-non-transient-transform structure {} next-fn)
+    )
+
+  #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
+  (map-vals-transform [structure next-fn]
+    (map-vals-non-transient-transform structure (sorted-map) next-fn)
+    )
+
+  #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
+  (map-vals-transform [structure next-fn]
+    (persistent!
+      (reduce-kv
+        (fn [m k v]
+          (assoc! m k (next-fn v)))
+        (transient
+          #+clj clojure.lang.PersistentHashMap/EMPTY #+cljs cljs.core.PersistentHashMap.EMPTY
+          )
+        structure
+        )))
+
+  #+clj Object #+cljs default
+  (map-vals-transform [structure next-fn]
+    (reduce-kv
+      (fn [m k v]
+        (assoc m k (next-fn v)))
+      (empty structure)
+      structure))
+  )
+
+
 (deftype ValCollect [])
 
 (extend-protocol p/Collector
