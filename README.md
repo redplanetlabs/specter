@@ -1,10 +1,10 @@
 # Specter [![Build Status](https://travis-ci.org/nathanmarz/specter.svg?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that – because of its far-ranging applicability – is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transfoming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly and in a much more maintainable way. 
+Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transfoming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way. 
 
 Here are three areas where Specter greatly improves Clojure programming:
 
-**Specter makes common tasks concise instead of cumbersome, and simple instead of complex**
+**Specter makes common tasks concise instead of cumbersome and simple instead of complex**
 
 Example 1: Increment every value in a map
 
