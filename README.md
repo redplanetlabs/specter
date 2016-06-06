@@ -15,7 +15,7 @@ Example 1: Increment every value in a map
 (->> data (map (fn [[k v]] [k (inc v)])) (into {}))
 
 ;; Specter:
-(transform [ALL LAST] inc data)
+(transform MAP-VALS inc data)
 ```
 
 Example 2: Increment every even number nested within map of vector of maps
@@ -38,7 +38,6 @@ Example 2: Increment every even number nested within map of vector of maps
       v)))
 
 ;; Specter:
-(def MAP-VALS (comp-paths ALL LAST))
 (transform [MAP-VALS ALL MAP-VALS even?] inc data)
 ```
 
