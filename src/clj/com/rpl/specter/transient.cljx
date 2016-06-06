@@ -25,13 +25,30 @@
   "Navigates to an empty (persistent) vector at the end of a transient vector."
   (i/comp-paths* [(i/->TransientEndNavigator)]))
 
+(defn- t-get-first
+  [tv]
+  (nth tv 0))
+
+(defn- t-get-last
+  [tv]
+  (nth tv (dec (i/transient-vec-count tv))))
+
+(defn- t-update-first
+  [tv next-fn]
+  (assoc! tv 0 (next-fn (nth tv 0))))
+
+(defn- t-update-last
+  [tv next-fn]
+  (let [i (dec (i/transient-vec-count tv))]
+    (assoc! tv i (next-fn (nth tv i)))))
+
 (def FIRST!
   "Navigates to the first element of a transient vector."
-  (keypath! 0))
+  (i/->PosNavigator t-get-first t-update-first))
 
 (def LAST!
   "Navigates to the last element of a transient vector."
-  (i/comp-paths* [(i/->TransientLastNavigator)]))
+  (i/->PosNavigator t-get-last t-update-last))
 
 (defn- select-keys-from-transient-map
   "Selects keys from transient map, because built-in select-keys uses
@@ -54,7 +71,7 @@
   submap!
   [m-keys]
   (select* [this structure next-fn]
-    (select-keys-from-transient-map structure m-keys))
+    (next-fn (select-keys-from-transient-map structure m-keys)))
   (transform* [this structure next-fn]
     (let [selected (select-keys-from-transient-map structure m-keys)
           res (next-fn selected)]
