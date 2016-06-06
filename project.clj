@@ -20,11 +20,10 @@
              #".*"             "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}#L{line}"
              }
           }
-  :profiles {:provided {:dependencies
-                        [[org.clojure/clojure "1.7.0"]
-                         [org.clojure/clojurescript "1.7.10"]]}
-             :dev {:dependencies
-                   [[org.clojure/test.check "0.7.0"]]
+  :profiles {:dev {:dependencies
+                   [[org.clojure/test.check "0.7.0"]
+                    [org.clojure/clojure "1.7.0"]
+                    [org.clojure/clojurescript "1.7.10"]]
                    :plugins
                    [[com.keminglabs/cljx "0.6.0"]]
                    :cljx {:builds [{:source-paths ["src/clj"]
@@ -40,6 +39,7 @@
                                     :output-path "target/test-classes"
                                     :rules :cljs}]}
                    }
+             :test {:dependencies [[org.clojure/clojure "1.6.0"]]}
              }
   :aliases {"cleantest" ["do" "clean,"
                          "cljx" "once,"

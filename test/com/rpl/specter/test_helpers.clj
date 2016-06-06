@@ -3,7 +3,7 @@
              [generators :as gen]
              [properties :as prop]]
             [clojure.test]
-            [cljs.test])
+            )
   (:use [com.rpl.specter.macros :only [select transform]]
         [com.rpl.specter :only [select* transform* must-cache-paths!]]))
 
