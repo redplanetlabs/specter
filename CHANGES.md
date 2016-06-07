@@ -1,3 +1,10 @@
+## 0.12.0 (unreleased)
+
+* BREAKING CHANGE: Changed semantics of Navigator protocol `select*` in order to enable very large performance improvements to `select`, `select-one`, `select-first`, and `select-one!`. Custom navigators will need to be updated to comform to the new required semantics. Codebases that do not use custom navigators do not require any changes. See the docstring on the protocol for the details. 
+* Added `select-any` operation which selects any element navigated to by the path. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
+* Added `selected-any?` operation that returns true if any element is navigated to.
+* Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
+
 ## 0.11.1 (unreleased)
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
 * Huge performance improvement for ALL transform on maps and vectors
