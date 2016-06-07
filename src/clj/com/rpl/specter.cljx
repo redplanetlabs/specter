@@ -91,7 +91,8 @@
   NONE i/NONE)
 
 (defn select-any*
-  "Returns any element found or [[NONE]] if nothing selected."
+  "Returns any element found or [[NONE]] if nothing selected. This is the most
+   efficient of the various selection operations."
   [path structure]
   (compiled-select-any (i/comp-paths* path) structure))
 
@@ -177,7 +178,11 @@
   ALL
   (comp-paths (i/->AllNavigator)))
 
-(defnav MAP-VALS []
+(defnav
+  ^{:doc "Navigate to each value of the map. This is more efficient than 
+          navigating via [ALL LAST]"}
+  MAP-VALS
+  []
   (select* [this structure next-fn]
     (doseqres NONE [v (vals structure)]
       (next-fn v)

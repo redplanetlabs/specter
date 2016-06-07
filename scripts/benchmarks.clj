@@ -56,6 +56,9 @@
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 10000000
     (select-any [:a :b :c] data)
+    (select-one [:a :b :c] data)
+    (select-first [:a :b :c] data)
+    (select-one! [:a :b :c] data)
     (compiled-select-any p data)
     (get-in data [:a :b :c])
     (-> data :a :b :c)
