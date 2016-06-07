@@ -90,6 +90,7 @@
 (let [data [1 2 3 4 5 6 7 8 9 10]]
   (run-benchmark "filter a sequence" 1000000
     (doall (filter even? data))
+    (filterv even? data)
     (select [ALL even?] data)
     (select-any (filterer even?) data)
     ))

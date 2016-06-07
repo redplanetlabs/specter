@@ -7,7 +7,7 @@
             )
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val]]
-        [com.rpl.specter.util-macros :only [doseqres]]
+        #+clj [com.rpl.specter.util-macros :only [doseqres]]
 )
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
@@ -21,12 +21,6 @@
   )
 
 (def NONE ::NONE)
-
-#+clj
-(def kw-identical? identical?)
-
-#+cljs
-(def kw-identical? keyword-identical?)
 
 (defn spy [e]
   (println "SPY:")
@@ -590,8 +584,8 @@
 
 ;; amazingly doing this as a macro shows a big effect in the 
 ;; benchmark for getting a value out of a nested map
-(defmacro compiled-traverse*
-  [path result-fn structure]
+#+clj
+(defmacro compiled-traverse* [path result-fn structure]
   `(let [tfns# (transform-fns-field ~path)
          ex# (executors-field tfns#)]
     ((traverse-executor-field ex#)
@@ -601,6 +595,19 @@
       ~result-fn
       ~structure)
     ))
+
+#+cljs
+(defn compiled-traverse* [path result-fn structure]
+  (let [tfns (transform-fns-field path)
+        ex (executors-field tfns)]
+    ((traverse-executor-field ex)
+      (params-field path)
+      (params-idx-field path)
+      (selector-field tfns)
+      result-fn
+      structure)
+    ))
+
 
 (defn compiled-select* [path structure]
   (let [res (mutable-cell (transient []))
@@ -613,44 +620,44 @@
     ))
 
 (defn compiled-select-one* [path structure]
-  (let [res (mutable-cell ::NOTHING)
+  (let [res (mutable-cell NONE)
         result-fn (fn [structure]
                     (let [curr (get-cell res)]
-                      (if (kw-identical? curr ::NOTHING)
+                      (if (identical? curr NONE)
                         (set-cell! res structure)
                         (throw-illegal "More than one element found in structure: " structure)
                         )))]
     (compiled-traverse* path result-fn structure)
     (let [ret (get-cell res)]
-      (if (kw-identical? ret ::NOTHING)
+      (if (identical? ret NONE)
         nil
         ret
         ))))
 
 (defn compiled-select-one!* [path structure]
-  (let [res (mutable-cell ::NOTHING)
+  (let [res (mutable-cell NONE)
         result-fn (fn [structure]
                     (let [curr (get-cell res)]
-                      (if (kw-identical? curr ::NOTHING)
+                      (if (identical? curr NONE)
                         (set-cell! res structure)
                         (throw-illegal "More than one element found in structure: " structure)
                         )))]
     (compiled-traverse* path result-fn structure)
     (let [ret (get-cell res)]
-      (if (kw-identical? ::NOTHING ret)
+      (if (identical? NONE ret)
         (throw-illegal "Found no elements for select-one! on " structure))
       ret
       )))
 
 (defn compiled-select-first* [path structure]
-  (let [res (mutable-cell ::NOTHING)
+  (let [res (mutable-cell NONE)
         result-fn (fn [structure]
                     (let [curr (get-cell res)]
-                      (if (kw-identical? curr ::NOTHING)
+                      (if (identical? curr NONE)
                         (set-cell! res structure))))]
     (compiled-traverse* path result-fn structure)
     (let [ret (get-cell res)]
-      (if (kw-identical? ret ::NOTHING)
+      (if (identical? ret NONE)
         nil
         ret
         ))))
@@ -669,7 +676,7 @@
   [compiled-path structure]
   (->> structure
        (compiled-select-any* compiled-path)
-       (kw-identical? NONE)))
+       (identical? NONE)))
 
 (defn selected?*
   [compiled-path structure]
@@ -680,7 +687,7 @@
         walker (fn this [structure]
                  (if (pred structure)
                    (let [r (continue-fn structure)]
-                     (if-not (kw-identical? r NONE)
+                     (if-not (identical? r NONE)
                        (set-cell! ret r))
                      r
                      )
