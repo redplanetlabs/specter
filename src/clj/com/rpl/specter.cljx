@@ -590,9 +590,8 @@
   (variable-pathed-nav [compiled-paths paths]
     (select* [this structure next-fn]
       (doseqres NONE [c compiled-paths]
-        (doseqres NONE [e (compiled-select c structure)]
-          (next-fn e)
-          )))
+        (i/compiled-traverse* c next-fn structure)
+        ))
     (transform* [this structure next-fn]
       (reduce
         (fn [structure path]

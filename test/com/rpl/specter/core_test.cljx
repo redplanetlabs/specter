@@ -7,7 +7,8 @@
            [com.rpl.specter.macros
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
-                     select-first transform setval replace-in defnavconstructor]])
+                     select-first transform setval replace-in defnavconstructor
+                     select-any selected-any?]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
@@ -15,7 +16,8 @@
     #+clj [com.rpl.specter.macros
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
-                  select-first transform setval replace-in defnavconstructor]]
+                  select-first transform setval replace-in defnavconstructor
+                  select-any selected-any?]]
 
     )
 
@@ -1038,3 +1040,100 @@
     (is (= 2 (key e)))
     (is (= 4 (val e)))
     ))
+
+(deftest select-on-empty-vector
+  (is (= s/NONE (select-any s/ALL [])))
+  (is (nil? (select-first s/ALL [])))
+  (is (nil? (select-one s/ALL [])))
+  (is (= s/NONE (select-any s/FIRST [])))
+  (is (= s/NONE (select-any s/LAST [])))
+  (is (nil? (select-first s/FIRST [])))
+  (is (nil? (select-one s/FIRST [])))
+  (is (nil? (select-first s/LAST [])))
+  (is (nil? (select-one s/LAST [])))
+  )
+
+(defspec select-first-one-any-equivalency
+  (for-all+
+    [aval gen/int
+     apred (gen/elements [even? odd?])]
+    (let [data [aval]
+          r1 (select-any [s/ALL (s/pred apred)] data)
+          r2 (select-first [s/ALL (s/pred apred)] data)
+          r3 (select-one [s/ALL (s/pred apred)] data)
+          r4 (first (select [s/ALL (s/pred apred)] data))
+          r5 (select-any [s/FIRST (s/pred apred)] data)
+          r6 (select-any [s/LAST (s/pred apred)] data)
+          ]
+      (or (and (= r1 s/NONE) (nil? r2) (nil? r3) (nil? r4)
+               (= r5 s/NONE) (= r6 s/NONE))
+          (and (not= r1 s/NONE) (some? r1) (= r1 r2 r3 r4 r5 r6)))
+      )))
+
+(deftest select-any-static-fn
+  (is (= 2 (select-any even? 2)))
+  (is (= s/NONE (select-any odd? 2)))
+  )
+
+(deftest select-any-keywords
+  (is (= s/NONE (select-any [:a even?] {:a 1})))
+  (is (= 2 (select-any [:a even?] {:a 2})))
+  (is (= s/NONE (select-any [(s/keypath "a") even?] {"a" 1})))
+  (is (= 2 (select-any [(s/keypath "a") even?] {"a" 2})))
+  (is (= s/NONE (select-any (s/must :b) {:a 1 :c 3})))
+  (is (= 2 (select-any (s/must :b) {:a 1 :b 2 :c 3})))
+  (is (= s/NONE (select-any [(s/must :b) odd?] {:a 1 :b 2 :c 3})))
+  )
+
+(defspec select-any-ALL
+  (for-all+
+    [v (gen/vector gen/int)
+     pred (gen/elements [even? odd?])]
+    (let [r1 (select [s/ALL pred] v)
+          r2 (select-any [s/ALL pred] v)]
+      (or (and (empty? r1) (= s/NONE r2))
+          (contains? (set r1) r2)
+          ))))
+
+(deftest select-any-beginning-end
+  (is (= [] (select-any s/BEGINNING [1 2 3]) (select-any s/END [1])))
+  (is (= s/NONE (select-any [s/BEGINNING s/STOP] [1 2 3]) (select-any [s/END s/STOP] [2 3])))
+  )
+
+(deftest select-any-walker
+  (let [data [1 [2 3 4] [[6]]]]
+    (is (= s/NONE (select-any (s/walker keyword?) data)))
+    (is (= s/NONE (select-any [(s/walker number?) neg?] data)))
+    (is (#{1 3} (select-any [(s/walker number?) odd?] data)))
+    (is (#{2 4 6} (select-any [(s/walker number?) even?] data)))
+    ))
+
+(defspec selected-any?-select-equivalence
+  (for-all+
+    [v (gen/vector gen/int)
+     pred (gen/elements [even? odd?])]
+    (let [r1 (not (empty? (select [s/ALL pred] v)))
+          r2 (selected-any? [s/ALL pred] v)]
+      (= r1 r2)
+      )))
+
+(defn div-by-3? [v]
+  (= 0 (mod v 3)))
+
+(defspec selected?-filter-equivalence
+  (for-all+
+    [v (gen/vector gen/int)
+     pred (gen/elements [even? odd?])]
+    (and
+      (= (select-any [s/ALL pred] v)
+         (select-any [s/ALL (s/selected? pred)] v)
+         )
+      (= (select-any [s/ALL pred div-by-3?] v)
+         (select-any [s/ALL (s/selected? pred) div-by-3?] v)
+         )
+      )))
+
+;; select-any tests:
+;;   - if-path (both then and else branches)
+;;   - continuous-subseqs
+;;   - multi-path
