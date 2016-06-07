@@ -1133,7 +1133,19 @@
          )
       )))
 
-;; select-any tests:
-;;   - if-path (both then and else branches)
-;;   - continuous-subseqs
-;;   - multi-path
+(deftest multi-path-select-any-test
+  (is (= s/NONE (select-any (s/multi-path s/STOP s/STOP) 1)))
+  (is (= 1 (select-any (s/multi-path s/STAY s/STOP) 1)
+           (select-any (s/multi-path s/STOP s/STAY) 1)
+           (select-any (s/multi-path s/STOP s/STAY s/STOP) 1)
+           ))
+  (is (= s/NONE (select-any [(s/multi-path s/STOP s/STAY) even?] 1)))
+  )
+
+(deftest if-path-select-any-test
+  (is (= s/NONE (select-any (s/if-path even? s/STAY) 1)))
+  (is (= 2 (select-any (s/if-path even? s/STAY s/STAY) 2)))
+  (is (= s/NONE (select-any [(s/if-path even? s/STAY s/STAY) odd?] 2)))
+  (is (= 2 (select-any (s/if-path odd? s/STOP s/STAY) 2)))
+  (is (= s/NONE (select-any [(s/if-path odd? s/STOP s/STAY) odd?] 2)))
+  )
