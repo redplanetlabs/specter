@@ -169,9 +169,7 @@
   MAP-VALS
   []
   (select* [this structure next-fn]
-    (doseqres NONE [v (vals structure)]
-      (next-fn v)
-      ))
+    (doall (mapcat next-fn (vals structure))))
   (transform* [this structure next-fn]
     (i/map-vals-transform structure next-fn)
     ))
