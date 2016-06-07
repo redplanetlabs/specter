@@ -163,9 +163,15 @@
   ALL
   (comp-paths (i/->AllNavigator)))
 
-(defnav MAP-VALS []
+(defnav
+  ^{:doc "Navigate to each value of the map. This is more efficient than 
+          navigating via [ALL LAST]"}
+  MAP-VALS
+  []
   (select* [this structure next-fn]
-    (doall (mapcat next-fn (vals structure))))
+    (doseqres NONE [v (vals structure)]
+      (next-fn v)
+      ))
   (transform* [this structure next-fn]
     (i/map-vals-transform structure next-fn)
     ))
