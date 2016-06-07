@@ -9,6 +9,8 @@
                defnav
                defpathedfn
               ]]
+            [com.rpl.specter.util-macros :refer
+              [doseqres]]
             )
   (:use [com.rpl.specter.protocols :only [Navigator]]
     #+clj [com.rpl.specter.macros :only
@@ -18,6 +20,7 @@
              defcollector
              defnav
              defpathedfn]]
+    #+clj [com.rpl.specter.util-macros :only [doseqres]]
     )
   (:require [com.rpl.specter.impl :as i]
             [clojure.set :as set])
@@ -76,10 +79,19 @@
 
 
 (defn select-first*
-  "Returns first element found. Not any more efficient than select, just a convenience"
+  "Returns first element found."
   [path structure]
   (compiled-select-first (i/comp-paths* path) structure))
 
+(def ^{:doc "Version of select-any that takes in a path pre-compiled with comp-paths"}
+  compiled-select-any i/compiled-select-any*)
+
+(def NONE i/NONE)
+
+(defn select-any*
+  "Returns any element found."
+  [path structure]
+  (compiled-select-any (i/comp-paths* path) structure))
 
 ;; Transformation functions
 
@@ -143,7 +155,7 @@
   STOP
   []
   (select* [this structure next-fn]
-    nil )
+    NONE )
   (transform* [this structure next-fn]
     structure
     ))
@@ -165,7 +177,9 @@
 
 (defnav MAP-VALS []
   (select* [this structure next-fn]
-    (doall (mapcat next-fn (vals structure))))
+    (doseqres NONE [v (vals structure)]
+      (next-fn v)
+      ))
   (transform* [this structure next-fn]
     (i/map-vals-transform structure next-fn)
     ))
@@ -212,11 +226,9 @@
   continuous-subseqs
   [pred]
   (select* [this structure next-fn]
-    (doall
-      (mapcat
-        (fn [[s e]] (i/srange-select structure s e next-fn))
-        (i/matching-ranges structure pred)
-        )))
+    (doseqres NONE [[s e] (i/matching-ranges structure pred)]
+      (i/srange-select structure s e next-fn)
+      ))
   (transform* [this structure next-fn]
     (reduce
       (fn [structure [s e]]
@@ -322,7 +334,8 @@
   [k]
   (select* [this structure next-fn]
     (if (contains? structure k)
-      (next-fn (get structure k))))
+      (next-fn (get structure k))
+      NONE))
   (transform* [this structure next-fn]
    (if (contains? structure k)
      (assoc structure k (next-fn (get structure k)))
@@ -561,11 +574,10 @@
   [& paths]
   (variable-pathed-nav [compiled-paths paths]
     (select* [this structure next-fn]
-      (->> compiled-paths
-           (mapcat #(compiled-select % structure))
-           (mapcat next-fn)
-           doall
-           ))
+      (doseqres NONE [c compiled-paths]
+        (doseqres NONE [e (compiled-select c structure)]
+          (next-fn e)
+          )))
     (transform* [this structure next-fn]
       (reduce
         (fn [structure path]

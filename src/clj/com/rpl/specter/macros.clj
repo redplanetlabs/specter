@@ -1,5 +1,6 @@
 (ns com.rpl.specter.macros
-  (:require [com.rpl.specter.impl :as i])
+  (:require [com.rpl.specter.impl :as i]
+            [clojure.walk :as cljwalk])
   )
 
 (defn ^:no-doc gensyms [amt]
@@ -456,7 +457,15 @@
                     (-> &env :locals keys set) ;cljs
                     (-> &env keys set) ;clj
                     )
-        used-locals (vec (i/walk-select local-syms vector path))
+        used-locals-cell (i/mutable-cell [])
+        _ (cljwalk/postwalk
+            (fn [e]
+              (if (local-syms e)
+                (i/update-cell! used-locals-cell #(conj % e))
+                e
+                ))
+            path)
+        used-locals (i/get-cell used-locals-cell)
 
         ;; note: very important to use riddley's macroexpand-all here, so that
         ;; &env is preserved in any potential nested calls to select (like via
@@ -549,12 +558,20 @@
   `(i/compiled-select-one* (path ~apath) ~structure))
 
 (defmacro select-first
-  "Returns first element found. Not any more efficient than select, just a convenience.
+  "Returns first element found.
    This macro will attempt to do inline factoring and caching of the path, falling
    back to compiling the path on every invocation it it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select-first* (path ~apath) ~structure))
+
+(defmacro select-any
+  "Returns first element found.
+   This macro will attempt to do inline factoring and caching of the path, falling
+   back to compiling the path on every invocation it it's not possible to 
+   factor/cache the path."
+  [apath structure]
+  `(i/compiled-select-any* (path ~apath) ~structure))
 
 (defmacro transform
   "Navigates to each value specified by the path and replaces it by the result of running

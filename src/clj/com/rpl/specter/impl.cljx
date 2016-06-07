@@ -3,9 +3,12 @@
             [com.rpl.specter.prot-opt-invoke
               :refer [mk-optimized-invocation]]
             [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
+            [com.rpl.specter.util-macros :refer [doseqres]]
             )
   (:use [com.rpl.specter.protocols :only
-    [select* transform* collect-val]])
+          [select* transform* collect-val]]
+        [com.rpl.specter.util-macros :only [doseqres]]
+)
   (:require [com.rpl.specter.protocols :as p]
             [clojure.walk :as walk]
             #+clj [clojure.core.reducers :as r]
@@ -14,8 +17,16 @@
             #+clj [riddley.walk :as riddley]
             )
   #+clj
-  (:import [com.rpl.specter Util])
+  (:import [com.rpl.specter Util MutableCell])
   )
+
+(def NONE ::NONE)
+
+#+clj
+(def kw-identical? identical?)
+
+#+cljs
+(def kw-identical? keyword-identical?)
 
 (defn spy [e]
   (println "SPY:")
@@ -92,15 +103,18 @@
    (dotimes [_ iters]
      (afn))))
 
-(deftype ExecutorFunctions [type select-executor transform-executor])
+(deftype ExecutorFunctions [type traverse-executor transform-executor])
 
 (def RichPathExecutor
   (->ExecutorFunctions
     :richpath
-    (fn [params params-idx selector structure]
+    (fn [params params-idx selector result-fn structure]
       (selector params params-idx [] structure
         (fn [_ _ vals structure]
-          (if-not (identical? [] vals) [(conj vals structure)] [structure]))))
+          (result-fn
+            (if (identical? vals [])
+              structure
+              (conj vals structure))))))
     (fn [params params-idx transformer transform-fn structure]
       (transformer params params-idx [] structure
         (fn [_ _ vals structure]
@@ -112,8 +126,8 @@
 (def LeanPathExecutor
   (->ExecutorFunctions
     :leanpath
-    (fn [params params-idx selector structure]
-      (selector structure (fn [structure] [structure])))
+    (fn [params params-idx selector result-fn structure]
+      (selector structure result-fn))
     (fn [params params-idx transformer transform-fn structure]
       (transformer structure transform-fn))
     ))
@@ -420,25 +434,43 @@
 
 
 ;; cell implementation idea taken from prismatic schema library
+#+cljs
 (defprotocol PMutableCell
-  #+clj (get_cell [cell])
   (set_cell [cell x]))
 
+#+cljs
 (deftype MutableCell [^:volatile-mutable q]
   PMutableCell
-  #+clj (get_cell [cell] q)
   (set_cell [this x] (set! q x)))
 
+#+cljs
 (defn mutable-cell
   ([] (mutable-cell nil))
   ([init] (MutableCell. init)))
 
+#+cljs
 (defn set-cell! [cell val]
   (set_cell cell val))
 
+#+cljs
 (defn get-cell [cell]
   #+clj (get_cell cell) #+cljs (.-q cell)
   )
+
+
+#+clj
+(defn mutable-cell
+  ([] (mutable-cell nil))
+  ([v] (MutableCell. v)))
+
+#+clj
+(defn get-cell [^MutableCell c]
+  (.get c))
+
+#+clj
+(defn set-cell! [^MutableCell c v]
+  (.set c v))
+
 
 (defn update-cell! [cell afn]
   (let [ret (afn (get-cell cell))]
@@ -538,15 +570,93 @@
         ret
         ))))
 
-(defn- conj-all! [cell elems]
-  (set-cell! cell (concat (get-cell cell) elems)))
+(defn transform-fns-field [^CompiledPath path]
+  (.-transform-fns path))
 
-(defn compiled-select*
-  [^com.rpl.specter.impl.CompiledPath path structure]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
-        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-select-executor ex) (.-params path) (.-params-idx path) (.-selector tfns) structure)
+(defn executors-field [^TransformFunctions tfns]
+  (.-executors tfns))
+
+(defn traverse-executor-field [^ExecutorFunctions ex]
+  (.-traverse-executor ex))
+
+(defn params-field [^CompiledPath path]
+  (.-params path))
+
+(defn params-idx-field [^CompiledPath path]
+  (.-params-idx path))
+
+(defn selector-field [^TransformFunctions tfns]
+  (.-selector tfns))
+
+;; amazingly doing this as a macro shows a big effect in the 
+;; benchmark for getting a value out of a nested map
+(defmacro compiled-traverse*
+  [path result-fn structure]
+  `(let [tfns# (transform-fns-field ~path)
+         ex# (executors-field tfns#)]
+    ((traverse-executor-field ex#)
+      (params-field ~path)
+      (params-idx-field ~path)
+      (selector-field tfns#)
+      ~result-fn
+      ~structure)
     ))
+
+(defn compiled-select* [path structure]
+  (let [res (mutable-cell (transient []))
+        result-fn (fn [structure]
+                    (let [curr (get-cell res)]
+                      (set-cell! res (conj! curr structure))
+                      ))]
+    (compiled-traverse* path result-fn structure)
+    (persistent! (get-cell res))
+    ))
+
+(defn compiled-select-one* [path structure]
+  (let [res (mutable-cell ::NOTHING)
+        result-fn (fn [structure]
+                    (let [curr (get-cell res)]
+                      (if (kw-identical? curr ::NOTHING)
+                        (set-cell! res structure)
+                        (throw-illegal "More than one element found in structure: " structure)
+                        )))]
+    (compiled-traverse* path result-fn structure)
+    (let [ret (get-cell res)]
+      (if (kw-identical? ret ::NOTHING)
+        nil
+        ret
+        ))))
+
+(defn compiled-select-one!* [path structure]
+  (let [res (mutable-cell ::NOTHING)
+        result-fn (fn [structure]
+                    (let [curr (get-cell res)]
+                      (if (kw-identical? curr ::NOTHING)
+                        (set-cell! res structure)
+                        (throw-illegal "More than one element found in structure: " structure)
+                        )))]
+    (compiled-traverse* path result-fn structure)
+    (let [ret (get-cell res)]
+      (if (kw-identical? ::NOTHING ret)
+        (throw-illegal "Found no elements for select-one! on " structure))
+      ret
+      )))
+
+(defn compiled-select-first* [path structure]
+  (let [res (mutable-cell ::NOTHING)
+        result-fn (fn [structure]
+                    (let [curr (get-cell res)]
+                      (if (kw-identical? curr ::NOTHING)
+                        (set-cell! res structure))))]
+    (compiled-traverse* path result-fn structure)
+    (let [ret (get-cell res)]
+      (if (kw-identical? ret ::NOTHING)
+        nil
+        ret
+        ))))
+
+(defn compiled-select-any* [path structure]
+  (compiled-traverse* path identity structure))
 
 (defn compiled-transform*
   [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
@@ -565,14 +675,17 @@
   [compiled-path structure]
   (not (not-selected?* compiled-path structure)))
 
-;; returns vector of all results
 (defn walk-select [pred continue-fn structure]
-  (let [ret (mutable-cell [])
+  (let [ret (mutable-cell NONE)
         walker (fn this [structure]
                  (if (pred structure)
-                   (conj-all! ret (continue-fn structure))
-                   (walk/walk this identity structure))
-                 )]
+                   (let [r (continue-fn structure)]
+                     (if-not (kw-identical? r NONE)
+                       (set-cell! ret r))
+                     r
+                     )
+                   (walk/walk this identity structure)
+                   ))]
     (walker structure)
     (get-cell ret)
     ))
@@ -584,13 +697,9 @@
   (assoc structure akey (next-fn (get structure akey))
   ))
 
-#+clj
 (defn all-select [structure next-fn]
-  (into [] (r/mapcat next-fn structure)))
-
-#+cljs
-(defn all-select [structure next-fn]
-  (into [] (mapcat #(next-fn %)) structure))
+  (doseqres NONE [e structure]
+    (next-fn e)))
 
 #+cljs
 (defn queue? [coll]
@@ -758,7 +867,8 @@
   PosNavigator
   (select* [this structure next-fn]
     (if-not (fast-empty? structure)
-      (next-fn ((.-getter this) structure))))
+      (next-fn ((.-getter this) structure))
+      NONE))
   (transform* [this structure next-fn]
     (if (fast-empty? structure)
       structure
@@ -825,8 +935,7 @@
   (let [apath (if (then-tester structure)
                 late-then
                 late-else)]
-    (doall (mapcat next-fn (compiled-select* apath structure)))
-    ))
+    (compiled-traverse* apath next-fn structure)))
 
 (defn if-transform [structure next-fn then-tester late-then late-else]
   (let [apath (if (then-tester structure)
@@ -837,7 +946,8 @@
 
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
-    (next-fn structure)))
+    (next-fn structure)
+    NONE))
 
 (defn filter-transform [afn structure next-fn]
   (if (afn structure)
@@ -945,6 +1055,7 @@
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
             (next-fn params (inc params-idx) vals structure)
+            NONE
             )))
       (fn [params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
@@ -1181,21 +1292,6 @@
     ))
 
 
-(defn compiled-select-one* [path structure]
-  (let [res (compiled-select* path structure)]
-    (when (> (count res) 1)
-      (throw-illegal "More than one element found for params: " path structure))
-    (first res)
-    ))
-
-(defn compiled-select-one!* [path structure]
-  (let [res (compiled-select* path structure)]
-    (when (not= 1 (count res)) (throw-illegal "Expected exactly one element for params: " path structure))
-    (first res)
-    ))
-
-(defn compiled-select-first* [path structure]
-  (first (compiled-select* path structure)))
 
 (defn compiled-setval* [path val structure]
   (compiled-transform* path (fn [_] val) structure))

@@ -26,8 +26,10 @@
 
 (defn average-time-ms [iters amt-per-iter afn]
   (avg
-    (for [i (range iters)]
-      (time-ms amt-per-iter afn))))
+    ;; treat 1st run as warmup 
+    (next
+      (for [i (range (inc iters))]
+        (time-ms amt-per-iter afn)))))
 
 (defn compare-benchmark [amt-per-iter afn-map]
   (let [results (transform [ALL LAST]
@@ -42,7 +44,7 @@
       )))
 
 (defmacro run-benchmark [name amt-per-iter & exprs]
-  (let [afn-map (->> exprs (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
+  (let [afn-map (->> exprs shuffle (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
     `(do
        (println "Benchmark:" ~name)
        (compare-benchmark ~amt-per-iter ~afn-map)
@@ -54,12 +56,11 @@
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 10000000
+    (select-any [:a :b :c] data)
+    (compiled-select-any p data)
     (get-in data [:a :b :c])
-    (select [:a :b :c] data)
-    (compiled-select p data)
-    (-> data :a :b :c vector)
-    )
-  )
+    (-> data :a :b :c)
+    ))
 
 
 ;; because below 1.7 there is no update function
@@ -85,6 +86,13 @@
     (vec (map inc data))
     (mapv inc data)
     (transform ALL inc data)
+    ))
+
+(let [data [1 2 3 4 5 6 7 8 9 10]]
+  (run-benchmark "filter a sequence" 1000000
+    (doall (filter even? data))
+    (select [ALL even?] data)
+    (select-first (filterer even?) data)
     ))
 
 
