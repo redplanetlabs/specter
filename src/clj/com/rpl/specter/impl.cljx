@@ -474,6 +474,30 @@
 (defn- append [coll elem]
   (-> coll vec (conj elem)))
 
+(defprotocol AddExtremes
+  (append-all [structure elements])
+  (prepend-all [structure elements]))
+
+(extend-protocol AddExtremes
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  (append-all [structure elements]
+    (reduce conj structure elements))
+  (prepend-all [structure elements]
+    (let [ret (transient [])]
+      (as-> ret <>
+            (reduce conj! <> elements)
+            (reduce conj! <> structure)
+            (persistent! <>)
+            )))
+
+  #+clj Object #+cljs default
+  (append-all [structure elements]
+    (concat structure elements))
+  (prepend-all [structure elements]
+    (concat elements structure))
+  )
+
+
 (defprotocol UpdateExtremes
   (update-first [s afn])
   (update-last [s afn]))
