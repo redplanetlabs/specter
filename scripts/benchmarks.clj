@@ -95,6 +95,12 @@
     (select-any (filterer even?) data)
     ))
 
+(let [data [{:a 2 :b 2} {:a 1} {:a 4} {:a 6}]]
+  (run-benchmark "even :a values from sequence of maps" 1000000
+    (select [ALL :a even?] data)
+    (->> data (mapv :a) (filter even?) doall)
+    ))
+
 
 (defn- update-pair [[k v]]
   [k (inc v)])

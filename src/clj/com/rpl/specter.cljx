@@ -86,10 +86,12 @@
 (def ^{:doc "Version of select-any that takes in a path pre-compiled with comp-paths"}
   compiled-select-any i/compiled-select-any*)
 
-(def NONE i/NONE)
+(def ^{:doc "Global value used to indicate no elements selected during
+             [[select-any]]."}
+  NONE i/NONE)
 
 (defn select-any*
-  "Returns any element found."
+  "Returns any element found or [[NONE]] if nothing selected."
   [path structure]
   (compiled-select-any (i/comp-paths* path) structure))
 

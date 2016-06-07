@@ -566,7 +566,7 @@
   `(i/compiled-select-first* (path ~apath) ~structure))
 
 (defmacro select-any
-  "Returns first element found.
+  "Returns any element found or [[NONE]] if nothing selected.
    This macro will attempt to do inline factoring and caching of the path, falling
    back to compiling the path on every invocation it it's not possible to 
    factor/cache the path."
