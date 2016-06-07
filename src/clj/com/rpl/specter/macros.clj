@@ -574,6 +574,14 @@
   [apath structure]
   `(i/compiled-select-any* (path ~apath) ~structure))
 
+(defmacro selected-any?
+  "Returns true if any element was selected, false otherwise.
+   This macro will attempt to do inline factoring and caching of the path, falling
+   back to compiling the path on every invocation it it's not possible to 
+   factor/cache the path."
+  [apath structure]
+  `(i/compiled-selected-any?* (path ~apath) ~structure))
+
 (defmacro transform
   "Navigates to each value specified by the path and replaces it by the result of running
    the transform-fn on it.

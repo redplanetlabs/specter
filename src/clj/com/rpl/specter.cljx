@@ -96,6 +96,14 @@
   [path structure]
   (compiled-select-any (i/comp-paths* path) structure))
 
+(def ^{:doc "Version of selected-any? that takes in a path pre-compiled with comp-paths"}
+  compiled-selected-any? i/compiled-selected-any?*)
+
+(defn selected-any?*
+  "Returns true if any element was selected, false otherwise."
+  [path structure]
+  (compiled-selected-any? (i/comp-paths* path) structure))
+
 ;; Transformation functions
 
 (def ^{:doc "Version of transform that takes in a path pre-compiled with comp-paths"}

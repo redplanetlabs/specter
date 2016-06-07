@@ -665,6 +665,9 @@
 (defn compiled-select-any* [path structure]
   (compiled-traverse* path identity structure))
 
+(defn compiled-selected-any?* [path structure]
+  (not= NONE (compiled-select-any* path structure)))
+
 (defn compiled-transform*
   [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
   (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
