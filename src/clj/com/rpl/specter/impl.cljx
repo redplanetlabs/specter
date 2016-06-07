@@ -668,8 +668,8 @@
 (defn not-selected?*
   [compiled-path structure]
   (->> structure
-       (compiled-select* compiled-path)
-       empty?))
+       (compiled-select-any* compiled-path)
+       (kw-identical? NONE)))
 
 (defn selected?*
   [compiled-path structure]

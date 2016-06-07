@@ -52,7 +52,6 @@
        )))
 
 
-
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 10000000
@@ -92,7 +91,7 @@
   (run-benchmark "filter a sequence" 1000000
     (doall (filter even? data))
     (select [ALL even?] data)
-    (select-first (filterer even?) data)
+    (select-any (filterer even?) data)
     ))
 
 
