@@ -229,16 +229,28 @@
       (reverse (i/matching-ranges structure pred))
       )))
 
-(def
+(defnav
   ^{:doc "Navigate to the empty subsequence before the first element of the collection."}
   BEGINNING
-  (srange 0 0))
+  []
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (let [to-prepend (next-fn [])]
+      (i/prepend-all structure to-prepend)
+      )))
 
-(def
+(defnav
  ^{:doc "Navigate to the empty subsequence after the last element of the collection."}
   END
-  (srange-dynamic count count))
-
+  []
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (let [to-append (next-fn [])]
+      (i/append-all structure to-append)
+      )))
+  
 (defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
           In a transform, that subset in the original set is changed to the

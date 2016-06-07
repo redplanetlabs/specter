@@ -3,6 +3,7 @@
 * Huge performance improvement for ALL transform on maps and vectors
 * Significant performance improvements for FIRST/LAST for vectors
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
+* Huge performance improvement for `END` on vectors
 * Added specialized MAP-VALS navigator that is twice as fast as using [ALL LAST]
 * Eliminated compiler warnings for ClojureScript version
 * Dropped support for Clojurescript below v1.7.10

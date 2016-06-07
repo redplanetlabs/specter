@@ -49,8 +49,6 @@
        (println "\n********************************\n")
        )))
 
-
-
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 10000000
@@ -87,6 +85,12 @@
     (transform ALL inc data)
     ))
 
+(let [v (vec (range 1000))]
+  (run-benchmark "END on large vector"
+    5000000
+    (setval END [1] v)
+    (reduce conj v [1])
+    (conj v 1)))
 
 (defn- update-pair [[k v]]
   [k (inc v)])
