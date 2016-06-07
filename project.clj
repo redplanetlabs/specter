@@ -14,7 +14,8 @@
   :codox {:source-paths ["target/classes" "src/clj"]
           :namespaces [com.rpl.specter
                        com.rpl.specter.macros
-                       com.rpl.specter.zipper]
+                       com.rpl.specter.zipper
+                       com.rpl.specter.protocols]
           :source-uri
             {#"target/classes" "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}x#L{line}"
              #".*"             "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}#L{line}"
