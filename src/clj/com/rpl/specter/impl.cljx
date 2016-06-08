@@ -497,6 +497,14 @@
 (defn vec-count [v]
   (count v))
 
+#+clj
+(defn transient-vec-count [^clojure.lang.ITransientVector v]
+  (.count v))
+
+#+cljs
+(defn transient-vec-count [v]
+  (count v))
+
 (extend-protocol UpdateExtremes
   #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
   (update-first [v afn]
@@ -536,6 +544,9 @@
   #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (fast-empty? [v]
     (= 0 (vec-count v)))
+  #+clj clojure.lang.ITransientVector #+cljs cljs.core/TransientVector
+  (fast-empty? [v]
+    (= 0 (transient-vec-count v)))
   #+clj Object #+cljs default
   (fast-empty? [s]
     (empty? s))
@@ -830,6 +841,16 @@
   (transform* [this structure next-fn]
     (next-fn structure)
     ))
+
+(deftype TransientEndNavigator [])
+
+(extend-protocol p/Navigator
+  TransientEndNavigator
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (let [res (next-fn [])]
+      (reduce conj! structure res))))
 
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
