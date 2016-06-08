@@ -1191,3 +1191,8 @@
        (first (select s/META (with-meta v meta-map)))
        (first (select s/META (setval s/META meta-map v))))))
 
+
+(deftest beginning-end-on-nil
+  (is (= [2 3] (setval s/END [2 3] nil) (setval s/BEGINNING [2 3] nil)))
+  (is (nil? (setval s/FIRST :a nil)))
+  )

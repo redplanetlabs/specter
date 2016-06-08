@@ -479,6 +479,12 @@
   (prepend-all [structure elements]))
 
 (extend-protocol AddExtremes
+  nil
+  (append-all [_ elements]
+    elements)
+  (prepend-all [_ elements]
+    elements)
+
   #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
   (append-all [structure elements]
     (reduce conj structure elements))
@@ -567,6 +573,9 @@
 
 
 (extend-protocol FastEmpty
+  nil
+  (fast-empty? [_] true)
+
   #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (fast-empty? [v]
     (= 0 (vec-count v)))
