@@ -219,3 +219,9 @@
     300000
     (vector (meta data))
     (select META data)))
+
+(let [data (with-meta {:x 1} {:my :metadata})]
+  (run-benchmark "vary metadata"
+    300000
+    (vary-meta data assoc :y 2)
+    (setval [META :y] 2 data)))
