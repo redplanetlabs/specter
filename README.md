@@ -28,6 +28,7 @@ Example 2: Increment every even number nested within map of vector of maps
 ;; Manual Clojure
 (defn map-vals [m afn]
   (->> m (map (fn [[k v]] [k (afn v)])) (into {})))
+
 (map-vals data
   (fn [v]
     (mapv 
