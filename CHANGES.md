@@ -1,4 +1,4 @@
-## 0.11.1 (unreleased)
+## 0.11.1
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
 * Added navigators for transients in com.rpl.specter.transient namespace (thanks @aaengelberg)
 * Huge performance improvement for ALL transform on maps and vectors
