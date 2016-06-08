@@ -31,7 +31,7 @@
       (time-ms amt-per-iter afn))))
 
 (defn compare-benchmark [amt-per-iter afn-map]
-  (let [results (transform [ALL LAST]
+  (let [results (transform MAP-VALS
                   (fn [afn]
                     (average-time-ms 8 amt-per-iter afn))
                   afn-map)
