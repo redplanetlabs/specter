@@ -1,6 +1,6 @@
 ## 0.11.1
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
-* Added navigators for transients in com.rpl.specter.transient namespace (thanks @aaengelberg)
+* Added navigators for transients in com.rpl.specter.transient namespace (thanks @aengelberg)
 * Huge performance improvement for ALL transform on maps and vectors
 * Significant performance improvements for FIRST/LAST for vectors
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
