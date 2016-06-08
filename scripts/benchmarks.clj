@@ -210,18 +210,18 @@
 (let [data {:x 1}
       meta-map {:my :metadata}]
   (run-benchmark "set metadata"
-    300000
+    3000000
     (with-meta data meta-map)
     (setval META meta-map data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "get metadata"
-    300000
+    30000000
     (vector (meta data))
     (select META data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "vary metadata"
-    300000
+    3000000
     (vary-meta data assoc :y 2)
     (setval [META :y] 2 data)))
