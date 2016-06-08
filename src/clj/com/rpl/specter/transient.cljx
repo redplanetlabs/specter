@@ -86,6 +86,6 @@
         (reduce (fn [m k]
                   (dissoc! m k))
                 % m-keys)
-        (reduce (fn [m [k v]]
-                  (assoc! m k v))
-                % res)))))
+        (reduce-kv (fn [m k v]
+                     (assoc! m k v))
+                   % res)))))
