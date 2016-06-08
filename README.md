@@ -1,21 +1,21 @@
 # Specter [![Build Status](https://travis-ci.org/nathanmarz/specter.svg?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transfoming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way. 
+Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way. 
 
 Here are three areas where Specter greatly improves Clojure programming:
 
 **Specter makes common tasks concise instead of cumbersome and simple instead of complex**
 
-Example 1: Increment every value in a map
+Example 1: Append a sequence of elements to a nested vector
 
 ```clojure
-(def data {:a 1 :b 2 :c 3})
+(def data {:a [1 2 3]})
 
-;; Manual Clojure:
-(->> data (map (fn [[k v]] [k (inc v)])) (into {}))
+;; Manual Clojure
+(update data :a (fn [v] (reduce conj v [4 5])))
 
-;; Specter:
-(transform MAP-VALS inc data)
+;; Specter
+(setval [:a END] [4 5] data)
 ```
 
 Example 2: Increment every even number nested within map of vector of maps
@@ -93,7 +93,7 @@ Example 2: Replace every continuous sequence of odd numbers with its sum:
 ;; => [4 6 8 35 16]
 ```
 
-This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/0.11.0/src/clj/com/rpl/specter/protocols.cljx).
+This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/0.11.1/src/clj/com/rpl/specter/protocols.cljx).
 
 Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
 
@@ -130,15 +130,6 @@ Increment all the values in maps of maps:
 ```clojure
 user> (use 'com.rpl.specter)
 user> (use 'com.rpl.specter.macros)
-user> (transform [ALL LAST ALL LAST]
-              inc
-              {:a {:aa 1} :b {:ba -1 :bb 2}})
-{:a {:aa 2}, :b {:ba 0, :bb 3}}
-```
-
-Do the previous example more concisely:
-```clojure
-user> (def MAP-VALS (comp-paths ALL LAST))
 user> (transform [MAP-VALS MAP-VALS]
               inc
               {:a {:aa 1} :b {:ba -1 :bb 2}})
