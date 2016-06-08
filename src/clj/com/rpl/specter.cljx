@@ -522,6 +522,15 @@
   NIL->VECTOR
   (nil->val []))
 
+(defnav ^{:doc "Navigates to the metadata of the structure, or nil if
+  the structure has no metadata or may not contain metadata."}
+  META
+  []
+  (select* [this structure next-fn]
+    (next-fn (meta structure)))
+  (transform* [this structure next-fn]
+    (with-meta structure (next-fn (meta structure)))))
+
 (defpathedfn
   ^{:doc "Adds the result of running select with the given path on the
           current value to the collected vals."}

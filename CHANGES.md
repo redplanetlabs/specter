@@ -4,9 +4,11 @@
 * Added `select-any` operation which selects a single element navigated to by the path. Which element returned is undefined. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
 * Added `selected-any?` operation that returns true if any element is navigated to.
 * Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
+* Added META navigator (thanks @aengelberg)
 
-## 0.11.1 (unreleased)
+## 0.11.1
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
+* Added navigators for transients in com.rpl.specter.transient namespace (thanks @aengelberg)
 * Huge performance improvement for ALL transform on maps and vectors
 * Significant performance improvements for FIRST/LAST for vectors
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
@@ -17,7 +19,7 @@
 * Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or non-collection value, the path will not factor. 
 * Bug fix: `transformed` transform-fn no longer factors into `pred` when an anonymous function during inline factoring
 * Bug fix: Fixed nil->val to not replace the val on `false`
-* Bug fix: Eliminate reflection when using primitive paramaters in an inline cached path
+* Bug fix: Eliminate reflection when using primitive parameters in an inline cached path
 
 ## 0.11.0
 * New `path` macro does intelligent inline caching of the provided path. The path is factored into a static portion and into params which may change on each usage of the path (e.g. local parameters). The static part is factored and compiled on the first run-through, and then re-used for all subsequent invocations. As an example, `[ALL (keypath k)]` is factored into `[ALL keypath]`, which is compiled and cached, and `[k]`, which is provided on each execution. If it is not possible to precompile the path (e.g. [ALL some-local-variable]), nothing is cached and the path will be compiled on each run-through.

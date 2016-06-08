@@ -1,6 +1,7 @@
 (ns com.rpl.specter.benchmarks
   (:use [com.rpl.specter]
         [com.rpl.specter macros]
+        [com.rpl.specter.transient]
         [com.rpl.specter.impl :only [benchmark]])
   (:require [clojure.walk :as walk]))
 
@@ -32,7 +33,7 @@
         (time-ms amt-per-iter afn)))))
 
 (defn compare-benchmark [amt-per-iter afn-map]
-  (let [results (transform [ALL LAST]
+  (let [results (transform MAP-VALS
                   (fn [afn]
                     (average-time-ms 8 amt-per-iter afn))
                   afn-map)
@@ -53,7 +54,7 @@
 
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
-  (run-benchmark "get value in nested map" 10000000
+  (run-benchmark "get value in nested map" 5000000
     (select-any [:a :b :c] data)
     (select-one [:a :b :c] data)
     (select-first [:a :b :c] data)
@@ -61,6 +62,7 @@
     (compiled-select-any p data)
     (get-in data [:a :b :c])
     (-> data :a :b :c)
+    (select-any [(keypath :a) (keypath :b) (keypath :c)] data)
     ))
 
 
@@ -76,7 +78,7 @@
           (my-update m3 :c afn))))))
 
 (let [data {:a {:b {:c 1}}}]
-  (run-benchmark "update value in nested map" 1000000
+  (run-benchmark "update value in nested map" 500000
     (update-in data [:a :b :c] inc)
     (transform [:a :b :c] inc data)
     (manual-transform data inc)
@@ -163,7 +165,7 @@
 
 (let [data [1 2 [[3]] [4 6 [7 [8]] 10]]]
   (run-benchmark "update every value in a tree (represented with vectors)"
-    100000
+    50000
     (walk/postwalk (fn [e] (if (and (number? e) (even? e)) (inc e) e)) data)
     (transform [(walker number?) even?] inc data)
     (transform [TreeValues even?] inc data)
@@ -171,3 +173,73 @@
     (tree-value-transform (fn [e] (if (even? e) (inc e) e)) data)
     ))
 
+(let [toappend (range 1000)]
+  (run-benchmark "transient comparison: building up vectors"
+    10000
+    (reduce (fn [v i] (conj v i)) [] toappend)
+    (reduce (fn [v i] (conj! v i)) (transient []) toappend)
+    (setval END toappend [])
+    (setval END! toappend (transient []))))
+
+(let [toappend (range 1000)]
+  (run-benchmark "transient comparison: building up vectors one at a time"
+    10000
+    (reduce (fn [v i] (conj v i)) [] toappend)
+    (reduce (fn [v i] (conj! v i)) (transient []) toappend)
+    (reduce (fn [v i] (setval END [i] v)) [] toappend)
+    (reduce (fn [v i] (setval END! [i] v)) (transient []) toappend)
+    ))
+
+(let [data (vec (range 1000))
+      tdata (transient data)
+      tdata2 (transient data)
+      idx 600]
+  (run-benchmark "transient comparison: assoc'ing in vectors"
+    2500000
+    (assoc data idx 0)
+    (assoc! tdata idx 0)
+    (setval (keypath idx) 0 data)
+    (setval (keypath! idx) 0 tdata2)))
+
+(let [data (into {} (for [k (range 1000)]
+                      [k (rand)]))
+      tdata (transient data)
+      tdata2 (transient data)
+      idx 600]
+  (run-benchmark "transient comparison: assoc'ing in maps"
+    2500000
+    (assoc data idx 0)
+    (assoc! tdata idx 0)
+    (setval (keypath idx) 0 data)
+    (setval (keypath! idx) 0 tdata2)))
+
+(defn modify-submap
+  [m]
+  (assoc m 0 1 458 89))
+
+(let [data (into {} (for [k (range 1000)]
+                      [k (rand)]))
+      tdata (transient data)]
+  (run-benchmark "transient comparison: submap"
+    300000
+    (transform (submap [600 700]) modify-submap data)
+    (transform (submap! [600 700]) modify-submap tdata)))
+
+(let [data {:x 1}
+      meta-map {:my :metadata}]
+  (run-benchmark "set metadata"
+    2000000
+    (with-meta data meta-map)
+    (setval META meta-map data)))
+
+(let [data (with-meta {:x 1} {:my :metadata})]
+  (run-benchmark "get metadata"
+    20000000
+    (meta data)
+    (select-any META data)))
+
+(let [data (with-meta {:x 1} {:my :metadata})]
+  (run-benchmark "vary metadata"
+    2000000
+    (vary-meta data assoc :y 2)
+    (setval [META :y] 2 data)))

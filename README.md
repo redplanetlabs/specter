@@ -1,10 +1,103 @@
 # Specter [![Build Status](https://travis-ci.org/nathanmarz/specter.svg?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is library for Clojure and ClojureScript for querying and manipulating arbitrarily complicated data structures very concisely. Its use cases range from transforming the values of a map to manipulating deeply nested data structures to performing sophisticated recursive tree transformations. Without Specter, writing these manipulations in Clojure manually is cumbersome and prone to error. 
+Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way. 
 
-Specter is fully extensible. At its core, it's just a protocol for how to navigate within a data structure. By extending this protocol, you can use Specter to navigate any data structure or object you have.
+Here are three areas where Specter greatly improves Clojure programming:
 
-Even though Specter is so generic and flexible, [its performance](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) rivals hand-optimized code. The only comparable functions in Clojure's core library are `get-in` and `update-in`. The equivalent Specter code is effectively identical (just different order of arguments), but Specter runs 30% faster than `get-in` and 5x faster than `update-in`. 
+**Specter makes common tasks concise instead of cumbersome and simple instead of complex**
+
+Example 1: Append a sequence of elements to a nested vector
+
+```clojure
+(def data {:a [1 2 3]})
+
+;; Manual Clojure
+(update data :a (fn [v] (reduce conj v [4 5])))
+
+;; Specter
+(setval [:a END] [4 5] data)
+```
+
+Example 2: Increment every even number nested within map of vector of maps
+
+```clojure
+(def data {:a [{:aa 1 :bb 2}
+               {:cc 3}]
+           :b [{:dd 4}]})
+
+;; Manual Clojure
+(defn map-vals [m afn]
+  (->> m (map (fn [[k v]] [k (afn v)])) (into {})))
+
+(map-vals data
+  (fn [v]
+    (mapv 
+      (fn [m]
+        (map-vals
+          m
+          (fn [v] (if (even? v) (inc v) v))))
+      v)))
+
+;; Specter
+(transform [MAP-VALS ALL MAP-VALS even?] inc data)
+```
+
+**Specter is much faster than Clojure's limited built-in alternatives**
+
+Example 1: Specter's `select` is 27% faster than `get-in`:
+
+```clojure
+(time
+  (dotimes [_ 10000000]
+    (get-in {:a {:b {:c 1}}} [:a :b :c])))
+"Elapsed time: 640.666 msecs"
+
+(time
+  (dotimes [_ 10000000]
+    (select [:a :b :c] {:a {:b {:c 1}}})))
+"Elapsed time: 470.167 msecs"
+```
+
+Example 2: Specter's `transform` is 6x faster than `update-in`:
+
+```clojure
+(time
+  (dotimes [_ 10000000]
+    (update-in {:a {:b {:c 1}}} [:a :b :c] inc)))
+"Elapsed time: 10662.014 msecs"
+
+(time
+  (dotimes [_ 10000000]
+    (transform [:a :b :c] inc {:a {:b {:c 1}}})))
+"Elapsed time: 1699.016 msecs"
+```
+
+**Specter makes sophisticated tasks – that are difficult to program manually – easy**
+
+Example 1: Reverse the order of even numbers in a tree (with order based on depth first search):
+
+```clojure
+(transform (subselect (walker number?) even?)
+  reverse
+  [1 [[[2]] 3] 5 [6 [7 8]] 10])
+;; => [1 [[[10]] 3] 5 [8 [7 6]] 2]
+```
+
+
+Example 2: Replace every continuous sequence of odd numbers with its sum:
+
+```clojure
+(transform (continuous-subseqs odd?)
+  (fn [aseq] [(reduce + aseq)])
+  [1 3 6 8 9 11 15 16]
+  )
+;; => [4 6 8 35 16]
+```
+
+This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/0.11.1/src/clj/com/rpl/specter/protocols.cljx).
+
+Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
+
 
 # Latest Version
 
@@ -23,7 +116,8 @@ Specter's API is contained in three files:
 
 - [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
 - [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx): This contains the build-in navigators and functional versions of `select/transform/etc.`
-- [zippers.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljx): This integrates zipper-based navigation into Specter.
+- [transient.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transient.cljx): This contains navigators for transient collections.
+- [zipper.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljx): This integrates zipper-based navigation into Specter.
 
 # Questions?
 
@@ -33,27 +127,10 @@ You can also find help in the #specter channel on [Clojurians](http://clojurians
 
 # Examples
 
-Increment all the values in a map:
+Increment all the values in maps of maps:
 ```clojure
 user> (use 'com.rpl.specter)
 user> (use 'com.rpl.specter.macros)
-user> (transform [ALL LAST]
-              inc
-              {:a 1 :b 2 :c 3})
-{:a 2, :b 3, :c 4}
-```
-
-Increment all the values in maps of maps:
-```clojure
-user> (transform [ALL LAST ALL LAST]
-              inc
-              {:a {:aa 1} :b {:ba -1 :bb 2}})
-{:a {:aa 2}, :b {:ba 0, :bb 3}}
-```
-
-Do the previous example more concisely:
-```clojure
-user> (def MAP-VALS (comp-paths ALL LAST))
 user> (transform [MAP-VALS MAP-VALS]
               inc
               {:a {:aa 1} :b {:ba -1 :bb 2}})
@@ -92,7 +169,7 @@ user> (transform [(srange 1 4) ALL odd?] inc [0 1 2 3 4 5 6 7])
 [0 2 2 4 4 5 6 7]
 ```
 
-Replace the subsequence from index 2 to 4 with [:a :b :c :d :e]:
+Replace the subsequence from indices 2 to 4 with [:a :b :c :d :e]:
 
 ```clojure
 user> (setval (srange 2 4) [:a :b :c :d :e] [0 1 2 3 4 5 6 7 8 9])
@@ -106,7 +183,7 @@ user> (setval [ALL END] [:a :b] [[1] '(1 2) [:c]])
 [[1 :a :b] (1 2 :a :b) [:c :a :b]]
 ```
 
-Get all the numbers out of a map, no matter how they're nested:
+Get all the numbers out of a data structure, no matter how they're nested:
 
 ```clojure
 user> (select (walker number?)
@@ -129,15 +206,6 @@ user> (transform [(srange 4 11) (filterer even?)]
               reverse
               [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15])
 [0 1 2 3 10 5 8 7 6 9 4 11 12 13 14 15]
-```
-
-Decrement every value in a map:
-
-```clojure
-user> (transform [ALL LAST]
-              dec
-              {:a 1 :b 3})
-{:b 2 :a 0}
 ```
 
 Append [:c :d] to every subsequence that has at least two even numbers:
@@ -226,7 +294,7 @@ The next examples demonstrate recursive navigation. Here's how to double all the
 ;; => [:a 1 [4 [[[3]]] :e] [8 5 [12 7]]]
 ```
 
-Here's how to reverse the positions of all even numbers in a tree (with order based on a depth first search). This example uses conditional navigation instead of protocol paths to do the walk:
+Here's how to reverse the positions of all even numbers in a tree (with order based on a depth first search). This example uses conditional navigation instead of protocol paths to do the walk and is much more efficient than using `walker`:
 
 ```clojure
 (declarepath TreeValues)
