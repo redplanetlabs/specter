@@ -55,6 +55,7 @@
   (run-benchmark "get value in nested map" 10000000
     (get-in data [:a :b :c])
     (select [:a :b :c] data)
+    (select [(keypath :a) (keypath :b) (keypath :c)] data)
     (compiled-select p data)
     (-> data :a :b :c vector)
     )
