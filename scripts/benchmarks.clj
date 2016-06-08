@@ -154,36 +154,36 @@
     (tree-value-transform (fn [e] (if (even? e) (inc e) e)) data)
     ))
 
-(run-benchmark "transient comparison: building up vectors"
-  6
-  10000
-  (reduce (fn [v i] (conj v i)) [] (range 1000))
-  (reduce (fn [v i] (conj! v i)) (transient []) (range 1000))
-  ;; uncomment this when END is fast
-  #_(reduce (fn [v i] (setval [END] [i] v)) [] (range 1000))
-  (setval [END!] (range 1000) (transient []))
-  (reduce (fn [v i] (setval [END!] [i] v)) (transient []) (range 1000)))
+(let [toappend (range 1000)]
+  (run-benchmark "transient comparison: building up vectors"
+    10000
+    (reduce (fn [v i] (conj v i)) [] toappend)
+    (reduce (fn [v i] (conj! v i)) (transient []) toappend)
+    (setval END toappend [])
+    (setval END! toappend (transient []))))
 
 (let [data (vec (range 1000))
-      tdata (transient data)]
+      tdata (transient data)
+      tdata2 (transient data)
+      idx 600]
   (run-benchmark "transient comparison: assoc'ing in vectors"
-    6
     500000
-    (assoc data (rand-int 1000) 0)
-    (assoc! tdata (rand-int 1000) 0)
-    (setval [(keypath (rand-int 1000))] 0 data)
-    (setval [(keypath! (rand-int 1000))] 0 tdata)))
+    (assoc data idx 0)
+    (assoc! tdata idx 0)
+    (setval (keypath idx) 0 data)
+    (setval (keypath! idx) 0 tdata2)))
 
 (let [data (into {} (for [k (range 1000)]
                       [k (rand)]))
-      tdata (transient data)]
+      tdata (transient data)
+      tdata2 (transient data)
+      idx 600]
   (run-benchmark "transient comparison: assoc'ing in maps"
-    6
     500000
-    (assoc data (rand-int 1000) 0)
-    (assoc! tdata (rand-int 1000) 0)
-    (setval [(keypath (rand-int 1000))] 0 data)
-    (setval [(keypath! (rand-int 1000))] 0 tdata)))
+    (assoc data idx 0)
+    (assoc! tdata idx 0)
+    (setval (keypath idx) 0 data)
+    (setval (keypath! idx) 0 tdata2)))
 
 (defn modify-submap
   [m]
@@ -193,7 +193,6 @@
                       [k (rand)]))
       tdata (transient data)]
   (run-benchmark "transient comparison: submap"
-    6
     300000
-    (transform [(submap [(rand-int 1000)])] modify-submap data)
-    (transform [(submap! [(rand-int 1000)])] modify-submap tdata)))
+    (transform (submap [600 700]) modify-submap data)
+    (transform (submap! [600 700]) modify-submap tdata)))
