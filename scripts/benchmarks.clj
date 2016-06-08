@@ -163,12 +163,21 @@
     (setval END toappend [])
     (setval END! toappend (transient []))))
 
+(let [toappend (range 1000)]
+  (run-benchmark "transient comparison: building up vectors one at a time"
+    10000
+    (reduce (fn [v i] (conj v i)) [] toappend)
+    (reduce (fn [v i] (conj! v i)) (transient []) toappend)
+    (reduce (fn [v i] (setval END [i] v)) [] toappend)
+    (reduce (fn [v i] (setval END! [i] v)) (transient []) toappend)
+    ))
+
 (let [data (vec (range 1000))
       tdata (transient data)
       tdata2 (transient data)
       idx 600]
   (run-benchmark "transient comparison: assoc'ing in vectors"
-    500000
+    2500000
     (assoc data idx 0)
     (assoc! tdata idx 0)
     (setval (keypath idx) 0 data)
@@ -180,7 +189,7 @@
       tdata2 (transient data)
       idx 600]
   (run-benchmark "transient comparison: assoc'ing in maps"
-    500000
+    2500000
     (assoc data idx 0)
     (assoc! tdata idx 0)
     (setval (keypath idx) 0 data)
