@@ -25,6 +25,7 @@
             #+cljs [cljs.test.check.generators :as gen]
             #+cljs [cljs.test.check.properties :as prop :include-macros true]
             [com.rpl.specter :as s]
+            [com.rpl.specter.transient :as t]
             [clojure.set :as set]))
 
 ;;TODO:
@@ -64,8 +65,9 @@
 
 (defspec select-all-on-map
   (for-all+
-    [m (limit-size 5 (gen/map gen/keyword gen/int))]
-    (= (select [s/ALL s/LAST] m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))
+     p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
+    (= (select p m)
        (for [[k v] m] v))
     ))
 
@@ -81,8 +83,9 @@
 
 (defspec transform-all-on-map
   (for-all+
-    [m (limit-size 5 (gen/map gen/keyword gen/int))]
-    (= (transform [s/ALL s/LAST] inc m)
+    [m (limit-size 5 (gen/map gen/keyword gen/int))
+     p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
+    (= (transform p inc m)
        (into {} (for [[k v] m] [k (inc v)]))
        )))
 
@@ -1036,3 +1039,34 @@
     (is (= 2 (key e)))
     (is (= 4 (val e)))
     ))
+
+(defspec transient-vector-test
+  (for-all+
+    [v (gen/vector (limit-size 5 gen/int))]
+    (every? identity
+            (for [[path transient-path f]
+                  [[s/FIRST t/FIRST! (fnil inc 0)]  ;; fnil in case vector is empty
+                   [s/LAST t/LAST! (fnil inc 0)]
+                   [(s/keypath 0) (t/keypath! 0) (fnil inc 0)]
+                   [s/END t/END! #(conj % 1 2 3)]]]
+              (and (= (s/transform* path f v)
+                      (persistent! (s/transform* transient-path f (transient v))))
+                   (= (s/select* path v)
+                      (s/select* transient-path (transient v))))))))
+
+(defspec transient-map-test
+  (for-all+
+    [m (limit-size 5 (gen/not-empty (gen/map gen/keyword gen/int)))
+     new-key gen/keyword]
+    (let [existing-key (first (keys m))]
+      (every? identity
+              (for [[path transient-path f]
+                    [[(s/keypath existing-key) (t/keypath! existing-key) inc]
+                     [(s/keypath new-key) (t/keypath! new-key) (constantly 3)]
+                     [(s/submap [existing-key new-key])
+                      (t/submap! [existing-key new-key])
+                      (constantly {new-key 1234})]]]
+                (and (= (s/transform* path f m)
+                        (persistent! (s/transform* transient-path f (transient m))))
+                     (= (s/select* path m)
+                        (s/select* transient-path (transient m)))))))))

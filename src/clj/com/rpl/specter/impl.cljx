@@ -448,6 +448,30 @@
 (defn- append [coll elem]
   (-> coll vec (conj elem)))
 
+(defprotocol AddExtremes
+  (append-all [structure elements])
+  (prepend-all [structure elements]))
+
+(extend-protocol AddExtremes
+  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
+  (append-all [structure elements]
+    (reduce conj structure elements))
+  (prepend-all [structure elements]
+    (let [ret (transient [])]
+      (as-> ret <>
+            (reduce conj! <> elements)
+            (reduce conj! <> structure)
+            (persistent! <>)
+            )))
+
+  #+clj Object #+cljs default
+  (append-all [structure elements]
+    (concat structure elements))
+  (prepend-all [structure elements]
+    (concat elements structure))
+  )
+
+
 (defprotocol UpdateExtremes
   (update-first [s afn])
   (update-last [s afn]))
@@ -471,6 +495,14 @@
 
 #+cljs
 (defn vec-count [v]
+  (count v))
+
+#+clj
+(defn transient-vec-count [^clojure.lang.ITransientVector v]
+  (.count v))
+
+#+cljs
+(defn transient-vec-count [v]
   (count v))
 
 (extend-protocol UpdateExtremes
@@ -512,6 +544,9 @@
   #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
   (fast-empty? [v]
     (= 0 (vec-count v)))
+  #+clj clojure.lang.ITransientVector #+cljs cljs.core/TransientVector
+  (fast-empty? [v]
+    (= 0 (transient-vec-count v)))
   #+clj Object #+cljs default
   (fast-empty? [s]
     (empty? s))
@@ -702,6 +737,49 @@
   (transform* [this structure next-fn]
     (all-transform structure next-fn)))
 
+(defprotocol MapValsTransformProtocol
+  (map-vals-transform [structure next-fn]))
+
+(defn map-vals-non-transient-transform [structure empty-map next-fn]
+  (reduce-kv
+    (fn [m k v]
+      (assoc m k (next-fn v)))
+    empty-map
+    structure))
+
+(extend-protocol MapValsTransformProtocol
+  #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
+  (map-vals-transform [structure next-fn]
+    (map-vals-non-transient-transform structure {} next-fn)
+    )
+
+  #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
+  (map-vals-transform [structure next-fn]
+    (map-vals-non-transient-transform structure (sorted-map) next-fn)
+    )
+
+  #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
+  (map-vals-transform [structure next-fn]
+    (persistent!
+      (reduce-kv
+        (fn [m k v]
+          (assoc! m k (next-fn v)))
+        (transient
+          #+clj clojure.lang.PersistentHashMap/EMPTY #+cljs cljs.core.PersistentHashMap.EMPTY
+          )
+        structure
+        )))
+
+  #+clj Object #+cljs default
+  (map-vals-transform [structure next-fn]
+    (reduce-kv
+      (fn [m k v]
+        (assoc m k (next-fn v)))
+      (empty structure)
+      structure))
+  )
+
+
 (deftype ValCollect [])
 
 (extend-protocol p/Collector
@@ -763,6 +841,16 @@
   (transform* [this structure next-fn]
     (next-fn structure)
     ))
+
+(deftype TransientEndNavigator [])
+
+(extend-protocol p/Navigator
+  TransientEndNavigator
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (let [res (next-fn [])]
+      (reduce conj! structure res))))
 
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
