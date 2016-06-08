@@ -206,3 +206,16 @@
     300000
     (transform (submap [600 700]) modify-submap data)
     (transform (submap! [600 700]) modify-submap tdata)))
+
+(let [data {:x 1}
+      meta-map {:my :metadata}]
+  (run-benchmark "set metadata"
+    300000
+    (with-meta data meta-map)
+    (setval META meta-map data)))
+
+(let [data (with-meta {:x 1} {:my :metadata})]
+  (run-benchmark "get metadata"
+    300000
+    (vector (meta data))
+    (select META data)))

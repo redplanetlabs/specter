@@ -1070,3 +1070,12 @@
                         (persistent! (s/transform* transient-path f (transient m))))
                      (= (s/select* path m)
                         (s/select* transient-path (transient m)))))))))
+
+(defspec meta-test
+  (for-all+
+    [v (gen/vector gen/int)
+     meta-map (limit-size 5 (gen/map gen/keyword gen/int))]
+    (= meta-map
+       (meta (setval s/META meta-map v))
+       (first (select s/META (with-meta v meta-map)))
+       (first (select s/META (setval s/META meta-map v))))))
