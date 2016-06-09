@@ -9,6 +9,7 @@
 * Bug fix: END, BEGINNING, FIRST, and LAST now work properly on nil
 
 ## 0.11.2
+* Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate ClojureScript compiler warning about reserved keyword
 * Eliminated compiler warnings for ClojureScript version
 
 ## 0.11.1
