@@ -544,7 +544,8 @@
       (assoc v 0 (afn val))
       ))
   (update-last [v afn]
-    (let [c (vec-count v)]
+    ;; type-hinting vec-count to ^int caused weird errors with case
+    (let [c (int (vec-count v))]
       (case c
         1 (let [[e] v] [(afn e)])
         2 (let [[e1 e2] v] [e1 (afn e2)])
