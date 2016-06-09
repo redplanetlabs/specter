@@ -599,6 +599,15 @@
   [apath aval structure]
   `(i/compiled-setval* (path ~apath) ~aval ~structure))
 
+(defmacro traverse
+  "Return a reducible object that traverses over `structure` to every element
+   specified by the path.
+   This macro will attempt to do inline factoring and caching of the path, falling
+   back to compiling the path on every invocation it it's not possible to 
+   factor/cache the path."
+  [apath structure]
+  `(i/do-compiled-traverse (path ~apath) ~structure))
+
 (defmacro replace-in
   "Similar to transform, except returns a pair of [transformed-structure sequence-of-user-ret].
    The transform-fn in this case is expected to return [ret user-ret]. ret is

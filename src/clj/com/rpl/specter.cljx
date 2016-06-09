@@ -104,6 +104,17 @@
   [path structure]
   (compiled-selected-any? (i/comp-paths* path) structure))
 
+;; Reducible traverse functions
+
+(def ^{:doc "Version of traverse that takes in a path pre-compiled with comp-paths"}
+  compiled-traverse i/do-compiled-traverse)
+
+(defn traverse*
+  "Return a reducible object that traverses over `structure` to every element
+   specified by the path"
+  [apath structure]
+  (compiled-traverse (i/comp-paths* apath) structure))
+
 ;; Transformation functions
 
 (def ^{:doc "Version of transform that takes in a path pre-compiled with comp-paths"}

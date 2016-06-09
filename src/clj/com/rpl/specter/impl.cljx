@@ -652,6 +652,20 @@
       structure)
     ))
 
+(defn do-compiled-traverse [apath structure]
+  (reify clojure.lang.IReduceInit
+    (reduce [this afn start]
+      (let [cell (mutable-cell start)]
+        (compiled-traverse*
+          apath
+          (fn [elem]
+            (let [curr (get-cell cell)]
+              (set-cell! cell (afn curr elem))
+              ))
+          structure
+          )
+        (get-cell cell)
+        ))))
 
 (defn compiled-select* [path structure]
   (let [res (mutable-cell (transient []))
