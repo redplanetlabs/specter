@@ -41,7 +41,7 @@
                                     :output-path "target/test-classes"
                                     :rules :cljs}]}
                    }
-             :test {:dependencies [[org.clojure/clojure "1.6.0"]]}
+             :test {:dependencies [[org.clojure/clojure "1.7.0"]]}
              }
   :aliases {"cleantest" ["do" "clean,"
                          "cljx" "once,"
