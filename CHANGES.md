@@ -5,7 +5,6 @@
 * Added `selected-any?` operation that returns true if any element is navigated to.
 * Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
 * Added META navigator (thanks @aengelberg)
-* Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate cljs warning
 * Bug fix: END, BEGINNING, FIRST, and LAST now work properly on nil
 
 ## 0.11.2
