@@ -27,7 +27,7 @@
             #+cljs [cljs.test.check.generators :as gen]
             #+cljs [cljs.test.check.properties :as prop :include-macros true]
             [com.rpl.specter :as s]
-            [com.rpl.specter.transient :as t]
+            [com.rpl.specter.transients :as t]
             [clojure.set :as set]))
 
 ;;TODO:
