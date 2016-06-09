@@ -112,7 +112,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 - [API docs](http://nathanmarz.github.io/specter/)
 - Performance guide: The [Specter 0.11.0 announcement post](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) provides a comprehensive overview of how Specter achieves its performance and what you need to know as a user to enable Specter to perform its optimizations.
 
-Specter's API is contained in three files:
+Specter's API is contained in these files:
 
 - [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
 - [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx): This contains the build-in navigators and functional versions of `select/transform/etc.`
