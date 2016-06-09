@@ -56,6 +56,7 @@
   (run-benchmark "Traverse into a set" 5000
     (set data)
     (set (select ALL data))
+    (into #{} (traverse ALL data))
     (persistent!
       (reduce conj! (transient #{}) (traverse ALL data)))
     (reduce conj #{} (traverse ALL data))
