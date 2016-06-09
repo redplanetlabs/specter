@@ -8,6 +8,8 @@
 * Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate cljs warning
 * Bug fix: END, BEGINNING, FIRST, and LAST now work properly on nil
 
+## 0.11.2
+* Eliminated compiler warnings for ClojureScript version
 
 ## 0.11.1
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
@@ -17,7 +19,6 @@
 * Huge performance improvements for `if-path`, `cond-path`, `selected?`, and `not-selected?`, especially for condition path containing only static functions
 * Huge performance improvement for `END` on vectors
 * Added specialized MAP-VALS navigator that is twice as fast as using [ALL LAST]
-* Eliminated compiler warnings for ClojureScript version
 * Dropped support for Clojurescript below v1.7.10
 * Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or non-collection value, the path will not factor. 
 * Bug fix: `transformed` transform-fn no longer factors into `pred` when an anonymous function during inline factoring
