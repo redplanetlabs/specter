@@ -52,6 +52,15 @@
        (println "\n********************************\n")
        )))
 
+(let [data (range 1000)]
+  (run-benchmark "Traverse into a set" 5000
+    (set data)
+    (set (select ALL data))
+    (persistent!
+      (reduce conj! (transient #{}) (traverse ALL data)))
+    (reduce conj #{} (traverse ALL data))
+    ))
+
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 5000000
@@ -243,3 +252,4 @@
     2000000
     (vary-meta data assoc :y 2)
     (setval [META :y] 2 data)))
+
