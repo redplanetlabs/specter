@@ -536,7 +536,7 @@
 (defmacro select
   "Navigates to and returns a sequence of all the elements specified by the path.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select* (path ~apath) ~structure))
@@ -544,7 +544,7 @@
 (defmacro select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select-one!* (path ~apath) ~structure))
@@ -552,7 +552,7 @@
 (defmacro select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select-one* (path ~apath) ~structure))
@@ -560,7 +560,7 @@
 (defmacro select-first
   "Returns first element found.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select-first* (path ~apath) ~structure))
@@ -569,7 +569,7 @@
   "Returns any element found or [[NONE]] if nothing selected. This is the most
    efficient of the various selection operations.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-select-any* (path ~apath) ~structure))
@@ -577,7 +577,7 @@
 (defmacro selected-any?
   "Returns true if any element was selected, false otherwise.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/compiled-selected-any?* (path ~apath) ~structure))
@@ -586,7 +586,7 @@
   "Navigates to each value specified by the path and replaces it by the result of running
    the transform-fn on it.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath transform-fn structure]
   `(i/compiled-transform* (path ~apath) ~transform-fn ~structure))
@@ -594,7 +594,7 @@
 (defmacro setval
   "Navigates to each value specified by the path and replaces it by `aval`.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath aval structure]
   `(i/compiled-setval* (path ~apath) ~aval ~structure))
@@ -606,7 +606,7 @@
    in the final return. replace-in is useful for situations where you need to know the specific values
    of what was transformed in the data structure.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath transform-fn structure & args]
   `(i/compiled-replace-in* (path ~apath) ~transform-fn ~structure ~@args))
