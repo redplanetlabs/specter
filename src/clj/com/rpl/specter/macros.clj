@@ -603,7 +603,7 @@
   "Return a reducible object that traverses over `structure` to every element
    specified by the path.
    This macro will attempt to do inline factoring and caching of the path, falling
-   back to compiling the path on every invocation it it's not possible to 
+   back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."
   [apath structure]
   `(i/do-compiled-traverse (path ~apath) ~structure))
