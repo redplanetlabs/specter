@@ -609,6 +609,36 @@
         ret
         ))))
 
+
+(def collected?*
+  (->ParamsNeededPath
+    (->TransformFunctions
+      RichPathExecutor
+      (fn [params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
+            (next-fn params (inc params-idx) vals structure)
+            NONE
+            )))
+      (fn [params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
+            (next-fn params (inc params-idx) vals structure)
+            structure
+            ))))
+    1
+    ))
+
+(def DISPENSE*
+  (no-params-compiled-path
+    (->TransformFunctions
+      RichPathExecutor
+      (fn [params params-idx vals structure next-fn]
+        (next-fn params params-idx [] structure))
+      (fn [params params-idx vals structure next-fn]
+        (next-fn params params-idx [] structure))
+      )))
+
 (defn transform-fns-field [^CompiledPath path]
   (.-transform-fns path))
 

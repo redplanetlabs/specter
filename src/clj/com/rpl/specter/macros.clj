@@ -611,3 +611,11 @@
   [apath transform-fn structure & args]
   `(i/compiled-replace-in* (path ~apath) ~transform-fn ~structure ~@args))
 
+(defmacro collected?
+  "Creates a filter function navigator that takes in all the collected values
+   as input. For arguments, can use `(collected? [a b] ...)` syntax to look
+   at each collected value as individual arguments, or `(collected? v ...)` syntax
+   to capture all the collected values as a single vector."
+  [params & body]
+  `(i/collected?* (fn [~params] ~@body))
+  )
