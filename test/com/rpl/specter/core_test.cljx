@@ -1238,5 +1238,16 @@
                         s/DISPENSE
                         ]
                         data)
-           ))
-    ))
+           )))
+  (let [data {:active 3 :items [{:id 1 :val 0} {:id 3 :val 11}]}]
+    (is (= (transform [:items s/ALL (s/selected? :id #(= % 3)) :val] inc data)
+           (transform [(s/collect-one :active)
+                       :items
+                       s/ALL
+                       (s/collect-one :id)
+                       (collected? [a i] (= a i))
+                       s/DISPENSE
+                       :val]
+                      inc
+                      data)
+           ))))
