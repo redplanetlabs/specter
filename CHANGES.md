@@ -7,7 +7,7 @@
 * Added META navigator (thanks @aengelberg)
 * Added DISPENSE navigator to drop all collected values for subsequent navigation
 * Added `collected?` macro to create a filter function which operates on the collected values
-* Bug fix: END, BEGINNING, FIRST, and LAST now work properly on nil
+* Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
 
 ## 0.11.2
 * Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate ClojureScript compiler warning about reserved keyword
