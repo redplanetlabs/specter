@@ -1202,6 +1202,11 @@
   (is (empty? (select s/ALL nil)))
   )
 
+(deftest map-vals-nil
+  (is (= nil (transform s/MAP-VALS inc nil)))
+  (is (empty? (select s/MAP-VALS nil)))
+  )
+
 (defspec dispense-test
   (for-all+
     [k1 gen/int

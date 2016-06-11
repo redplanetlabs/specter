@@ -907,6 +907,11 @@
     structure))
 
 (extend-protocol MapValsTransformProtocol
+  nil
+  (map-vals-transform [structure next-fn]
+    nil
+    )
+
   #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
   (map-vals-transform [structure next-fn]
     (map-vals-non-transient-transform structure {} next-fn)
