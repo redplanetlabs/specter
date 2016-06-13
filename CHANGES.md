@@ -7,7 +7,7 @@
 * Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
 * Added META navigator (thanks @aengelberg)
 * Added DISPENSE navigator to drop all collected values for subsequent navigation
-* Added `collected?` macro to create a filter function which operates on the collected values. See docstring for limitations of using `collected?` in ClojureScript
+* Added `collected?` macro to create a filter function which operates on the collected values.
 * Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
 
 ## 0.11.2
