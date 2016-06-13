@@ -1224,10 +1224,6 @@
                m)
        )))
 
-
-;; clojure only because inability to use macroexpand inside path macro in 
-;; clojurescript makes it impossible to use macros inside the path
-#+clj
 (deftest collected?-test
   (let [data {:active-id 1 :items [{:id 1 :name "a"} {:id 2 :name "b"}]}]
     (is (= {:id 1 :name "a"}

@@ -1,6 +1,7 @@
 (ns com.rpl.specter.macros
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as cljwalk])
+            [clojure.walk :as cljwalk]
+            [riddley.walk :as riddley])
   )
 
 (defn ^:no-doc gensyms [amt]
@@ -444,6 +445,27 @@
       path
       )))
 
+(defn cljs-macroexpand [env form]
+  (require 'cljs.analyzer)
+  (let [expand-fn (eval 'cljs.analyzer/macroexpand-1)
+        mform (expand-fn env form)]
+    (cond (identical? form mform) mform
+          (and (seq? mform) (#{'js*} (first mform))) form
+          :else (cljs-macroexpand env mform))))
+
+(defn cljs-macroexpand-all* [env form]
+  (if (and (seq? form)
+           (#{'fn 'fn* 'cljs.core/fn} (first form)))
+    form
+    (let [expanded (if (seq? form) (cljs-macroexpand env form) form)]
+      (cljwalk/walk #(cljs-macroexpand-all* env %) identity expanded)
+      )))
+
+(defn cljs-macroexpand-all [env form]
+  (let [ret (cljs-macroexpand-all* env form)]
+    ret
+    ))
+
 ;; still possible to mess this up with alter-var-root
 (defmacro path
   "Same as calling comp-paths, except it caches the composition of the static part
@@ -470,7 +492,10 @@
         ;; note: very important to use riddley's macroexpand-all here, so that
         ;; &env is preserved in any potential nested calls to select (like via
         ;; a view function)
-        expanded (i/do-macroexpand-all (vec path))
+        expanded (if (= platform :clj)
+                  (riddley/macroexpand-all (vec path))
+                  (cljs-macroexpand-all &env (vec path)))
+
         prepared-path (ic-prepare-path local-syms expanded)
         possible-params (vec (ic-possible-params expanded))
 
@@ -624,11 +649,8 @@
   "Creates a filter function navigator that takes in all the collected values
    as input. For arguments, can use `(collected? [a b] ...)` syntax to look
    at each collected value as individual arguments, or `(collected? v ...)` syntax
-   to capture all the collected values as a single vector.
-
-   For ClojureScript, since can't use macros inside path when that path will be
-   inline factored/cached, to use collected? declare the logic in a global
-   variable such as (def my-collected (collected? [v] (= v 1)))"
+   to capture all the collected values as a single vector."
   [params & body]
-  `(i/collected?* (fn [~params] ~@body))
-  )
+  (let [platform (if (contains? &env :locals) :cljs :clj)]
+    `(i/collected?* (~'fn [~params] ~@body))
+    ))

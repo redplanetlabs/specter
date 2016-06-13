@@ -48,28 +48,29 @@
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args))))
 
-;; these macroexpand functions are for path macro in bootstrap cljs environment
-#+cljs
-(defn macroexpand'
-  [form]
-  (let [orig-eval-fn ^:cljs.analyzer/no-resolve cljs.js/*eval-fn*]
-    (try
-      (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* ^:cljs.analyzer/no-resolve cljs.js/js-eval)
-      (^:cljs.analyzer/no-resolve cljs.js/eval (^:cljs.analyzer/no-resolve cljs.js/empty-state)
-        `(macroexpand (quote ~form))
-        identity)
-      (finally
-        (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* orig-eval-fn)))))
 
-#+cljs
-(defn do-macroexpand-all
-  "Recursively performs all possible macroexpansions in form."
-  {:added "1.1"}
-  [form]
-  (walk/prewalk (fn [x]
-                  (if (seq? x)
-                    (macroexpand' x)
-                    x)) form))
+;; these macroexpand functions are for path macro in bootstrap cljs environment
+; #+cljs
+; (defn macroexpand'
+;   [form]
+;   (let [orig-eval-fn ^:cljs.analyzer/no-resolve cljs.js/*eval-fn*]
+;     (try
+;       (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* ^:cljs.analyzer/no-resolve cljs.js/js-eval)
+;       (^:cljs.analyzer/no-resolve cljs.js/eval (^:cljs.analyzer/no-resolve cljs.js/empty-state)
+;         `(macroexpand (quote ~form))
+;         identity)
+;       (finally
+;         (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* orig-eval-fn)))))
+
+; #+cljs
+; (defn do-macroexpand-all
+;   "Recursively performs all possible macroexpansions in form."
+;   {:added "1.1"}
+;   [form]
+;   (walk/prewalk (fn [x]
+;                   (if (seq? x)
+;                     (macroexpand' x)
+;                     x)) form))
 
 #+clj
 (defn intern* [ns name val] (intern ns name val))
@@ -77,10 +78,6 @@
 #+cljs
 (defn intern* [ns name val]
   (throw-illegal "intern not supported in ClojureScript"))
-
-#+clj
-(defn do-macroexpand-all [form]
-  (riddley/macroexpand-all form))
 
 ;; so that macros.clj compiles appropriately when
 ;; run in cljs (this code isn't called in that case)
