@@ -624,7 +624,11 @@
   "Creates a filter function navigator that takes in all the collected values
    as input. For arguments, can use `(collected? [a b] ...)` syntax to look
    at each collected value as individual arguments, or `(collected? v ...)` syntax
-   to capture all the collected values as a single vector."
+   to capture all the collected values as a single vector.
+
+   For ClojureScript, since can't use macros inside path when that path will be
+   inline factored/cached, to use collected? declare the logic in a global
+   variable such as (def my-collected (collected? [v] (= v 1)))"
   [params & body]
   `(i/collected?* (fn [~params] ~@body))
   )
