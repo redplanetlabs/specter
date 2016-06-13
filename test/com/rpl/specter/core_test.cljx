@@ -8,7 +8,7 @@
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
                      select-first transform setval replace-in defnavconstructor
-                     select-any selected-any? collected?]])
+                     select-any selected-any? collected? traverse]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
@@ -17,7 +17,7 @@
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
                   select-first transform setval replace-in defnavconstructor
-                  select-any selected-any? collected?]]
+                  select-any selected-any? collected? traverse]]
 
     )
 
@@ -1256,3 +1256,15 @@
                       inc
                       data)
            ))))
+
+(defspec traverse-test
+  (for-all+
+    [v (gen/vector gen/int)
+     p (gen/elements [odd? even?])
+     i gen/int]
+    (and
+      (= (reduce + (traverse [s/ALL p] v))
+         (reduce + (filter p v)))
+      (= (reduce + i (traverse [s/ALL p] v))
+         (reduce + i (filter p v)))
+      )))

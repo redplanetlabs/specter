@@ -684,10 +684,12 @@
     ))
 
 (defn do-compiled-traverse [apath structure]
-  (reify clojure.lang.IReduce
-    (reduce [this afn]
-      (.reduce this afn (afn)))
-    (reduce [this afn start]
+  (reify #+clj clojure.lang.IReduce #+cljs cljs.core/IReduce
+    (#+clj reduce #+cljs -reduce
+      [this afn]
+      (#+clj .reduce #+cljs -reduce this afn (afn)))
+    (#+clj reduce #+cljs -reduce
+      [this afn start]
       (let [cell (mutable-cell start)]
         (compiled-traverse*
           apath
