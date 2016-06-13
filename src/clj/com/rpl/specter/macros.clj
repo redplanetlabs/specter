@@ -447,6 +447,9 @@
 
 (defn cljs-macroexpand [env form]
   (require 'cljs.analyzer)
+  ;; need to get the expansion function like this so that 
+  ;; this code compiles in a clojure environment where cljs.analyzer
+  ;; namespace does not exist
   (let [expand-fn (eval 'cljs.analyzer/macroexpand-1)
         mform (expand-fn env form)]
     (cond (identical? form mform) mform
