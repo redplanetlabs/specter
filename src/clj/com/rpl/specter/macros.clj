@@ -1,7 +1,6 @@
 (ns com.rpl.specter.macros
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as cljwalk]
-            [riddley.walk :as riddley])
+            [clojure.walk :as cljwalk])
   )
 
 (defn ^:no-doc gensyms [amt]
@@ -496,7 +495,7 @@
         ;; &env is preserved in any potential nested calls to select (like via
         ;; a view function)
         expanded (if (= platform :clj)
-                  (riddley/macroexpand-all (vec path))
+                  (i/clj-macroexpand-all (vec path))
                   (cljs-macroexpand-all &env (vec path)))
 
         prepared-path (ic-prepare-path local-syms expanded)

@@ -73,6 +73,14 @@
 ;                     x)) form))
 
 #+clj
+(defn clj-macroexpand-all [form]
+  (riddley/macroexpand-all form))
+
+#+cljs
+(defn clj-macroexpand-all [form]
+  (throw-illegal "not implemented"))
+
+#+clj
 (defn intern* [ns name val] (intern ns name val))
 
 #+cljs
