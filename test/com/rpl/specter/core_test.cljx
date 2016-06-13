@@ -8,7 +8,7 @@
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
                      select-first transform setval replace-in defnavconstructor
-                     select-any selected-any?]])
+                     select-any selected-any? collected?]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
@@ -17,7 +17,7 @@
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
                   select-first transform setval replace-in defnavconstructor
-                  select-any selected-any?]]
+                  select-any selected-any? collected?]]
 
     )
 
@@ -1201,3 +1201,58 @@
   (is (empty? (select s/LAST nil)))
   (is (empty? (select s/ALL nil)))
   )
+
+(deftest map-vals-nil
+  (is (= nil (transform s/MAP-VALS inc nil)))
+  (is (empty? (select s/MAP-VALS nil)))
+  )
+
+(defspec dispense-test
+  (for-all+
+    [k1 gen/int
+     k2 gen/int
+     k3 gen/int
+     m (gen-map-with-keys gen/int gen/int k1 k2 k3)]
+    (= (select [(s/collect-one (s/keypath k1))
+                (s/collect-one (s/keypath k2))
+                s/DISPENSE
+                (s/collect-one (s/keypath k2))
+                (s/keypath k3)]
+               m)
+       (select [(s/collect-one (s/keypath k2))
+                (s/keypath k3)]
+               m)
+       )))
+
+(deftest collected?-test
+  (let [data {:active-id 1 :items [{:id 1 :name "a"} {:id 2 :name "b"}]}]
+    (is (= {:id 1 :name "a"}
+           (select-any [(s/collect-one :active-id)
+                        :items
+                        s/ALL
+                        (s/collect-one :id)
+                        (collected? [a i] (= a i))
+                        s/DISPENSE
+                        ]
+                        data)
+           (select-any [(s/collect-one :active-id)
+                        :items
+                        s/ALL
+                        (s/collect-one :id)
+                        (collected? v (apply = v))
+                        s/DISPENSE
+                        ]
+                        data)
+           )))
+  (let [data {:active 3 :items [{:id 1 :val 0} {:id 3 :val 11}]}]
+    (is (= (transform [:items s/ALL (s/selected? :id #(= % 3)) :val] inc data)
+           (transform [(s/collect-one :active)
+                       :items
+                       s/ALL
+                       (s/collect-one :id)
+                       (collected? [a i] (= a i))
+                       s/DISPENSE
+                       :val]
+                      inc
+                      data)
+           ))))

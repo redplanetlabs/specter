@@ -575,6 +575,11 @@
   (collect-val [this structure]
     val ))
 
+(def
+  ^{:doc "Drops all collected values for subsequent navigation."}
+  DISPENSE i/DISPENSE*)
+
+
 (defpathedfn if-path
   "Like cond-path, but with if semantics."
   ([cond-p then-path]
