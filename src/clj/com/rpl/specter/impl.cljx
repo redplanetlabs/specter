@@ -48,29 +48,17 @@
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args))))
 
+;; need to get the expansion function like this so that 
+;; this code compiles in a clojure environment where cljs.analyzer
+;; namespace does not exist
+#+clj
+(defn cljs-analyzer-macroexpand-1 []
+  (eval 'cljs.analyzer/macroexpand-1))
 
-;; these macroexpand functions are for path macro in bootstrap cljs environment
-; #+cljs
-; (defn macroexpand'
-;   [form]
-;   (let [orig-eval-fn ^:cljs.analyzer/no-resolve cljs.js/*eval-fn*]
-;     (try
-;       (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* ^:cljs.analyzer/no-resolve cljs.js/js-eval)
-;       (^:cljs.analyzer/no-resolve cljs.js/eval (^:cljs.analyzer/no-resolve cljs.js/empty-state)
-;         `(macroexpand (quote ~form))
-;         identity)
-;       (finally
-;         (set! ^:cljs.analyzer/no-resolve cljs.js/*eval-fn* orig-eval-fn)))))
-
-; #+cljs
-; (defn do-macroexpand-all
-;   "Recursively performs all possible macroexpansions in form."
-;   {:added "1.1"}
-;   [form]
-;   (walk/prewalk (fn [x]
-;                   (if (seq? x)
-;                     (macroexpand' x)
-;                     x)) form))
+;; this version is for bootstrap cljs
+#+cljs
+(defn cljs-analyzer-macroexpand-1 []
+  ^:cljs.analyzer/no-resolve cljs.analyzer/macroexpand-1)
 
 #+clj
 (defn clj-macroexpand-all [form]
