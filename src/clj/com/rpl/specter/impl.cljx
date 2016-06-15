@@ -1246,9 +1246,17 @@
       (instance? VarUse p)
       (let [v (:var p)
             vv (:val p)]
-        (cond (-> v meta :dynamic) (magic-fail! "Var " (:sym p) " is dynamic")
-              (valid-navigator? vv) vv
-              :else (magic-fail! "Var " (:sym p) " is not a navigator")
+        (cond (-> v meta :dynamic)
+              (magic-fail! "Var " (:sym p) " is dynamic")
+
+              (and (fn? vv) (-> v meta :pathedfn))
+              (throw-illegal "Cannot use pathed fn '" (:sym p) "' where navigator expected")
+
+              (valid-navigator? vv)
+              vv
+
+              :else
+              (magic-fail! "Var " (:sym p) " is not a navigator")
               ))
 
       (instance? SpecialFormUse p)
