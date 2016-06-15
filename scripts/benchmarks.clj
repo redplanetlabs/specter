@@ -47,20 +47,10 @@
 (defmacro run-benchmark [name amt-per-iter & exprs]
   (let [afn-map (->> exprs shuffle (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
     `(do
-       (println "Benchmark:" ~name)
+       (println "Benchmark:" ~name (str "(" ~amt-per-iter " iterations)"))
        (compare-benchmark ~amt-per-iter ~afn-map)
        (println "\n********************************\n")
        )))
-
-(let [data (range 1000)]
-  (run-benchmark "Traverse into a set" 5000
-    (set data)
-    (set (select ALL data))
-    (into #{} (traverse ALL data))
-    (persistent!
-      (reduce conj! (transient #{}) (traverse ALL data)))
-    (reduce conj #{} (traverse ALL data))
-    ))
 
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
@@ -253,4 +243,14 @@
     2000000
     (vary-meta data assoc :y 2)
     (setval [META :y] 2 data)))
+
+(let [data (range 1000)]
+  (run-benchmark "Traverse into a set" 5000
+    (set data)
+    (set (select ALL data))
+    (into #{} (traverse ALL data))
+    (persistent!
+      (reduce conj! (transient #{}) (traverse ALL data)))
+    (reduce conj #{} (traverse ALL data))
+    ))
 
