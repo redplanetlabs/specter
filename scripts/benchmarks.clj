@@ -84,6 +84,26 @@
     (manual-transform data inc)
     ))
 
+(let [data {:a 1 :b 2 :c 3 :d 4}]
+  (run-benchmark "transform values of a small map" 1000000
+    (into {} (for [[k v] data] [k (inc v)]))
+    (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (reduce-kv (fn [m k v] (assoc m k (inc v))) (empty data) data)
+    (transform [ALL LAST] inc data)
+    (transform MAP-VALS inc data)
+    (zipmap (keys data) (map inc (vals data)))
+    ))
+
+(let [data (->> (for [i (range 1000)] [i i]) (into {}))]
+  (run-benchmark "transform values of large map" 1000
+    (into {} (for [[k v] data] [k (inc v)]))
+    (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (reduce-kv (fn [m k v] (assoc m k (inc v))) (empty data) data)
+    (transform [ALL LAST] inc data)
+    (transform MAP-VALS inc data)
+    (zipmap (keys data) (map inc (vals data)))
+    ))
+
 (let [data [1 2 3 4 5]]
   (run-benchmark "map a function over a vector" 1000000
     (vec (map inc data))
@@ -111,36 +131,6 @@
     (setval END [1] v)
     (reduce conj v [1])
     (conj v 1)))
-
-(defn- update-pair [[k v]]
-  [k (inc v)])
-
-(defn manual-similar-reduce-kv [data]
-  (reduce-kv
-    (fn [m k v]
-      (let [[newk newv] (update-pair [k v])]
-        (assoc m newk newv)))
-    {}
-    data
-    ))
-
-(let [data {:a 1 :b 2 :c 3 :d 4}]
-  (run-benchmark "transform values of a map" 1000000
-    (into {} (for [[k v] data] [k (inc v)]))
-    (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
-    (manual-similar-reduce-kv data)
-    (transform [ALL LAST] inc data)
-    (transform MAP-VALS inc data)
-    ))
-
-(let [data (->> (for [i (range 1000)] [i i]) (into {}))]
-  (run-benchmark "transform values of large map" 1000
-    (into {} (for [[k v] data] [k (inc v)]))
-    (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
-    (manual-similar-reduce-kv data)
-    (transform [ALL LAST] inc data)
-    (transform MAP-VALS inc data)
-    ))
 
 
 (declarepath TreeValues)
