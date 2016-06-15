@@ -9,6 +9,7 @@
 * Added DISPENSE navigator to drop all collected values for subsequent navigation
 * Added `collected?` macro to create a filter function which operates on the collected values.
 * Error now thrown if a pathedfn (like filterer) is used without being parameterized
+* Performance improvement for ALL and MAP-VALS on small maps for Clojure by leveraging IMapIterable interface
 * Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
 
 ## 0.11.2
