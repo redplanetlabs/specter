@@ -837,7 +837,24 @@
   (all-transform [structure next-fn]
     (mapv next-fn structure))
 
-  #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
+  #+clj
+  clojure.lang.PersistentArrayMap
+  #+clj
+  (all-transform [structure next-fn]
+    (let [k-it (.keyIterator structure)
+          v-it (.valIterator structure)]
+      (loop [ret {}]
+        (if (.hasNext k-it)
+          (let [k (.next k-it)
+                v (.next v-it)
+                [newk newv] (next-fn [k v])]
+            (recur (assoc ret newk newv)))
+          ret
+          ))))
+
+  #+cljs
+  cljs.core/PersistentArrayMap
+  #+cljs
   (all-transform [structure next-fn]
     (non-transient-map-all-transform structure next-fn {})
     )
@@ -923,7 +940,23 @@
     nil
     )
 
-  #+clj clojure.lang.PersistentArrayMap #+cljs cljs.core/PersistentArrayMap
+  #+clj
+  clojure.lang.PersistentArrayMap
+  #+clj
+  (map-vals-transform [structure next-fn]
+    (let [k-it (.keyIterator structure)
+          v-it (.valIterator structure)]
+      (loop [ret {}]
+        (if (.hasNext k-it)
+          (let [k (.next k-it)
+                v (.next v-it)]
+            (recur (assoc ret k (next-fn v))))
+          ret
+          ))))
+
+  #+cljs
+  cljs.core/PersistentArrayMap
+  #+cljs
   (map-vals-transform [structure next-fn]
     (map-vals-non-transient-transform structure {} next-fn)
     )
