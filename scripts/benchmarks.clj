@@ -84,6 +84,31 @@
     (manual-transform data inc)
     ))
 
+(defn map-vals-map-iterable [^clojure.lang.IMapIterable m afn]
+  (let [k-it (.keyIterator m)
+        v-it (.valIterator m)]
+    (loop [ret {}]
+      (if (.hasNext k-it)
+        (let [k (.next k-it)
+              v (.next v-it)]
+          (recur (assoc ret k (afn v)))
+          )
+        ret
+        ))))
+
+(defn map-vals-map-iterable-transient [^clojure.lang.IMapIterable m afn]
+  (persistent!
+    (let [k-it (.keyIterator m)
+          v-it (.valIterator m)]
+      (loop [ret (transient {})]
+        (if (.hasNext k-it)
+          (let [k (.next k-it)
+                v (.next v-it)]
+            (recur (assoc! ret k (afn v)))
+            )
+          ret
+          )))))
+
 (let [data {:a 1 :b 2 :c 3 :d 4}]
   (run-benchmark "transform values of a small map" 1000000
     (into {} (for [[k v] data] [k (inc v)]))
@@ -93,6 +118,9 @@
     (transform [ALL LAST] inc data)
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
+    (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (map-vals-map-iterable data inc)
+    (map-vals-map-iterable-transient data inc)
     ))
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
@@ -100,10 +128,14 @@
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
+    (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient clojure.lang.PersistentHashMap/EMPTY) data))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) (empty data) data)
     (transform [ALL LAST] inc data)
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
+    (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (map-vals-map-iterable data inc)
+    (map-vals-map-iterable-transient data inc)
     ))
 
 (let [data [1 2 3 4 5]]
