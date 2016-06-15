@@ -88,6 +88,7 @@
   (run-benchmark "transform values of a small map" 1000000
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) (empty data) data)
     (transform [ALL LAST] inc data)
     (transform MAP-VALS inc data)
@@ -98,6 +99,7 @@
   (run-benchmark "transform values of large map" 1000
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
+    (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) (empty data) data)
     (transform [ALL LAST] inc data)
     (transform MAP-VALS inc data)
