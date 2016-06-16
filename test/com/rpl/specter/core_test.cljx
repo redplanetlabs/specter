@@ -373,11 +373,11 @@
   (is (empty? (select (s/if-path odd? (s/view inc)) 2)))
   (is (= [6 2 10 6 14]
          (transform [(s/putval 2)
-                  s/ALL
-                  (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
-                  *
-                  [1 2 3 4 5]
-                     )))
+                     s/ALL
+                    (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
+                    *
+                    [1 2 3 4 5]
+                    )))
   (is (= 2
          (transform [(s/putval 2)
                   (s/if-path odd? (s/view inc))]

@@ -1095,7 +1095,7 @@
         tran (if test?
                then-t
                else-t)
-        idx (if test? params-idx then-params)]
+        idx (if test? params-idx (+ params-idx then-params))]
     (tran params
           idx
           vals
@@ -1507,3 +1507,8 @@
     [(:selector tfns) (:transformer tfns)]
     ))
 
+(defn mk-jump-next-fn [next-fn init-idx total-params]
+  (let [jumped (+ init-idx total-params)]
+    (fn [params params-idx vals structure]
+      (next-fn params jumped vals structure)
+      )))

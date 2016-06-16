@@ -672,18 +672,25 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   [& paths]
-  (variable-pathed-nav [compiled-paths paths]
-    (select* [this structure next-fn]
-      (doseqres NONE [c compiled-paths]
-        (i/compiled-traverse* c next-fn structure)
-        ))
-    (transform* [this structure next-fn]
-      (reduce
-        (fn [structure path]
-          (compiled-transform path next-fn structure))
-        structure
-        compiled-paths
-        ))))
+  (let [paths-comp (mapv i/comp-paths* (vec paths))
+        all-needed (mapv i/num-needed-params paths-comp)
+        idx-deltas (vec (cons 0 (reductions + all-needed)))
+        extracted (mapv i/extract-rich-tfns paths-comp)
+        sel-info (mapv vector (mapv first extracted) idx-deltas)
+        tran-info (mapv vector (mapv second extracted) idx-deltas)]
+    (richnav (reduce + 0 all-needed)
+      (select* [params params-idx vals structure next-fn]
+        (doseqres NONE [[s delta] sel-info]
+          (s params (+ params-idx delta) vals structure next-fn)
+          ))
+      (transform* [params params-idx vals structure next-fn]
+        (reduce
+          (fn [structure [t delta]]
+            (t params (+ params-idx delta) vals structure next-fn)
+            )
+          structure
+          tran-info
+          )))))
 
 (defpathedfn stay-then-continue
   "Navigates to the current element and then navigates via the provided path.

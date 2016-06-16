@@ -130,15 +130,25 @@
    the next params index, the collected vals, and finally the next structure.
    This is the lowest level way of making navigators."
   [num-params impl1 impl2]
-  (let [[select-impl transform-impl] (determine-params-impls impl1 impl2)]
-    `(let [tfns# (i/->TransformFunctions
+  (let [[[s-params & s-body] [t-params & t-body]] (determine-params-impls impl1 impl2)
+        s-next-fn-sym (last s-params)
+        s-pidx-sym (second s-params)
+        t-next-fn-sym (last t-params)
+        t-pidx-sym (second t-params)
+        ]
+    `(let [num-params# ~num-params
+           tfns# (i/->TransformFunctions
                    i/RichPathExecutor
-                   (fn ~@select-impl)
-                   (fn ~@transform-impl)
+                   (fn ~s-params 
+                     (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
+                       ~@s-body))
+                   (fn ~t-params
+                     (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
+                       ~@t-body))
                    )]
-      (if (zero? ~num-params)
+      (if (zero? num-params#)
         (i/no-params-compiled-path tfns#)
-        (i/->ParamsNeededPath tfns# ~num-params)
+        (i/->ParamsNeededPath tfns# num-params#)
         ))))
 
 (defmacro paramsfn [params [structure-sym] & impl]
