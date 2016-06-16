@@ -10,6 +10,8 @@
 * Added `collected?` macro to create a filter function which operates on the collected values.
 * Error now thrown if a pathedfn (like filterer) is used without being parameterized
 * Performance improvement for ALL and MAP-VALS on small maps for Clojure by leveraging IMapIterable interface
+* Added low-level `richnav` macro for creating navigators with full flexibility
+* Bug fix: multi-path and if-path now work properly with value collection
 * Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
 
 ## 0.11.2
