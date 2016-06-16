@@ -127,7 +127,9 @@
 (defmacro richnav
   "Defines a navigator with full access to collected vals, the parameters array, 
    and the parameters array index. `next-fn` expects to receive the params array,
-   the next params index, the collected vals, and finally the next structure.
+   a params index, the collected vals, and finally the next structure.
+   `next-fn` will automatically skip ahead in params array by `num-params`, so the
+   index passed to it is ignored.
    This is the lowest level way of making navigators."
   [num-params impl1 impl2]
   (let [[[s-params & s-body] [t-params & t-body]] (determine-params-impls impl1 impl2)
