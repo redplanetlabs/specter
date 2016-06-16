@@ -124,6 +124,23 @@
     (paramsnav* retrieve-params num-params [impl1 impl2])
     ))
 
+(defmacro richnav
+  "Defines a navigator with full access to collected vals, the parameters array, 
+   and the parameters array index. `next-fn` expects to receive the params array,
+   the next params index, the collected vals, and finally the next structure.
+   This is the lowest level way of making navigators."
+  [num-params impl1 impl2]
+  (let [[select-impl transform-impl] (determine-params-impls impl1 impl2)]
+    `(let [tfns# (i/->TransformFunctions
+                   i/RichPathExecutor
+                   (fn ~@select-impl)
+                   (fn ~@transform-impl)
+                   )]
+      (if (zero? ~num-params)
+        (i/no-params-compiled-path tfns#)
+        (i/->ParamsNeededPath tfns# ~num-params)
+        ))))
+
 (defmacro paramsfn [params [structure-sym] & impl]
   `(nav ~params
      (~'select* [this# structure# next-fn#]

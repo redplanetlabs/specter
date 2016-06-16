@@ -417,7 +417,7 @@
 (defn num-needed-params [path]
   (if (instance? CompiledPath path)
     0
-    (:num-needed-params path)))
+    (.-num-needed-params ^ParamsNeededPath path)))
 
 
 ;; cell implementation idea taken from prismatic schema library
@@ -1075,18 +1075,33 @@
           path
           )))
 
-(defn if-select [structure next-fn then-tester late-then late-else]
-  (let [apath (if (then-tester structure)
-                late-then
-                late-else)]
-    (compiled-traverse* apath next-fn structure)))
 
-(defn if-transform [structure next-fn then-tester late-then late-else]
-  (let [apath (if (then-tester structure)
-                late-then
-                late-else)]
-    (compiled-transform* apath next-fn structure)
-    ))
+
+(defn if-select [params params-idx vals structure next-fn then-tester then-s then-params else-s]
+  (let [test? (then-tester structure)
+        sel (if test?
+              then-s
+              else-s)
+        idx (if test? params-idx (+ params-idx then-params))]
+    (sel params
+         idx
+         vals
+         structure
+         next-fn
+         )))
+
+(defn if-transform [params params-idx vals structure next-fn then-tester then-t then-params else-t]
+  (let [test? (then-tester structure)
+        tran (if test?
+               then-t
+               else-t)
+        idx (if test? params-idx then-params)]
+    (tran params
+          idx
+          vals
+          structure
+          next-fn
+          )))
 
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
@@ -1480,3 +1495,15 @@
               expected-params " but got " needed-params))
         (extend atype protpath-prot {m (fn [_] rp)})
         ))))
+
+(defn parameterize-path [apath params params-idx]
+  (if (instance? CompiledPath apath)
+    apath
+    (bind-params* apath params params-idx)
+    ))
+
+(defn extract-rich-tfns [apath]
+  (let [tfns (coerce-tfns-rich (:transform-fns apath))]
+    [(:selector tfns) (:transformer tfns)]
+    ))
+

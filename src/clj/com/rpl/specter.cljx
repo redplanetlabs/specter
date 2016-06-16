@@ -8,6 +8,7 @@
                defcollector
                defnav
                defpathedfn
+               richnav
               ]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]
@@ -19,7 +20,8 @@
              fixed-pathed-nav
              defcollector
              defnav
-             defpathedfn]]
+             defpathedfn
+             richnav]]
     #+clj [com.rpl.specter.util-macros :only [doseqres]]
     )
   (:require [com.rpl.specter.impl :as i]
@@ -585,21 +587,67 @@
   ([cond-p then-path]
     (if-path cond-p then-path STOP))
   ([cond-p then-path else-path]
-    (if-let [afn (i/extract-basic-filter-fn cond-p)]
-      (fixed-pathed-nav [late-then then-path
-                         late-else else-path]
-        (select* [this structure next-fn]
-          (i/if-select structure next-fn afn late-then late-else))
-        (transform* [this structure next-fn]
-          (i/if-transform structure next-fn afn late-then late-else)))
-      (fixed-pathed-nav [late-cond cond-p
-                         late-then then-path
-                         late-else else-path]
-        (select* [this structure next-fn]
-          (i/if-select structure next-fn #(i/selected?* late-cond %) late-then late-else))
-        (transform* [this structure next-fn]
-          (i/if-transform structure next-fn #(i/selected?* late-cond %) late-then late-else))
-        ))))
+    (let [then-comp (i/comp-paths* then-path)
+          else-comp (i/comp-paths* else-path)
+          then-needed (i/num-needed-params then-comp)
+          else-needed (i/num-needed-params else-comp)
+          [then-s then-t] (i/extract-rich-tfns then-comp)
+          [else-s else-t] (i/extract-rich-tfns else-comp)]
+      (if-let [afn (i/extract-basic-filter-fn cond-p)]
+        (richnav (+ then-needed else-needed)
+          (select* [params params-idx vals structure next-fn]
+            (i/if-select
+              params
+              params-idx
+              vals
+              structure
+              next-fn
+              afn
+              then-s
+              then-needed
+              else-s
+              ))
+          (transform* [params params-idx vals structure next-fn]
+            (i/if-transform
+              params
+              params-idx
+              vals
+              structure
+              next-fn
+              afn
+              then-t
+              then-needed
+              else-t
+              ))))
+        (let [cond-comp (i/comp-paths* cond-p)            
+              cond-needed (i/num-needed-params cond-comp)]
+          (richnav (+ then-needed else-needed cond-needed)
+            (select* [params params-idx vals structure next-fn]
+              (let [late-cond (i/parameterize-path cond-comp params params-idx)]
+                (i/if-select
+                  params
+                  (+ params-idx cond-needed)
+                  vals
+                  structure
+                  next-fn
+                  #(i/selected?* late-cond %)
+                  then-s
+                  then-needed
+                  else-s
+                  )))
+            (transform* [params params-idx vals structure next-fn]
+              (let [late-cond (i/parameterize-path cond-comp params params-idx)]
+                (i/if-transform
+                  params
+                  (+ params-idx cond-needed)
+                  vals
+                  structure
+                  next-fn
+                  #(i/selected?* late-cond %)
+                  then-t
+                  then-needed
+                  else-t
+                  ))))))))
 
 (defpathedfn cond-path
   "Takes in alternating cond-path path cond-path path...
