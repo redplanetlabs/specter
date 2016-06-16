@@ -1268,3 +1268,30 @@
       (= (reduce + i (traverse [s/ALL p] v))
          (reduce + i (filter p v)))
       )))
+
+(declarepath KeyAccumWalker [k])
+(providepath KeyAccumWalker
+  (s/if-path
+    s/must s/STAY
+    [s/ALL (s/collect-one s/FIRST) s/LAST (s/params-reset KeyAccumWalker)]))
+
+
+(deftest recursive-if-path-select-vals-test
+  (let [data {"e1" {"e2" {"e1" {:template 1} "e2" {:template 2}}}}]
+    (is (= [["e1" "e2" "e1" {:template 1}] ["e1" "e2" "e2" {:template 2}]]
+           (select (KeyAccumWalker :template) data)))
+    (is (= {"e1" {"e2" {"e1" "e1e2e1" "e2" "e1e2e2"}}}
+           (transform (KeyAccumWalker :template)
+             (fn [& all] (apply str (butlast all)))
+             data)))
+    ))
+
+(deftest multi-path-vals-test
+  (is (= {:a 1 :b 6 :c 3}
+         (transform [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
+           + 
+           {:a 1 :b 2 :c 3})))
+  (is (= [[1 2] [3 2]]
+         (select [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
+           {:a 1 :b 2 :c 3})))
+  )
