@@ -3,9 +3,11 @@
         [com.rpl.specter macros]
         [com.rpl.specter.transients]
         [com.rpl.specter.impl :only [benchmark]])
-  (:require [clojure.walk :as walk]))
+  (:require [clojure.walk :as walk])
+  )
 
 ;; run via `lein repl` with `(load-file "scripts/benchmarks.clj")`
+
 
 (defn pretty-float5 [anum]
   (format "%.5g" anum))
@@ -33,6 +35,8 @@
         (time-ms amt-per-iter afn)))))
 
 (defn compare-benchmark [amt-per-iter afn-map]
+  (System/runFinalization)
+  (System/gc)
   (let [results (transform MAP-VALS
                   (fn [afn]
                     (average-time-ms 8 amt-per-iter afn))
@@ -54,7 +58,7 @@
 
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
-  (run-benchmark "get value in nested map" 5000000
+  (run-benchmark "get value in nested map" 2500000
     (select-any [:a :b :c] data)
     (select-one [:a :b :c] data)
     (select-first [:a :b :c] data)
@@ -110,7 +114,7 @@
           )))))
 
 (let [data {:a 1 :b 2 :c 3 :d 4}]
-  (run-benchmark "transform values of a small map" 1000000
+  (run-benchmark "transform values of a small map" 500000
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
@@ -124,7 +128,7 @@
     ))
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
-  (run-benchmark "transform values of large map" 1000
+  (run-benchmark "transform values of large map" 600
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
@@ -146,22 +150,25 @@
     ))
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
-  (run-benchmark "filter a sequence" 1000000
+  (run-benchmark "filter a sequence" 500000
     (doall (filter even? data))
     (filterv even? data)
     (select [ALL even?] data)
     (select-any (filterer even?) data)
     ))
 
-(let [data [{:a 2 :b 2} {:a 1} {:a 4} {:a 6}]]
-  (run-benchmark "even :a values from sequence of maps" 1000000
+(let [data [{:a 2 :b 2} {:a 1} {:a 4} {:a 6}]
+      xf (comp (map :a) (filter even?))]
+  (run-benchmark "even :a values from sequence of maps" 500000
     (select [ALL :a even?] data)
     (->> data (mapv :a) (filter even?) doall)
+    (into [] (comp (map :a) (filter even?)) data)
+    (into [] xf data)
     ))
 
 (let [v (vec (range 1000))]
   (run-benchmark "END on large vector"
-    5000000
+    2000000
     (setval END [1] v)
     (reduce conj v [1])
     (conj v 1)))
@@ -199,7 +206,7 @@
 
 (let [toappend (range 1000)]
   (run-benchmark "transient comparison: building up vectors"
-    10000
+    8000
     (reduce (fn [v i] (conj v i)) [] toappend)
     (reduce (fn [v i] (conj! v i)) (transient []) toappend)
     (setval END toappend [])
@@ -207,7 +214,7 @@
 
 (let [toappend (range 1000)]
   (run-benchmark "transient comparison: building up vectors one at a time"
-    10000
+    7000
     (reduce (fn [v i] (conj v i)) [] toappend)
     (reduce (fn [v i] (conj! v i)) (transient []) toappend)
     (reduce (fn [v i] (setval END [i] v)) [] toappend)
@@ -231,7 +238,7 @@
       tdata2 (transient data)
       idx 600]
   (run-benchmark "transient comparison: assoc'ing in maps"
-    2500000
+    1500000
     (assoc data idx 0)
     (assoc! tdata idx 0)
     (setval (keypath idx) 0 data)
@@ -245,26 +252,26 @@
                       [k (rand)]))
       tdata (transient data)]
   (run-benchmark "transient comparison: submap"
-    300000
+    150000
     (transform (submap [600 700]) modify-submap data)
     (transform (submap! [600 700]) modify-submap tdata)))
 
 (let [data {:x 1}
       meta-map {:my :metadata}]
   (run-benchmark "set metadata"
-    2000000
+    1500000
     (with-meta data meta-map)
     (setval META meta-map data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "get metadata"
-    20000000
+    15000000
     (meta data)
     (select-any META data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "vary metadata"
-    2000000
+    800000
     (vary-meta data assoc :y 2)
     (setval [META :y] 2 data)))
 
