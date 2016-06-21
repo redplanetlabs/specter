@@ -1295,3 +1295,9 @@
          (select [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
            {:a 1 :b 2 :c 3})))
   )
+
+(deftest sorted-map-by-transform
+  (let [amap (sorted-map-by > 1 10 2 20 3 30)]
+    (is (= [3 2 1] (keys (transform s/MAP-VALS inc amap))))
+    (is (= [3 2 1] (keys (transform [s/ALL s/LAST] inc amap))))
+    ))

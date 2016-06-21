@@ -13,6 +13,7 @@
 * Added low-level `richnav` macro for creating navigators with full flexibility
 * Bug fix: multi-path and if-path now work properly with value collection
 * Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
+* Bug fix: ALL and MAP-VALS now maintain the comparator of sorted maps
 
 ## 0.11.2
 * Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate ClojureScript compiler warning about reserved keyword

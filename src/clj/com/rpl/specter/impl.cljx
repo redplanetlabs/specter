@@ -861,7 +861,7 @@
 
   #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
   (all-transform [structure next-fn]
-    (non-transient-map-all-transform structure next-fn (sorted-map))
+    (non-transient-map-all-transform structure next-fn (empty structure))
     )
 
   #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
@@ -963,7 +963,7 @@
 
   #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
   (map-vals-transform [structure next-fn]
-    (map-vals-non-transient-transform structure (sorted-map) next-fn)
+    (map-vals-non-transient-transform structure (empty structure) next-fn)
     )
 
   #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
