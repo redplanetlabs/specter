@@ -60,7 +60,7 @@
   (compiled-select (i/comp-paths* path)
                    structure))
 
-(def ^{:doc "Version of select-one that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of select-one that takes in a path precompiled with comp-paths"}
   compiled-select-one i/compiled-select-one*)
 
 (defn select-one*
@@ -68,7 +68,7 @@
   [path structure]
   (compiled-select-one (i/comp-paths* path) structure))
 
-(def ^{:doc "Version of select-one! that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of select-one! that takes in a path precompiled with comp-paths"}
   compiled-select-one! i/compiled-select-one!*)
 
 (defn select-one!*
@@ -76,7 +76,7 @@
   [path structure]
   (compiled-select-one! (i/comp-paths* path) structure))
 
-(def ^{:doc "Version of select-first that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of select-first that takes in a path precompiled with comp-paths"}
   compiled-select-first i/compiled-select-first*)
 
 
@@ -85,7 +85,7 @@
   [path structure]
   (compiled-select-first (i/comp-paths* path) structure))
 
-(def ^{:doc "Version of select-any that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of select-any that takes in a path precompiled with comp-paths"}
   compiled-select-any i/compiled-select-any*)
 
 (def ^{:doc "Global value used to indicate no elements selected during
@@ -98,7 +98,7 @@
   [path structure]
   (compiled-select-any (i/comp-paths* path) structure))
 
-(def ^{:doc "Version of selected-any? that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of selected-any? that takes in a path precompiled with comp-paths"}
   compiled-selected-any? i/compiled-selected-any?*)
 
 (defn selected-any?*
@@ -108,7 +108,7 @@
 
 ;; Reducible traverse functions
 
-(def ^{:doc "Version of traverse that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of traverse that takes in a path precompiled with comp-paths"}
   compiled-traverse i/do-compiled-traverse)
 
 (defn traverse*
@@ -119,7 +119,7 @@
 
 ;; Transformation functions
 
-(def ^{:doc "Version of transform that takes in a path pre-compiled with comp-paths"}
+(def ^{:doc "Version of transform that takes in a path precompiled with comp-paths"}
   compiled-transform i/compiled-transform*)
 
 (defn transform*
@@ -127,6 +127,18 @@
   the transform-fn on it"
   [path transform-fn structure]
   (compiled-transform (i/comp-paths* path) transform-fn structure))
+
+(def ^{:doc "Version of `multi-transform` that takes in a path precompiled with `comp-paths`"}
+  compiled-multi-transform i/compiled-multi-transform*)
+
+
+(defn multi-transform*
+  "Just like `transform` but expects transform functions to be specified
+   inline in the path using `terminal`. Error is thrown if navigation finishes
+   at a non-`terminal` navigator."
+  [path structure]
+  (compiled-multi-transform (i/comp-paths* path) structure))
+
 
 (def ^{:doc "Version of setval that takes in a path precompiled with comp-paths"}
   compiled-setval i/compiled-setval*)
@@ -192,6 +204,20 @@
     (next-fn structure))
   (transform* [this structure next-fn]
     (next-fn structure)))
+
+
+(def
+  ^{:doc "For usage with `multi-transform`, defines an endpoint in the navigation
+          that will have the parameterized transform function run. The transform
+          function works just like it does in `transform`, with collected values
+          given as the first arguments"}
+  terminal
+  (richnav 1
+    (select* [params params-idx vals structure next-fn]
+      (i/throw-illegal "'terminal' should only be used in multi-transform"))
+    (transform* [params params-idx vals structure next-fn]
+      (i/terminal* params params-idx vals structure)
+      )))
 
 (def
   ^{:doc "Navigate to every element of the collection. For maps navigates to

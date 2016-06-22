@@ -1103,6 +1103,13 @@
           next-fn
           )))
 
+(defn terminal* [params params-idx vals structure]
+  (let [afn (aget ^objects params params-idx)]
+    (if (identical? vals [])
+      (afn structure)
+      (apply afn (conj vals structure)))
+      ))
+
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)
@@ -1480,6 +1487,14 @@
              structure)
      (get-cell state)]
     ))
+
+(defn- multi-transform-error-fn [& nav]
+  (throw-illegal
+    "All navigation in multi-transform must end in 'terminal' "
+    "navigators. Instead navigated to: " nav))
+
+(defn compiled-multi-transform* [path structure]
+  (compiled-transform* path multi-transform-error-fn structure))
 
 #+clj
 (defn extend-protocolpath* [protpath protpath-prot extensions]

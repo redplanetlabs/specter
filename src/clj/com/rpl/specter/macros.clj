@@ -643,6 +643,17 @@
   [apath transform-fn structure]
   `(i/compiled-transform* (path ~apath) ~transform-fn ~structure))
 
+(defmacro multi-transform
+  "Just like `transform` but expects transform functions to be specified
+   inline in the path using `terminal`. Error is thrown if navigation finishes
+   at a non-`terminal` navigator.
+   This macro will attempt to do inline factoring and caching of the path, falling
+   back to compiling the path on every invocation if it's not possible to 
+   factor/cache the path."
+  [apath structure]
+  `(i/compiled-multi-transform* (path ~apath) ~structure))
+
+
 (defmacro setval
   "Navigates to each value specified by the path and replaces it by `aval`.
    This macro will attempt to do inline factoring and caching of the path, falling
