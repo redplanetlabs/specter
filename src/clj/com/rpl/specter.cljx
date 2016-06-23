@@ -9,6 +9,7 @@
                defnav
                defpathedfn
                richnav
+               defnavconstructor
               ]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]
@@ -21,7 +22,8 @@
              defcollector
              defnav
              defpathedfn
-             richnav]]
+             richnav
+             defnavconstructor]]
     #+clj [com.rpl.specter.util-macros :only [doseqres]]
     )
   (:require [com.rpl.specter.impl :as i]
@@ -218,6 +220,13 @@
     (transform* [params params-idx vals structure next-fn]
       (i/terminal* params params-idx vals structure)
       )))
+
+(defnavconstructor terminal-val
+  "Like `terminal` but specifies a val to set at the location regardless of
+   the collected values or the value at the location."
+  [p terminal]
+  [v]
+  (p (constantly v)))
 
 (def
   ^{:doc "Navigate to every element of the collection. For maps navigates to
