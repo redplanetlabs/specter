@@ -706,26 +706,30 @@
 (defpathedfn multi-path
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
-  [& paths]
-  (let [paths-comp (mapv i/comp-paths* (vec paths))
-        all-needed (mapv i/num-needed-params paths-comp)
-        idx-deltas (vec (cons 0 (reductions + all-needed)))
-        extracted (mapv i/extract-rich-tfns paths-comp)
-        sel-info (mapv vector (mapv first extracted) idx-deltas)
-        tran-info (mapv vector (mapv second extracted) idx-deltas)]
-    (richnav (reduce + 0 all-needed)
-      (select* [params params-idx vals structure next-fn]
-        (doseqres NONE [[s delta] sel-info]
-          (s params (+ params-idx delta) vals structure next-fn)
-          ))
-      (transform* [params params-idx vals structure next-fn]
-        (reduce
-          (fn [structure [t delta]]
-            (t params (+ params-idx delta) vals structure next-fn)
-            )
-          structure
-          tran-info
-          )))))
+  ([] STAY)
+  ([path] (i/comp-paths* path))
+  ([path1 path2]
+    (let [comp1 (i/comp-paths* path1)
+          comp2 (i/comp-paths* path2)
+          comp1-needed (i/num-needed-params comp1)
+          [s1 t1] (i/extract-rich-tfns comp1)
+          [s2 t2] (i/extract-rich-tfns comp2)
+          ]
+      (richnav (+ comp1-needed (i/num-needed-params comp2))
+        (select* [params params-idx vals structure next-fn]
+          (let [res1 (s1 params params-idx vals structure next-fn)
+                res2 (s2 params (+ params-idx comp1-needed) vals structure next-fn)]
+            (if (identical? NONE res2)
+              res1
+              res2
+              )))
+        (transform* [params params-idx vals structure next-fn]
+          (let [s1 (t1 params params-idx vals structure next-fn)]
+            (t2 params (+ params-idx comp1-needed) vals s1 next-fn)
+            )))))
+  ([path1 path2 & paths]
+    (reduce multi-path (multi-path path1 path2) paths)
+    ))
 
 (defpathedfn stay-then-continue
   "Navigates to the current element and then navigates via the provided path.

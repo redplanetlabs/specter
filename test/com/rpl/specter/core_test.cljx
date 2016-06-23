@@ -1327,3 +1327,17 @@
   (is (= 3 (multi-transform (s/terminal-val 3) 2)))
   (is (= 3 (multi-transform [s/VAL (s/terminal-val 3)] 2)))
   )
+
+
+(deftest multi-path-order-test
+  (is (= 102
+         (multi-transform
+           (s/multi-path
+            [odd? (s/terminal #(* 2 %))]
+            [even? (s/terminal-val 100)]
+            [#(= 100 %) (s/terminal inc)]
+            [#(= 101 %) (s/terminal inc)]
+
+            )
+           1
+           ))))
