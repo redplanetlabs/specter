@@ -8,7 +8,8 @@
              :refer [paramsfn defprotocolpath defnav extend-protocolpath
                      nav declarepath providepath select select-one select-one!
                      select-first transform setval replace-in defnavconstructor
-                     select-any selected-any? collected? traverse]])
+                     select-any selected-any? collected? traverse
+                     multi-transform]])
   (:use
     #+clj [clojure.test :only [deftest is]]
     #+clj [clojure.test.check.clojure-test :only [defspec]]
@@ -17,7 +18,8 @@
            :only [paramsfn defprotocolpath defnav extend-protocolpath
                   nav declarepath providepath select select-one select-one!
                   select-first transform setval replace-in defnavconstructor
-                  select-any selected-any? collected? traverse]]
+                  select-any selected-any? collected? traverse
+                  multi-transform]]
 
     )
 
@@ -1304,3 +1306,24 @@
 
 (deftest setval-vals-collection-test
   (is (= 2 (setval s/VAL 2 :a))))
+
+(defspec multi-transform-test
+  (for-all+
+    [kw1 gen/keyword
+     kw2 gen/keyword
+     m (limit-size 5 (gen-map-with-keys gen/keyword gen/int kw1 kw2))]
+    (= (->> m (transform [(s/keypath kw1) s/VAL] +) (transform (s/keypath kw2) dec))
+       (multi-transform
+         (s/multi-path [(s/keypath kw1) s/VAL (s/terminal +)]
+                       [(s/keypath kw2) (s/terminal dec)])
+         m
+         ))))
+
+(deftest multi-transform-overrun-error
+  (is (thrown? Exception (multi-transform s/STAY 3)))
+  )
+
+(deftest terminal-val-test
+  (is (= 3 (multi-transform (s/terminal-val 3) 2)))
+  (is (= 3 (multi-transform [s/VAL (s/terminal-val 3)] 2)))
+  )
