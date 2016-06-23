@@ -5,6 +5,7 @@
 * Added `selected-any?` operation that returns true if any element is navigated to.
 * Added `traverse` operation which returns a reducible object of all the elements navigated to by the path. Very efficient.
 * Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
+* Huge performance improvement to `multi-path`
 * Added META navigator (thanks @aengelberg)
 * Added DISPENSE navigator to drop all collected values for subsequent navigation
 * Added `collected?` macro to create a filter function which operates on the collected values.
