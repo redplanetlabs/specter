@@ -4,6 +4,8 @@
 * Added `select-any` operation which selects a single element navigated to by the path. Which element returned is undefined. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
 * Added `selected-any?` operation that returns true if any element is navigated to.
 * Added `traverse` operation which returns a reducible object of all the elements navigated to by the path. Very efficient.
+* Added `multi-transform` operation which can be used to perform multiple transformations in a single traversal. Much more efficient than doing the
+transformations with `transform` one after another when the transformations share a lot of navigation. `multi-transform` is used in conjunction with `terminal` and `terminal-val` – see the docstring for details.
 * Huge performance improvements to `select`, `select-one`, `select-first`, and `select-one!`
 * Huge performance improvement to `multi-path`
 * Added META navigator (thanks @aengelberg)

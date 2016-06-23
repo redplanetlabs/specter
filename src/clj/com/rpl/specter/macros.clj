@@ -646,7 +646,8 @@
 (defmacro multi-transform
   "Just like `transform` but expects transform functions to be specified
    inline in the path using `terminal`. Error is thrown if navigation finishes
-   at a non-`terminal` navigator.
+   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is 
+   the `multi-transform` equivalent of `setval`. 
    This macro will attempt to do inline factoring and caching of the path, falling
    back to compiling the path on every invocation if it's not possible to 
    factor/cache the path."

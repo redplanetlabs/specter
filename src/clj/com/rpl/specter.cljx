@@ -137,7 +137,8 @@
 (defn multi-transform*
   "Just like `transform` but expects transform functions to be specified
    inline in the path using `terminal`. Error is thrown if navigation finishes
-   at a non-`terminal` navigator."
+   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is 
+   the `multi-transform` equivalent of `setval`."
   [path structure]
   (compiled-multi-transform (i/comp-paths* path) structure))
 
