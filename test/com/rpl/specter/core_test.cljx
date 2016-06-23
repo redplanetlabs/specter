@@ -1320,7 +1320,7 @@
          ))))
 
 (deftest multi-transform-overrun-error
-  (is (thrown? Exception (multi-transform s/STAY 3)))
+  (is (thrown? #+clj Exception #+cljs js/Error (multi-transform s/STAY 3)))
   )
 
 (deftest terminal-val-test
