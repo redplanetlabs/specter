@@ -1301,3 +1301,6 @@
     (is (= [3 2 1] (keys (transform s/MAP-VALS inc amap))))
     (is (= [3 2 1] (keys (transform [s/ALL s/LAST] inc amap))))
     ))
+
+(deftest setval-vals-collection-test
+  (is (= 2 (setval s/VAL 2 :a))))
