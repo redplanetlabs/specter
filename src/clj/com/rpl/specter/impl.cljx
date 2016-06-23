@@ -35,6 +35,21 @@
 (defn smart-str [& elems]
   (apply str (map smart-str* elems)))
 
+(defn fast-constantly [v]
+  (fn ([] v)
+      ([a1] v)
+      ([a1 a2] v)
+      ([a1 a2 a3] v)
+      ([a1 a2 a3 a4] v)
+      ([a1 a2 a3 a4 a5] v)
+      ([a1 a2 a3 a4 a5 a6] v)
+      ([a1 a2 a3 a4 a5 a6 a7] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 & r] v)
+      ))
+
 #+clj
 (defmacro throw* [etype & args]
   `(throw (new ~etype (smart-str ~@args))))
@@ -1461,7 +1476,7 @@
 
 
 (defn compiled-setval* [path val structure]
-  (compiled-transform* path (fn [_] val) structure))
+  (compiled-transform* path (fast-constantly val) structure))
 
 (defn compiled-replace-in*
   [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
