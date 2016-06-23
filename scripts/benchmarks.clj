@@ -285,3 +285,16 @@
     (reduce conj #{} (traverse ALL data))
     ))
 
+(defn mult-10 [v] (* 10 v))
+
+(let [data [1 2 3 4 5 6 7 8 9]]
+  (run-benchmark "multi-transform vs. consecutive transforms, one shared nav" 300000
+    (->> data (transform [ALL even?] mult-10) (transform [ALL odd?] dec))
+    (multi-transform [ALL (multi-path [even? (terminal mult-10)] [odd? (terminal dec)])] data)
+    ))
+
+(let [data [[1 2 3 4 :a] [5] [6 7 :b 8 9] [10 11 12 13]]]
+  (run-benchmark "multi-transform vs. consecutive transforms, three shared navs" 150000
+    (->> data (transform [ALL ALL number? even?] mult-10) (transform [ALL ALL number? odd?] dec))
+    (multi-transform [ALL ALL number? (multi-path [even? (terminal mult-10)] [odd? (terminal dec)])] data)
+    ))
