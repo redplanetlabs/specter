@@ -226,7 +226,7 @@
    the collected values or the value at the location."
   [p terminal]
   [v]
-  (p (constantly v)))
+  (p (i/fast-constantly v)))
 
 (def
   ^{:doc "Navigate to every element of the collection. For maps navigates to
