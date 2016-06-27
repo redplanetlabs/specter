@@ -536,7 +536,16 @@
         info-sym (gensym "info")
 
         get-cache-code (if (= platform :clj)
-                         `(i/get-cell ~cache-sym)
+                         `(try (i/get-cell ~cache-sym)
+                            (catch ClassCastException e#
+                              (if (bound? (var ~cache-sym))
+                                (throw e#)
+                                (do
+                                  (alter-var-root
+                                    (var ~cache-sym)
+                                    (fn [_#] (i/mutable-cell)))
+                                  nil
+                                  ))))
                          cache-sym
                          )
         add-cache-code (if (= platform :clj)

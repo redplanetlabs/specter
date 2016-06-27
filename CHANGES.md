@@ -18,6 +18,7 @@ transformations with `transform` one after another when the transformations shar
 * Bug fix: END, BEGINNING, FIRST, LAST, and MAP-VALS now work properly on nil
 * Bug fix: ALL and MAP-VALS now maintain the comparator of sorted maps
 * Bug fix: Using value collection along with `setval` no longer throws exception
+* Bug fix: Fix error when trying to use Specter along with AOT compilation
 
 ## 0.11.2
 * Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate ClojureScript compiler warning about reserved keyword
