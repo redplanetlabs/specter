@@ -67,16 +67,19 @@
                           (+ ~PARAMS-IDX-SYM ~num-params)
                           (conj vals# c#)
                           ~structure-sym)                     
-                        ))]
-     (i/->ParamsNeededPath
-       (reify RichNavigator
-         (~'rich-select* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
-           (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
-         (~'rich-transform* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
-           (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
-         )
-       ~num-params
-       )))
+                        ))
+         nav# (reify RichNavigator
+                (~'rich-select* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+                  (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
+                (~'rich-transform* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+                  (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
+                )]
+     (if (= ~num-params 0)
+       (i/no-params-rich-compiled-path nav#)
+       (i/->ParamsNeededPath
+         nav#
+         ~num-params
+         ))))
 
 (defn ^:no-doc pathed-nav* [builder paths-seq latefns-sym pre-bindings post-bindings impls]
   (let [num-params-sym (gensym "num-params")]
@@ -102,7 +105,9 @@
            ret# ~(builder post-bindings num-params-sym impls)
            ]
     (if (not any-params-needed?#)
-      (i/bind-params* ret# nil 0)
+      (if (i/params-needed-path? ret#)
+        (i/bind-params* ret# nil 0)
+        ret#)
       ret#
       ))))
 

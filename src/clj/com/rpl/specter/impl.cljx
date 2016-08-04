@@ -389,6 +389,9 @@
                   (next-fn params2 params-idx2 vals-next structure-next)
                   )))))))))
 
+(defn comp-paths-internalized [path]
+  (capture-params-internally (comp-paths* path)))
+
 (extend-protocol PathComposer
   nil
   (do-comp-paths [o]

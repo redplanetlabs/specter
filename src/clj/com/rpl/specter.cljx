@@ -619,8 +619,8 @@
   ([cond-p then-path]
     (if-path cond-p then-path STOP))
   ([cond-p then-path else-path]
-    (let [then-comp (i/comp-paths* then-path)
-          else-comp (i/comp-paths* else-path)
+    (let [then-comp (i/comp-paths-internalized then-path)
+          else-comp (i/comp-paths-internalized else-path)
           then-needed (i/num-needed-params then-comp)
           else-needed (i/num-needed-params else-comp)
           then-nav (i/extract-rich-nav then-comp)
@@ -651,7 +651,7 @@
               then-needed
               else-nav
               ))))
-        (let [cond-comp (i/comp-paths* cond-p)            
+        (let [cond-comp (i/comp-paths-internalized cond-p)            
               cond-needed (i/num-needed-params cond-comp)]
           (richnav (+ then-needed else-needed cond-needed)
             (select* [this params params-idx vals structure next-fn]
@@ -706,8 +706,8 @@
   ([] STAY)
   ([path] (i/comp-paths* path))
   ([path1 path2]
-    (let [comp1 (i/comp-paths* path1)
-          comp2 (i/comp-paths* path2)
+    (let [comp1 (i/comp-paths-internalized path1)
+          comp2 (i/comp-paths-internalized path2)
           comp1-needed (i/num-needed-params comp1)
           nav1 (i/extract-rich-nav comp1)
           nav2 (i/extract-rich-nav comp2)
