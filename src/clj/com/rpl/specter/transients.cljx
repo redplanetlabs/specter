@@ -8,7 +8,7 @@
         [com.rpl.specter.macros :only
          [defnav
           defpathedfn]])
-  (:require [com.rpl.specter [navs :as n]]
+  (:require [com.rpl.specter.navs :as n]
             [com.rpl.specter :refer [subselect selected?]]))
 
 (defnav

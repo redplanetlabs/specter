@@ -26,7 +26,8 @@
              defnavconstructor]]
     #+clj [com.rpl.specter.util-macros :only [doseqres]]
     )
-  (:require [com.rpl.specter [impl :as i] [navs :as n]]
+  (:require [com.rpl.specter.impl :as i]
+            [com.rpl.specter.navs :as n]
             [clojure.set :as set])
   )
 

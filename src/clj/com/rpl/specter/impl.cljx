@@ -142,8 +142,8 @@
     ))
 
 #+cljs
-(defn exec-select* [this params params-idx vals structure next-fn]
-  (p/select* this params params-idx vals structure next-fn))
+(defn exec-select* [this structure next-fn]
+  (p/select* this structure next-fn))
 
 #+clj
 (defmacro exec-transform* [this & args]
@@ -152,9 +152,8 @@
     ))
 
 #+cljs
-(defn exec-transform* [this params params-idx vals structure next-fn]
-  (p/transform* this params params-idx vals structure next-fn))
-
+(defn exec-transform* [this structure next-fn]
+  (p/transform* this structure next-fn))
 
 (def RichPathExecutor
   (->ExecutorFunctions
@@ -407,7 +406,7 @@
                          (map capture-params-internally))
             combined (->> coerced
                           (map extract-nav)
-                          (partition-by class)
+                          (partition-by type)
                           (map combine-same-types)
                           )
             result-nav (if (= 1 (count combined))

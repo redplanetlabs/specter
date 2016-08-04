@@ -1,8 +1,23 @@
 (ns com.rpl.specter.navs
-  (:use [com.rpl.specter macros]
-        [com.rpl.specter.util-macros :only [doseqres]])
-  (:require [com.rpl.specter [impl :as i]]
-            [clojure [walk :as walk]]
+  #+cljs (:require-macros
+            [com.rpl.specter.macros
+              :refer
+              [pathed-collector
+               variable-pathed-nav
+               fixed-pathed-nav
+               defcollector
+               defnav
+               defpathedfn
+               richnav
+               defnavconstructor
+              ]]
+            [com.rpl.specter.util-macros :refer
+              [doseqres]]
+            )
+  (:use #+clj [com.rpl.specter macros]
+        #+clj [com.rpl.specter.util-macros :only [doseqres]])
+  (:require [com.rpl.specter.impl :as i]
+            [clojure.walk :as walk]
              #+clj [clojure.core.reducers :as r]
              )
   )
