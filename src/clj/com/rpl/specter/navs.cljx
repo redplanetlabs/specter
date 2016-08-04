@@ -307,16 +307,6 @@
       (apply afn (conj vals structure)))
       ))
 
-(defn filter-select [afn structure next-fn]
-  (if (afn structure)
-    (next-fn structure)
-    i/NONE))
-
-(defn filter-transform [afn structure next-fn]
-  (if (afn structure)
-    (next-fn structure)
-    structure))
-
 
 (defprotocol AddExtremes
   (append-all [structure elements])
@@ -456,25 +446,6 @@
         (with-meta ret (meta structure))
         ret
         ))))
-
-
-(def collected?*
-  (i/->ParamsNeededPath
-    (reify i/RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
-        (let [afn (aget ^objects params params-idx)]
-          (if (afn vals)
-            (next-fn params (inc params-idx) vals structure)
-            i/NONE
-            )))
-      (rich-transform* [this params params-idx vals structure next-fn]
-        (let [afn (aget ^objects params params-idx)]
-          (if (afn vals)
-            (next-fn params (inc params-idx) vals structure)
-            structure
-            ))))
-    1
-    ))
 
 (def DISPENSE*
   (i/no-params-rich-compiled-path

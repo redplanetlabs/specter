@@ -137,9 +137,9 @@
   [num-params impl1 impl2]
   (let [[[s-params & s-body] [t-params & t-body]] (determine-params-impls impl1 impl2)
         s-next-fn-sym (last s-params)
-        s-pidx-sym (second s-params)
+        s-pidx-sym (nth s-params 2)
         t-next-fn-sym (last t-params)
-        t-pidx-sym (second t-params)
+        t-pidx-sym (nth t-params 2)
         ]
     `(let [num-params# ~num-params
            nav# (reify RichNavigator

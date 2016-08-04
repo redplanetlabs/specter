@@ -465,12 +465,12 @@
     afn
     (fixed-pathed-nav [late path]
       (select* [this structure next-fn]
-        (n/filter-select
+        (i/filter-select
           #(n/selected?* late %)
           structure
           next-fn))
       (transform* [this structure next-fn]
-        (n/filter-transform
+        (i/filter-transform
           #(n/selected?* late %)
           structure
           next-fn)))))
@@ -480,12 +480,12 @@
     (fn [s] (not (afn s)))
     (fixed-pathed-nav [late path]
       (select* [this structure next-fn]
-        (n/filter-select
+        (i/filter-select
           #(n/not-selected?* late %)
           structure
           next-fn))
       (transform* [this structure next-fn]
-        (n/filter-transform
+        (i/filter-transform
           #(n/not-selected?* late %)
           structure
           next-fn)))))

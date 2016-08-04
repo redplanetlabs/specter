@@ -416,7 +416,9 @@
                          )
             needs-params-paths (filter #(instance? ParamsNeededPath %) coerced)]
         (if (empty? needs-params-paths)
-          (no-params-rich-compiled-path result-nav)
+          (if (satisfies? Navigator result-nav)
+            (lean-compiled-path result-nav)
+            (no-params-rich-compiled-path result-nav))
           (->ParamsNeededPath
             (coerce-rich-navigator result-nav)
             (->> needs-params-paths
@@ -700,6 +702,16 @@
     (bind-params* precompiled params 0)
     ))
 
+(defn filter-select [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    NONE))
+
+(defn filter-transform [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    structure))
+
 (def pred*
   (->ParamsNeededPath
     (reify RichNavigator
@@ -712,6 +724,24 @@
       (rich-transform* [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
+            (next-fn params (inc params-idx) vals structure)
+            structure
+            ))))
+    1
+    ))
+
+(def collected?*
+  (->ParamsNeededPath
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
+            (next-fn params (inc params-idx) vals structure)
+            NONE
+            )))
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
             (next-fn params (inc params-idx) vals structure)
             structure
             ))))
