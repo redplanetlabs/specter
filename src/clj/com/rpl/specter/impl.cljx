@@ -344,7 +344,6 @@
                 (exec-transform* curr structure
                   (fn [structure-next]
                     (exec-transform* next structure-next next-fn)))))))]
-
     (reduce combiner all)))
 
 (defn coerce-rich-navigator [nav]
@@ -1033,7 +1032,7 @@
         m (-> protpath-prot :sigs keys first)
         expected-params (num-needed-params protpath)]
     (doseq [[atype apath] extensions]
-      (let [p (comp-paths* apath)
+      (let [p (comp-paths-internalized apath)
             needed-params (num-needed-params p)
             rich-nav (extract-rich-nav p)
             ]
