@@ -23,18 +23,16 @@
          [[_ t-structure-sym t-next-fn-sym] & transform-body]]
          (determine-params-impls impl1 impl2)]
     (if (= 0 num-params)
-      `(i/no-params-compiled-path
-         (i/->TransformFunctions
-           i/LeanPathExecutor
-           (fn [~s-structure-sym ~s-next-fn-sym]
+      `(i/lean-compiled-path
+         (reify Navigator
+           (~'select* [this# ~s-structure-sym ~s-next-fn-sym]
              ~@select-body)
-           (fn [~t-structure-sym ~t-next-fn-sym]
+           (~'transform* [this# ~t-structure-sym ~t-next-fn-sym]
              ~@transform-body)
            ))
       `(i/->ParamsNeededPath
-         (i/->TransformFunctions
-           i/RichPathExecutor
-           (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
+         (reify i/RichNavigator
+           (~'rich-select* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
              (let [~s-next-fn-sym (fn [structure#]
                                     (next-fn#
                                       ~PARAMS-SYM
@@ -44,7 +42,7 @@
                    ~@bindings]
                ~@select-body
                ))
-           (fn [~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
+           (~'rich-transform* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~t-structure-sym next-fn#]
              (let [~t-next-fn-sym (fn [structure#]
                                     (next-fn#
                                       ~PARAMS-SYM
@@ -68,10 +66,12 @@
                           ~structure-sym)                     
                         ))]
      (i/->ParamsNeededPath
-       (i/->TransformFunctions
-         i/RichPathExecutor
-         collector#
-         collector# )
+       (reify RichNavigator
+         (~'rich-select* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+           (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
+         (~'rich-transform* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#]
+           (collector# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~structure-sym next-fn#))
+         )
        ~num-params
        )))
 
@@ -139,18 +139,17 @@
         t-pidx-sym (second t-params)
         ]
     `(let [num-params# ~num-params
-           tfns# (i/->TransformFunctions
-                   i/RichPathExecutor
-                   (fn ~s-params 
-                     (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
-                       ~@s-body))
-                   (fn ~t-params
-                     (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
-                       ~@t-body))
-                   )]
+           nav# (reify i/RichNavigator
+                  (rich-select* ~s-params 
+                    (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
+                      ~@s-body))
+                  (rich-transform* ~t-params
+                    (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
+                      ~@t-body))
+                  )]
       (if (zero? num-params#)
-        (i/no-params-compiled-path tfns#)
-        (i/->ParamsNeededPath tfns# num-params#)
+        (i/no-params-rich-compiled-path nav#)
+        (i/->ParamsNeededPath nav# num-params#)
         ))))
 
 (defmacro paramsfn [params [structure-sym] & impl]
@@ -239,6 +238,7 @@
 (defn- protpath-sym [name]
   (-> name (str "-prot") symbol))
 
+
 (defmacro defprotocolpath
   "Defines a navigator that chooses the path to take based on the type
    of the value at the current point. May be specified with parameters to
@@ -268,42 +268,28 @@
           ]
       `(do
           (defprotocol ~prot-name (~m [structure#]))
-          (def ~name
-            (if (= ~num-params 0)
-              (i/no-params-compiled-path
-                (i/->TransformFunctions
-                  i/RichPathExecutor
-                  (fn ~rargs
-                    (let [path# ~retrieve
-                          selector# (i/compiled-selector path#)]
-                      (selector# ~@rargs)
-                      ))
-                  (fn ~rargs
-                    (let [path# ~retrieve
-                          transformer# (i/compiled-transformer path#)]
-                      (transformer# ~@rargs)
-                      ))))
-              (i/->ParamsNeededPath
-                (i/->TransformFunctions
-                  i/RichPathExecutor
-                  (fn ~rargs
-                    (let [path# ~retrieve
-                          selector# (i/params-needed-selector path#)]
-                      (selector# ~@rargs)
-                      ))
-                  (fn ~rargs
-                    (let [path# ~retrieve
-                          transformer# (i/params-needed-transformer path#)]
-                      (transformer# ~@rargs)
-                      )))
-                ~num-params
-                )
-              ))))))
+          (let [nav# (reify i/RichNavigator
+                       (~'rich-select* [this# ~@rargs]
+                          (let [inav# ~retrieve]
+                            (i/exec-rich-select* inav# ~@rargs)
+                            ))
+                       (~'rich-transform* [this# ~@rargs]
+                          (let [inav# ~retrieve]
+                            (i/exec-rich-transform* inav# ~@rargs)
+                            )))]
+            (def ~name
+              (if (= ~num-params 0)
+                (i/no-params-rich-compiled-path nav#)
+                (i/->ParamsNeededPath nav# ~num-params)
+                )))))))
+
+
 
 
 (defn ^:no-doc declared-name [name]
   (vary-meta (symbol (str name "-declared"))
              assoc :no-doc true))
+
 
 (defmacro declarepath
   ([name]
@@ -317,32 +303,32 @@
          (declare ~declared)
          (def ~name
            (if (= ~num-params 0)
-             (i/no-params-compiled-path
-               (i/->TransformFunctions
-                i/RichPathExecutor
-                (fn ~rargs
-                  (let [selector# (i/compiled-selector ~declared)]
-                    (selector# ~@rargs)
+             (i/no-params-rich-compiled-path
+               (reify i/RichNavigator
+                (~'rich-select* [this# ~@rargs]
+                  (let [inav# (i/compiled-path-rich-nav ~declared)]
+                    (i/exec-rich-select* inav# ~@rargs)
                     ))
-                (fn ~rargs
-                  (let [transformer# (i/compiled-transformer ~declared)]
-                    (transformer# ~@rargs)
+                (~'rich-transform* [this# ~@rargs]
+                  (let [inav# (i/compiled-path-rich-nav ~declared)]
+                    (i/exec-rich-transform* inav# ~@rargs)
                     ))))
              (i/->ParamsNeededPath
-               (i/->TransformFunctions
-                 i/RichPathExecutor
-                 (fn ~rargs
-                   (let [selector# (i/params-needed-selector ~declared)]
-                     (selector# ~@rargs)
-                     ))
-                 (fn ~rargs
-                   (let [transformer# (i/params-needed-transformer ~declared)]
-                     (transformer# ~@rargs)
-                     )))
+               (reify i/RichNavigator
+                (~'rich-select* [this# ~@rargs]
+                  (let [inav# (i/params-needed-nav ~declared)]
+                    (i/exec-rich-select* inav# ~@rargs)
+                    ))
+                (~'rich-transform* [this# ~@rargs]
+                  (let [inav# (i/params-needed-nav ~declared)]
+                    (i/exec-rich-transform* inav# ~@rargs)
+                    )))
                ~num-params
                )
            ))))))
 
+;;TODO: continue refactoring from here *******
+;;TODO: need to convert to use first-class navigators
 (defmacro providepath [name apath]
   `(let [comped# (i/comp-paths* ~apath)
          expected-params# (i/num-needed-params ~name)
@@ -351,10 +337,8 @@
        (i/throw-illegal "Invalid number of params in provided path, expected "
            expected-params# " but got " needed-params#))
      (def ~(declared-name name)
-       (update-in comped#
-                  [:transform-fns]
-                  i/coerce-tfns-rich)
-       )))
+      (i/coerce-compiled->rich-nav comped#)
+      )))
 
 (defmacro extend-protocolpath
   "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
