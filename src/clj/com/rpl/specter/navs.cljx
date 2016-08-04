@@ -2,7 +2,9 @@
   (:use [com.rpl.specter macros]
         [com.rpl.specter.util-macros :only [doseqres]])
   (:require [com.rpl.specter [impl :as i]]
-            [clojure [walk :as walk]])
+            [clojure [walk :as walk]]
+             #+clj [clojure.core.reducers :as r]
+             )
   )
 
 (defn- append [coll elem]
@@ -12,25 +14,25 @@
   [compiled-path structure]
   (->> structure
        (i/compiled-select-any* compiled-path)
-       (identical? NONE)))
+       (identical? i/NONE)))
 
 (defn selected?*
   [compiled-path structure]
   (not (not-selected?* compiled-path structure)))
 
 (defn walk-select [pred continue-fn structure]
-  (let [ret (i/mutable-cell NONE)
+  (let [ret (i/mutable-cell i/NONE)
         walker (fn this [structure]
                  (if (pred structure)
                    (let [r (continue-fn structure)]
-                     (if-not (identical? r NONE)
-                       (set-cell! ret r))
+                     (if-not (identical? r i/NONE)
+                       (i/set-cell! ret r))
                      r
                      )
                    (walk/walk this identity structure)
                    ))]
     (walker structure)
-    (get-cell ret)
+    (i/get-cell ret)
     ))
 
 (defn key-select [akey structure next-fn]
@@ -41,7 +43,7 @@
   ))
 
 (defn all-select [structure next-fn]
-  (doseqres NONE [e structure]
+  (doseqres i/NONE [e structure]
     (next-fn e)))
 
 #+cljs
@@ -228,16 +230,7 @@
 (defn srange-select [structure start end next-fn]
   (next-fn (-> structure vec (subvec start end))))
 
-(defn srange-transform [structure start end next-fn]
-  (let [structurev (vec structure)
-        newpart (next-fn (-> structurev (subvec start end)))
-        res (concat (subvec structurev 0 start)
-                    newpart
-                    (subvec structurev end (count structure)))]
-    (if (vector? structure)
-      (vec res)
-      res
-      )))
+(def srange-transform i/srange-transform*)
 
 (defn- matching-indices [aseq p]
   (keep-indexed (fn [i e] (if (p e) i)) aseq))
@@ -291,6 +284,7 @@
          next-fn
          )))
 
+
 (defn if-transform [params params-idx vals structure next-fn then-tester then-nav then-params else-nav]
   (let [test? (then-tester structure)
         tran (if test?
@@ -316,24 +310,13 @@
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)
-    NONE))
+    i/NONE))
 
 (defn filter-transform [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)
     structure))
 
-
-
-(defnav PosNavigator [getter updater]
-  (select* [this structure next-fn]
-    (if-not (i/fast-empty? structure)
-      (next-fn (getter structure))
-      NONE))
-  (transform* [this structure next-fn]
-    (if (i/fast-empty? structure)
-      structure
-      (updater structure next-fn))))
 
 (defprotocol AddExtremes
   (append-all [structure elements])
@@ -375,6 +358,16 @@
 
 (defprotocol FastEmpty
   (fast-empty? [s]))
+
+(defnav PosNavigator [getter updater]
+  (select* [this structure next-fn]
+    (if-not (fast-empty? structure)
+      (next-fn (getter structure))
+      i/NONE))
+  (transform* [this structure next-fn]
+    (if (fast-empty? structure)
+      structure
+      (updater structure next-fn))))
 
 (defn- update-first-list [l afn]
   (cons (afn (first l)) (rest l)))
@@ -455,17 +448,11 @@
     (walk/walk (partial walk-until pred on-match-fn) identity structure)
     ))
 
-(defn fn-invocation? [f]
-  (or #+clj  (instance? clojure.lang.Cons f)
-      #+clj  (instance? clojure.lang.LazySeq f)
-      #+cljs (instance? cljs.core.LazySeq f)
-      (list? f)))
-
 (defn codewalk-until [pred on-match-fn structure]
   (if (pred structure)
     (on-match-fn structure)
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (fn-invocation? structure) (fn-invocation? ret))
+      (if (and (i/fn-invocation? structure) (i/fn-invocation? ret))
         (with-meta ret (meta structure))
         ret
         ))))
@@ -478,7 +465,7 @@
         (let [afn (aget ^objects params params-idx)]
           (if (afn vals)
             (next-fn params (inc params-idx) vals structure)
-            NONE
+            i/NONE
             )))
       (rich-transform* [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]

@@ -176,10 +176,10 @@
         needed (i/num-needed-params params-path)]
     (richnav 0
       (select* [this params params-idx vals structure next-fn]
-        (i/exec-rich-select* nav params (- params-idx needed) vals structure next-fn)
+        (i/exec-rich-select* nav params (- params-idx needed) vals structure next-fn))
       (transform* [this params params-idx vals structure next-fn]
         (i/exec-rich-transform* nav params (- params-idx needed) vals structure next-fn)
-        )))))
+        ))))
 
 ;; Built-in pathing and context operations
 
@@ -198,6 +198,7 @@
 (defnav
   ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
   STAY
+  []
   (select* [this structure next-fn]
     (next-fn structure))
   (transform* [this structure next-fn]
@@ -255,13 +256,13 @@
   ^{:doc "Navigate to the last element of the collection. If the collection is
           empty navigation is stopped at this point."}
   LAST
-  (n/PosNavigator i/get-last i/update-last))
+  (n/PosNavigator n/get-last n/update-last))
 
 (def
   ^{:doc "Navigate to the first element of the collection. If the collection is
           empty navigation is stopped at this point."}
   FIRST
-  (n/PosNavigator i/get-first i/update-first))
+  (n/PosNavigator n/get-first n/update-first))
 
 (defnav
   ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
@@ -460,7 +461,7 @@
   will be parameterized in the order of which the parameterized navigators
   were declared."
   [& path]
-  (if-let [afn (i/extract-basic-filter-fn path)]
+  (if-let [afn (n/extract-basic-filter-fn path)]
     afn
     (fixed-pathed-nav [late path]
       (select* [this structure next-fn]
@@ -475,7 +476,7 @@
           next-fn)))))
 
 (defpathedfn not-selected? [& path]
-  (if-let [afn (i/extract-basic-filter-fn path)]
+  (if-let [afn (n/extract-basic-filter-fn path)]
     (fn [s] (not (afn s)))
     (fixed-pathed-nav [late path]
       (select* [this structure next-fn]
@@ -624,10 +625,10 @@
           else-needed (i/num-needed-params else-comp)
           then-nav (i/extract-rich-nav then-comp)
           else-nav (i/extract-rich-nav else-comp)]
-      (if-let [afn (i/extract-basic-filter-fn cond-p)]
+      (if-let [afn (n/extract-basic-filter-fn cond-p)]
         (richnav (+ then-needed else-needed)
           (select* [this params params-idx vals structure next-fn]
-            (i/if-select
+            (n/if-select
               params
               params-idx
               vals
@@ -639,7 +640,7 @@
               else-nav
               ))
           (transform* [this params params-idx vals structure next-fn]
-            (i/if-transform
+            (n/if-transform
               params
               params-idx
               vals
@@ -655,26 +656,26 @@
           (richnav (+ then-needed else-needed cond-needed)
             (select* [this params params-idx vals structure next-fn]
               (let [late-cond (i/parameterize-path cond-comp params params-idx)]
-                (i/if-select
+                (n/if-select
                   params
                   (+ params-idx cond-needed)
                   vals
                   structure
                   next-fn
-                  #(i/selected?* late-cond %)
+                  #(n/selected?* late-cond %)
                   then-nav
                   then-needed
                   else-nav
                   )))
             (transform* [this params params-idx vals structure next-fn]
               (let [late-cond (i/parameterize-path cond-comp params params-idx)]
-                (i/if-transform
+                (n/if-transform
                   params
                   (+ params-idx cond-needed)
                   vals
                   structure
                   next-fn
-                  #(i/selected?* late-cond %)
+                  #(n/selected?* late-cond %)
                   then-nav
                   then-needed
                   else-nav

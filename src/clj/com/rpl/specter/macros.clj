@@ -1,4 +1,6 @@
 (ns com.rpl.specter.macros
+  (:use [com.rpl.specter.protocols :only [Navigator]]
+        [com.rpl.specter.impl :only [RichNavigator]])
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as cljwalk])
   )
@@ -8,14 +10,14 @@
 
 (defn ^:no-doc determine-params-impls [[name1 & impl1] [name2 & impl2]]
   (if-not (= #{name1 name2} #{'select* 'transform*})
-    (i/throw-illegal "defpath must implement select* and transform*, instead got "
+    (i/throw-illegal "defnav must implement select* and transform*, instead got "
       name1 " and " name2))
   (if (= name1 'select*)
     [impl1 impl2]
     [impl2 impl1]))
 
 
-(def ^:no-doc PARAMS-SYM (vary-meta (gensym "params") assoc :tag 'objects))
+(def ^:no-doc PARAMS-SYM (gensym "params"))
 (def ^:no-doc PARAMS-IDX-SYM (gensym "params-idx"))
 
 (defn ^:no-doc paramsnav* [bindings num-params [impl1 impl2]]
@@ -31,7 +33,7 @@
              ~@transform-body)
            ))
       `(i/->ParamsNeededPath
-         (reify i/RichNavigator
+         (reify RichNavigator
            (~'rich-select* [this# ~PARAMS-SYM ~PARAMS-IDX-SYM vals# ~s-structure-sym next-fn#]
              (let [~s-next-fn-sym (fn [structure#]
                                     (next-fn#
@@ -51,7 +53,8 @@
                                       structure#))
                    ~@bindings]
                ~@transform-body
-               )))
+               ))
+           )
          ~num-params
          ))))
 
@@ -107,8 +110,8 @@
   (->> params
        (map-indexed
          (fn [i p]
-           [p `(aget ~PARAMS-SYM
-                     (+ ~PARAMS-IDX-SYM ~i))]
+           [p `(i/object-aget ~PARAMS-SYM
+                              (+ ~PARAMS-IDX-SYM ~i))]
            ))
        (apply concat)))
 
@@ -139,11 +142,11 @@
         t-pidx-sym (second t-params)
         ]
     `(let [num-params# ~num-params
-           nav# (reify i/RichNavigator
-                  (rich-select* ~s-params 
+           nav# (reify RichNavigator
+                  (~'rich-select* ~s-params 
                     (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
                       ~@s-body))
-                  (rich-transform* ~t-params
+                  (~'rich-transform* ~t-params
                     (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
                       ~@t-body))
                   )]
@@ -268,7 +271,7 @@
           ]
       `(do
           (defprotocol ~prot-name (~m [structure#]))
-          (let [nav# (reify i/RichNavigator
+          (let [nav# (reify RichNavigator
                        (~'rich-select* [this# ~@rargs]
                           (let [inav# ~retrieve]
                             (i/exec-rich-select* inav# ~@rargs)
@@ -304,7 +307,7 @@
          (def ~name
            (if (= ~num-params 0)
              (i/no-params-rich-compiled-path
-               (reify i/RichNavigator
+               (reify RichNavigator
                 (~'rich-select* [this# ~@rargs]
                   (let [inav# (i/compiled-path-rich-nav ~declared)]
                     (i/exec-rich-select* inav# ~@rargs)
@@ -314,7 +317,7 @@
                     (i/exec-rich-transform* inav# ~@rargs)
                     ))))
              (i/->ParamsNeededPath
-               (reify i/RichNavigator
+               (reify RichNavigator
                 (~'rich-select* [this# ~@rargs]
                   (let [inav# (i/params-needed-nav ~declared)]
                     (i/exec-rich-select* inav# ~@rargs)

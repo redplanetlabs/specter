@@ -10,7 +10,6 @@
         #+clj [com.rpl.specter.util-macros :only [doseqres]]
 )
   (:require [com.rpl.specter.protocols :as p]
-            #+clj [clojure.core.reducers :as r]
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             #+clj [riddley.walk :as riddley]
@@ -33,6 +32,9 @@
 
 (defn smart-str [& elems]
   (apply str (map smart-str* elems)))
+
+(defn object-aget [^objects a i]
+  (aget a i))
 
 (defn fast-constantly [v]
   (fn ([] v)
@@ -115,7 +117,7 @@
 
 #+clj
 (defmacro exec-rich-select* [this & args]
-  (let [hinted (with-meta this {:tag com.rpl.specter.impl.RichNavigator})]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
     `(.rich-select* ~hinted ~@args)
     ))
 
@@ -125,7 +127,7 @@
 
 #+clj
 (defmacro exec-rich-transform* [this & args]
-  (let [hinted (with-meta this {:tag com.rpl.specter.impl.RichNavigator})]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
     `(.rich-transform* ~hinted ~@args)
     ))
 
@@ -135,7 +137,7 @@
 
 #+clj
 (defmacro exec-select* [this & args]
-  (let [hinted (with-meta this {:tag com.rpl.specter.protocols.Navigator})]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
     `(.select* ~hinted ~@args)
     ))
 
@@ -145,7 +147,7 @@
 
 #+clj
 (defmacro exec-transform* [this & args]
-  (let [hinted (with-meta this {:tag com.rpl.specter.protocols.Navigator})]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
     `(.transform* ~hinted ~@args)
     ))
 
@@ -157,7 +159,7 @@
 (def RichPathExecutor
   (->ExecutorFunctions
     (fn [^ParameterizedRichNav richnavp result-fn structure]
-      (exec-rich-select* (.-rich-nav nav)
+      (exec-rich-select* (.-rich-nav richnavp)
         (.-params richnavp) (.-params-idx richnavp)
         [] structure
         (fn [_ _ vals structure]
@@ -166,7 +168,7 @@
               structure
               (conj vals structure))))))
     (fn [^ParameterizedRichNav richnavp transform-fn structure]
-      (exec-rich-transform* (.-rich-nav nav)
+      (exec-rich-transform* (.-rich-nav richnavp)
         (.-params richnavp) (.-params-idx richnavp)
         [] structure
         (fn [_ _ vals structure]
@@ -315,7 +317,7 @@
     (coerce-object this)))
 
 
-(defn- combine-same-types [n & _ :as all]]
+(defn- combine-same-types [[n & _ :as all]]
   (let [combiner
         (if (satisfies? RichNavigator n)
           (fn [curr next]
@@ -348,14 +350,13 @@
 (defn coerce-rich-navigator [nav]
   (if (satisfies? RichNavigator nav)
     nav
-    (let [nav]
-      (reify RichNavigator
-        (rich-select* [this params params-idx vals structure next-fn]
-          (exec-select* nav structure (fn [structure] (next-fn params params-idx vals structure)))
-          )
-        (rich-transform* [this params params-idx vals structure next-fn]
-          (exec-transform* nav structure (fn [structure] (next-fn params params-idx vals structure)))
-          )))))
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (exec-select* nav structure (fn [structure] (next-fn params params-idx vals structure)))
+        )
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (exec-transform* nav structure (fn [structure] (next-fn params params-idx vals structure)))
+        ))))
 
 (defn extract-rich-nav [p]
   (coerce-rich-navigator (extract-nav p)))
@@ -365,14 +366,14 @@
     (not (instance? CompiledPath path))
     path
 
-    (instance? Navigator (:nav path))
+    (satisfies? Navigator (:nav path))
     path
     
     :else
-    (let [prich-nav (:nav path)
-          rich-nav (:rich-nav prich-nav)
-          params (:params prich-nav)
-          params-idx (:params-idx prich-nav)]
+    (let [^ParameterizedRichNav prich-nav (:nav path)
+          rich-nav (.-rich-nav prich-nav)
+          params (.-params prich-nav)
+          params-idx (.-params-idx prich-nav)]
       (if (empty? params)
         path
         (no-params-rich-compiled-path
@@ -591,7 +592,7 @@
 (defn compiled-transform*
   [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
   (let [nav (.-nav path)
-        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
+        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors path)]
     ((.-transform-executor ex) nav transform-fn structure)
     ))
 
@@ -617,8 +618,11 @@
         path
         ))))
 
-;;TODO: continue from here
-
+(defn fn-invocation? [f]
+  (or #+clj  (instance? clojure.lang.Cons f)
+      #+clj  (instance? clojure.lang.LazySeq f)
+      #+cljs (instance? cljs.core.LazySeq f)
+      (list? f)))
 
 (defrecord LayeredNav [underlying])
 
@@ -746,6 +750,17 @@
     1
     ))
 
+(defn srange-transform* [structure start end next-fn]
+  (let [structurev (vec structure)
+        newpart (next-fn (-> structurev (subvec start end)))
+        res (concat (subvec structurev 0 start)
+                    newpart
+                    (subvec structurev end (count structure)))]
+    (if (vector? structure)
+      (vec res)
+      res
+      )))
+
 (defn- variadic-arglist? [al]
   (contains? (set al) '&))
 
@@ -761,7 +776,7 @@
     (when-not ret
       (throw-illegal "Invalid # arguments at " code))
     (if (variadic-arglist? ret)
-      (srange-transform ret (- len 2) len
+      (srange-transform* ret (- len 2) len
         (fn [_] (repeatedly (- c (- len 2)) gensym)))
       ret
       )))
