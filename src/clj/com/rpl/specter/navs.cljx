@@ -18,6 +18,7 @@
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]
              #+clj [clojure.core.reducers :as r]
+            [com.rpl.specter.defnavhelpers] ; so that for cljs it's loaded as macros expand to this
              )
   )
 
