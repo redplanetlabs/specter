@@ -91,16 +91,6 @@
 (defn intern* [ns name val]
   (throw-illegal "intern not supported in ClojureScript"))
 
-;; so that macros.clj compiles appropriately when
-;; run in cljs (this code isn't called in that case)
-#+cljs
-(defn gen-uuid-str []
-  (throw-illegal "Cannot get UUID in Javascript"))
-
-#+clj
-(defn gen-uuid-str []
-  (str (java.util.UUID/randomUUID)))
-
 (defn benchmark [iters afn]
   (time
    (dotimes [_ iters]
@@ -123,7 +113,7 @@
 
 #+cljs
 (defn exec-rich-select* [this params params-idx vals structure next-fn]
-  (rich-select* this params params-idx vals structure next-fn))
+  (rich-select* ^not-native this params params-idx vals structure next-fn))
 
 #+clj
 (defmacro exec-rich-transform* [this & args]
@@ -133,7 +123,7 @@
 
 #+cljs
 (defn exec-rich-transform* [this params params-idx vals structure next-fn]
-  (rich-select* this params params-idx vals structure next-fn))
+  (rich-transform* ^not-native this params params-idx vals structure next-fn))
 
 #+clj
 (defmacro exec-select* [this & args]
@@ -143,7 +133,7 @@
 
 #+cljs
 (defn exec-select* [this structure next-fn]
-  (p/select* this structure next-fn))
+  (p/select* ^not-native this structure next-fn))
 
 #+clj
 (defmacro exec-transform* [this & args]
@@ -153,7 +143,7 @@
 
 #+cljs
 (defn exec-transform* [this structure next-fn]
-  (p/transform* this structure next-fn))
+  (p/transform* ^not-native this structure next-fn))
 
 (def RichPathExecutor
   (->ExecutorFunctions

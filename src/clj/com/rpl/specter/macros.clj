@@ -303,49 +303,40 @@
   ([name]
     `(declarepath ~name []))
   ([name params]
-    (let [num-params (count params)
+    (let [platform (if (contains? &env :locals) :cljs :clj)
+          select-exec (if (= platform :clj)
+                        `i/exec-rich-select*
+                        `i/rich-select*)
+          transform-exec (if (= platform :clj)
+                           `i/exec-rich-transform*
+                           `i/rich-transform*)
+          num-params (count params)
           declared (declared-name name)
           rargs [(gensym "params") (gensym "pidx") (gensym "vals")
                  (gensym "structure") (gensym "next-fn")]]
       `(do
          (declare ~declared)
          (def ~name
-           (if (= ~num-params 0)
-             (i/no-params-rich-compiled-path
-               (reify RichNavigator
-                (~'rich-select* [this# ~@rargs]
-                  (let [inav# (i/compiled-path-rich-nav ~declared)]
-                    (i/exec-rich-select* inav# ~@rargs)
-                    ))
-                (~'rich-transform* [this# ~@rargs]
-                  (let [inav# (i/compiled-path-rich-nav ~declared)]
-                    (i/exec-rich-transform* inav# ~@rargs)
-                    ))))
-             (i/->ParamsNeededPath
-               (reify RichNavigator
-                (~'rich-select* [this# ~@rargs]
-                  (let [inav# (i/params-needed-nav ~declared)]
-                    (i/exec-rich-select* inav# ~@rargs)
-                    ))
-                (~'rich-transform* [this# ~@rargs]
-                  (let [inav# (i/params-needed-nav ~declared)]
-                    (i/exec-rich-transform* inav# ~@rargs)
-                    )))
-               ~num-params
-               )
-           ))))))
+           (let [nav# (reify RichNavigator
+                        (~'rich-select* [this# ~@rargs]
+                          (~select-exec ~declared ~@rargs))
+                        (~'rich-transform* [this# ~@rargs]
+                          (~transform-exec ~declared ~@rargs)
+                          ))]
+             (if (= ~num-params 0)
+               (i/no-params-rich-compiled-path nav#)
+               (i/->ParamsNeededPath nav# ~num-params)
+               )))))))
 
-;;TODO: continue refactoring from here *******
-;;TODO: need to convert to use first-class navigators
 (defmacro providepath [name apath]
-  `(let [comped# (i/comp-paths* ~apath)
+  `(let [comped# (i/comp-paths-internalized ~apath)
          expected-params# (i/num-needed-params ~name)
          needed-params# (i/num-needed-params comped#)]
      (if-not (= needed-params# expected-params#)
        (i/throw-illegal "Invalid number of params in provided path, expected "
            expected-params# " but got " needed-params#))
      (def ~(declared-name name)
-      (i/coerce-compiled->rich-nav comped#)
+      (i/extract-rich-nav (i/coerce-compiled->rich-nav comped#))
       )))
 
 (defmacro extend-protocolpath
