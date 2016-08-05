@@ -12,7 +12,7 @@ Example 1: Append a sequence of elements to a nested vector
 (def data {:a [1 2 3]})
 
 ;; Manual Clojure
-(update data :a (fn [v] (reduce conj v [4 5])))
+(update data :a (fn [v] (into (if v v []) [4 5])))
 
 ;; Specter
 (setval [:a END] [4 5] data)
