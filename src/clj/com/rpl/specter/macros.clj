@@ -109,7 +109,7 @@
         `(let [num-params# ~num-params-code
                cfn# (fn [~params-sym ~params-idx-sym vals# ~structure-sym next-fn#]
                       (let [~@binding-declarations]
-                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body) ~structure-sym))
+                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body)) ~structure-sym)
                         ))]
           (reify RichNavigator
             (~'rich-select* [this# params# params-idx# vals# structure# next-fn#]
@@ -218,14 +218,20 @@
   are required, then the result is executable."
   [bindings & body]
   (fixed-pathed-operation bindings
-    (fn [runtime-bindings _ total-params-sym]
-      `(i/->ParamsNeededPath
-        (collector-with-bindings ~total-params-sym
-                                 ~runtime-bindings
-                                 ~@body
-                                 )
-        ~total-params-sym
-        ))))
+    (fn [runtime-bindings compiled-syms total-params-sym]
+      (let [late-syms (map first (partition 2 bindings))
+            lean-bindings (mapcat vector late-syms compiled-syms)]
+        `(if (zero? ~total-params-sym)
+           (let [~@lean-bindings]
+             (i/no-params-rich-compiled-path
+               (collector-with-bindings 0 [] ~@body)))
+           (i/->ParamsNeededPath
+            (collector-with-bindings ~total-params-sym
+                                     ~runtime-bindings
+                                     ~@body
+                                     )
+            ~total-params-sym
+            ))))))
 
 (defmacro paramsfn [params [structure-sym] & impl]
   `(nav ~params
