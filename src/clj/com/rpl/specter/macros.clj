@@ -53,10 +53,10 @@
         binding-fn-syms (gensyms (count bindings))
         binding-syms (map first bindings)
         fn-exprs (map second bindings)
-        binding-fn-declarations (map vector binding-fn-syms fn-exprs)
-        binding-declarations (map (fn [s f] `[s (f ~params-sym ~params-idx-sym)])
-                                  binding-syms
-                                  binding-fn-syms)
+        binding-fn-declarations (vec (mapcat vector binding-fn-syms fn-exprs))
+        binding-declarations (vec (mapcat (fn [s f] [s `(~f ~params-sym ~params-idx-sym)])
+                                          binding-syms
+                                          binding-fn-syms))
         body (op-maker binding-declarations)]
     `(let [~@binding-fn-declarations]
        ~body
@@ -65,7 +65,7 @@
 (defmacro rich-nav-with-bindings [num-params-code bindings & impls]
   (let [[[[_ s-structure-sym s-next-fn-sym] & s-body]
          [[_ t-structure-sym t-next-fn-sym] & t-body]]
-        (determine-params-impls impl1 impl2)
+        (apply determine-params-impls impls)
         params-sym (gensym "params")
         params-idx-sym (gensym "params-idx")
         ]
@@ -97,7 +97,7 @@
               ))
           )))))
 
-(defmacro collector-with-bindings [bindings impl]
+(defmacro collector-with-bindings [num-params-code bindings impl]
   (let [[_ [_ structure-sym] & body] impl
         params-sym (gensym "params")
         params-idx-sym (gensym "params")]
@@ -106,9 +106,11 @@
       params-sym
       params-idx-sym
       (fn [binding-declarations]
-        `(let [cfn# (fn [params# params-idx# vals# ~structure-sym next-fn#]
-                     (next-fn# params# params-idx# (conj vals# (do ~@body) ~structure-sym))
-                     )]
+        `(let [num-params# ~num-params-code
+               cfn# (fn [~params-sym ~params-idx-sym vals# ~structure-sym next-fn#]
+                      (let [~@binding-declarations]
+                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body) ~structure-sym))
+                        ))]
           (reify RichNavigator
             (~'rich-select* [this# params# params-idx# vals# structure# next-fn#]
               (cfn# params# params-idx# vals# structure# next-fn#))
@@ -118,7 +120,7 @@
 
 (defn- delta-param-bindings [params]
   (->> params
-       (map (fn [i p] [p `(dnh/param-delta ~i)]))
+       (map-indexed (fn [i p] [p `(dnh/param-delta ~i)]))
        (apply concat)
        vec
        ))
@@ -147,17 +149,17 @@
   that needed parameters (in the order in which they were declared).
   "
   [params body]
-  `(let [rich-nav (collector-with-bindings ~(count params)
+  `(let [rich-nav# (collector-with-bindings ~(count params)
                                            ~(delta-param-bindings params)
-                                           ~impl-body
+                                           ~body
                                            )]
      (if ~(empty? params)
-       (i/no-params-rich-compiled-path rich-nav)
+       (i/no-params-rich-compiled-path rich-nav#)
        (i/->ParamsNeededPath
          ; (fn ~params
          ;   (collector-with-bindings 0
          ;     ~impl-body))
-         rich-nav
+         rich-nav#
          ~(count params))
          )))
 
@@ -169,7 +171,7 @@
         compiled-syms (vec (gensyms (count bindings)))
         runtime-bindings (vec (mapcat
                                (fn [l c d]
-                                 `[~l (dfn/bound-params ~c ~d)]
+                                 `[~l (dnh/bound-params ~c ~d)]
                                  )
                                late-path-syms
                                compiled-syms
@@ -197,9 +199,9 @@
             lean-bindings (mapcat vector late-syms compiled-syms)]
         `(if (zero? ~total-params-sym)
            (let [~@lean-bindings]
-             (i/lean-compiled-path (lean-nav* ~@body))
+             (i/lean-compiled-path (lean-nav* ~@impls))
              )
-           (->ParamsNeededPath
+           (i/->ParamsNeededPath
             (rich-nav-with-bindings ~total-params-sym
                                     ~runtime-bindings
                                     ~@impls
@@ -217,7 +219,7 @@
   [bindings & body]
   (fixed-pathed-operation bindings
     (fn [runtime-bindings _ total-params-sym]
-      `(->ParamsNeededPath
+      `(i/->ParamsNeededPath
         (collector-with-bindings ~total-params-sym
                                  ~runtime-bindings
                                  ~@body

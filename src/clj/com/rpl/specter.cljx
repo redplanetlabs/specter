@@ -2,8 +2,7 @@
   #+cljs (:require-macros
             [com.rpl.specter.macros
               :refer
-              [pathed-collector
-               variable-pathed-nav
+              [fixed-pathed-collector
                fixed-pathed-nav
                defcollector
                defnav
@@ -16,8 +15,7 @@
             )
   (:use [com.rpl.specter.protocols :only [ImplicitNav]]
     #+clj [com.rpl.specter.macros :only
-            [pathed-collector
-             variable-pathed-nav
+            [fixed-pathed-collector
              fixed-pathed-nav
              defcollector
              defnav
@@ -41,7 +39,7 @@
   (i/comp-paths* (vec apath)))
 
 (def ^{:doc "Mandate that operations that do inline path factoring and compilation
-             (select/transform/setval/replace-in/path/etc.) must succeed in 
+             (select/transform/setval/replace-in/path/etc.) must succeed in
              factoring the path into static and dynamic portions. If not, an
              error will be thrown and the reasons for not being able to factor
              will be printed. Defaults to false, and `(must-cache-paths! false)`
@@ -138,7 +136,7 @@
 (defn multi-transform*
   "Just like `transform` but expects transform functions to be specified
    inline in the path using `terminal`. Error is thrown if navigation finishes
-   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is 
+   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is
    the `multi-transform` equivalent of `setval`."
   [path structure]
   (compiled-multi-transform (i/comp-paths* path) structure))
@@ -185,7 +183,7 @@
 ;; Built-in pathing and context operations
 
 (defnav
-  ^{:doc "Stops navigation at this point. For selection returns nothing and for 
+  ^{:doc "Stops navigation at this point. For selection returns nothing and for
           transformation returns the structure unchanged"}
   STOP
   []
@@ -236,7 +234,7 @@
     (n/all-transform structure next-fn)))
 
 (defnav
-  ^{:doc "Navigate to each value of the map. This is more efficient than 
+  ^{:doc "Navigate to each value of the map. This is more efficient than
           navigating via [ALL LAST]"}
   MAP-VALS
   []
@@ -324,7 +322,7 @@
     (let [to-append (next-fn [])]
       (n/append-all structure to-append)
       )))
-  
+
 (defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
           In a transform, that subset in the original set is changed to the
@@ -431,8 +429,8 @@
     ))
 
 (defnav
-  ^{:doc "Navigate to the result of running `parse-fn` on the value. For 
-          transforms, the transformed value then has `unparse-fn` run on 
+  ^{:doc "Navigate to the result of running `parse-fn` on the value. For
+          transforms, the transformed value then has `unparse-fn` run on
           it to get the final value at this point."}
   parser
   [parse-fn unparse-fn]
@@ -582,7 +580,7 @@
           current value to the collected vals."}
   collect
   [& path]
-  (pathed-collector [late path]
+  (fixed-pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select late structure)
       )))
@@ -592,7 +590,7 @@
           current value to the collected vals."}
   collect-one
   [& path]
-  (pathed-collector [late path]
+  (fixed-pathed-collector [late path]
     (collect-val [this structure]
       (compiled-select-one late structure)
       )))
@@ -652,7 +650,7 @@
               then-needed
               else-nav
               ))))
-        (let [cond-comp (i/comp-paths-internalized cond-p)            
+        (let [cond-comp (i/comp-paths-internalized cond-p)
               cond-needed (i/num-needed-params cond-comp)]
           (richnav (+ then-needed else-needed cond-needed)
             (select* [this params params-idx vals structure next-fn]

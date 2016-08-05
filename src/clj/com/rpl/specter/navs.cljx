@@ -2,8 +2,7 @@
   #+cljs (:require-macros
             [com.rpl.specter.macros
               :refer
-              [pathed-collector
-               variable-pathed-nav
+              [fixed-pathed-collector
                fixed-pathed-nav
                defcollector
                defnav
@@ -169,7 +168,7 @@
 
   #+cljs
   default
-  #+cljs 
+  #+cljs
   (all-transform [structure next-fn]
     (let [empty-structure (empty structure)]
       (if (and (list? empty-structure) (not (queue? empty-structure)))
@@ -469,5 +468,3 @@
         (next-fn params params-idx [] structure))
       (rich-transform* [this params params-idx vals structure next-fn]
         (next-fn params params-idx [] structure)))))
-
-
