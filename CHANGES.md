@@ -1,4 +1,4 @@
-## 0.12.0 (unreleased)
+## 0.12.0
 
 * BREAKING CHANGE: Changed semantics of `Navigator` protocol `select*` in order to enable very large performance improvements to `select`, `select-one`, `select-first`, and `select-one!`. Custom navigators will need to be updated to conform to the new required semantics. Codebases that do not use custom navigators do not require any changes. See the docstring on the protocol for the details. 
 * Added `select-any` operation which selects a single element navigated to by the path. Which element returned is undefined. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
