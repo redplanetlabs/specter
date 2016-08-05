@@ -45,10 +45,10 @@
          (i/->ParamsNeededPath nav# num-params#)
          ))))
 
-(defmacro lean-nav* [& impls]
+(defmacro ^:no-doc lean-nav* [& impls]
   `(reify Navigator ~@impls))
 
-(defn operation-with-bindings [bindings params-sym params-idx-sym op-maker]
+(defn ^:no-doc operation-with-bindings [bindings params-sym params-idx-sym op-maker]
   (let [bindings (partition 2 bindings)
         binding-fn-syms (gensyms (count bindings))
         binding-syms (map first bindings)
@@ -62,7 +62,7 @@
        ~body
        )))
 
-(defmacro rich-nav-with-bindings [num-params-code bindings & impls]
+(defmacro ^:no-doc rich-nav-with-bindings [num-params-code bindings & impls]
   (let [[[[_ s-structure-sym s-next-fn-sym] & s-body]
          [[_ t-structure-sym t-next-fn-sym] & t-body]]
         (apply determine-params-impls impls)
@@ -97,7 +97,7 @@
               ))
           )))))
 
-(defmacro collector-with-bindings [num-params-code bindings impl]
+(defmacro ^:no-doc collector-with-bindings [num-params-code bindings impl]
   (let [[_ [_ structure-sym] & body] impl
         params-sym (gensym "params")
         params-idx-sym (gensym "params")]
@@ -133,14 +133,19 @@
   [params & impls]
   (if (empty? params)
     `(i/lean-compiled-path (lean-nav* ~@impls))
-    `(i/->ParamsNeededPath
-      ;(fn ~params (lean-nav* ~@body))
-      (rich-nav-with-bindings ~(count params)
-          ~(delta-param-bindings params)
-          ~@impls
-          )
-      ~(count params)
-      )))
+    `(vary-meta
+      (fn ~params (i/lean-compiled-path (lean-nav* ~@impls)))
+      assoc
+      :highernav
+      {:type :lean
+       :params-needed-path
+       (i/->ParamsNeededPath
+        (rich-nav-with-bindings ~(count params)
+                               ~(delta-param-bindings params)
+                               ~@impls
+                               )
+       ~(count params))}
+       )))
 
 (defmacro collector
   "Defines a Collector with late bound parameters. This collector can be precompiled
@@ -155,13 +160,20 @@
                                            )]
      (if ~(empty? params)
        (i/no-params-rich-compiled-path rich-nav#)
-       (i/->ParamsNeededPath
-         ; (fn ~params
-         ;   (collector-with-bindings 0
-         ;     ~impl-body))
-         rich-nav#
-         ~(count params))
-         )))
+       (vary-meta
+         (fn ~params
+           (i/no-params-rich-compiled-path
+             (collector-with-bindings 0 []
+                ~body)))
+         assoc
+         :highernav
+         {:type :rich
+          :params-needed-path
+          (i/->ParamsNeededPath
+           rich-nav#
+           ~(count params)
+           )}
+         ))))
 
 (defn ^:no-doc fixed-pathed-operation [bindings op-maker]
   (let [bindings (partition 2 bindings)
@@ -413,7 +425,8 @@
        (vary-meta
         (let [~csym (i/layered-wrapper ~anav)]
           (fn ~@checked-code))
-        assoc :layerednav true))
+        assoc :layerednav (or (-> ~anav meta :highernav :type) :rich)
+        ))
     ))
 
 

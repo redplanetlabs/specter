@@ -64,7 +64,7 @@
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args))))
 
-;; need to get the expansion function like this so that 
+;; need to get the expansion function like this so that
 ;; this code compiles in a clojure environment where cljs.analyzer
 ;; namespace does not exist
 #+clj
@@ -221,7 +221,7 @@
                  p11 p12 p13 p14 p15 p16 p17 p18 p19 p20
                  rest]
     (let [a (object-array
-              (concat 
+              (concat
                 [p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
                 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20]
                 rest))]
@@ -263,8 +263,12 @@
        empty?
        not))
 
+(defn root-params-nav? [o]
+  (and (fn? o) (-> o meta :highernav)))
+
 (defn- coerce-object [this]
-  (cond (satisfies? p/ImplicitNav this) (p/implicit-nav this)
+  (cond (root-params-nav? this) (-> this meta :highernav :params-needed-path)
+        (satisfies? p/ImplicitNav this) (p/implicit-nav this)
         :else (throw-illegal "Not a navigator: " this)
     ))
 
@@ -300,7 +304,7 @@
   #+cljs cljs.core/LazySeq
   #+cljs (coerce-path [this]
            (coerce-path (vec this)))
-  
+
   #+clj Object #+cljs default
   (coerce-path [this]
     (coerce-object this)))
@@ -356,7 +360,7 @@
 
     (satisfies? Navigator (:nav path))
     path
-    
+
     :else
     (let [^ParameterizedRichNav prich-nav (:nav path)
           rich-nav (.-rich-nav prich-nav)
@@ -482,7 +486,7 @@
   (.-traverse-executor ex))
 
 
-;; amazingly doing this as a macro shows a big effect in the 
+;; amazingly doing this as a macro shows a big effect in the
 ;; benchmark for getting a value out of a nested map
 #+clj
 (defmacro compiled-traverse* [path result-fn structure]
@@ -626,8 +630,9 @@
 
 (defn verify-layerable! [anav]
   (if-not
-    (and (instance? ParamsNeededPath anav)
-         (> (:num-needed-params anav) 0))
+    (or (root-params-nav? anav)
+        (and (instance? ParamsNeededPath anav)
+             (> (:num-needed-params anav) 0)))
     (throw-illegal "defnavconstructor must be used on a navigator defined with
       defnav with at least one parameter")
     ))
@@ -771,6 +776,30 @@
     1
     ))
 
+(def lean-compiled-path-proxy
+  (->ParamsNeededPath
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (let [^CompiledPath apath (aget ^objects params params-idx)
+              ^Navigator nav (.-nav apath)]
+          (exec-select*
+            nav
+            structure
+            (fn [structure-next]
+              (next-fn params params-idx vals structure-next))
+            )))
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (let [^CompiledPath apath (aget ^objects params params-idx)
+              ^Navigator nav (.-nav apath)]
+          (exec-transform*
+            nav
+            structure
+            (fn [structure-next]
+              (next-fn params params-idx vals structure-next))
+            ))))
+    1
+    ))
+
 (defn srange-transform* [structure start end next-fn]
   (let [structurev (vec structure)
         newpart (next-fn (-> structurev (subvec start end)))
@@ -851,14 +880,14 @@
             (if (-> v meta :dynamic)
               (magic-fail! "Var " (:sym op) " is dynamic")
               (cond
-                (instance? ParamsNeededPath vv)
+                (or (root-params-nav? vv) (instance? ParamsNeededPath vv))
                 ;;TODO: if all params are constants, then just bind the path right here
                 ;;otherwise, add the params
                 ;;  - could extend this to see if it contains nested function calls which
                 ;;    are only on constants
                 (do
                   (swap! params-atom #(vec (concat % ps)))
-                  vv
+                  (coerce-path vv)
                   )
 
                 (and (fn? vv) (-> v meta :pathedfn))
@@ -899,9 +928,12 @@
 
                 (and (fn? vv) (-> vv meta :layerednav))
                 (do
+                  ;;TODO: if all args are constant then invoke it right here
                   (swap! params-atom conj (:code p))
-                  rich-compiled-path-proxy
-                  )
+                  (if (= (-> vv meta :layerednav) :lean)
+                    lean-compiled-path-proxy
+                    rich-compiled-path-proxy
+                    ))
 
                 :else
                 (magic-fail! "Var " (:sym op) " must be either a parameterized "
