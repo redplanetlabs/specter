@@ -1,4 +1,3 @@
 language: clojure
 script:
-  - lein cljx
   - lein test
