@@ -6,12 +6,10 @@
             [com.rpl.specter.util-macros :refer [doseqres]]
             )
   (:use [com.rpl.specter.protocols :only
-          [select* transform* collect-val]]
+          [select* transform* collect-val Navigator]]
         #+clj [com.rpl.specter.util-macros :only [doseqres]]
 )
   (:require [com.rpl.specter.protocols :as p]
-            [clojure.walk :as walk]
-            #+clj [clojure.core.reducers :as r]
             [clojure.string :as s]
             #+clj [com.rpl.specter.defhelpers :as dh]
             #+clj [riddley.walk :as riddley]
@@ -34,6 +32,9 @@
 
 (defn smart-str [& elems]
   (apply str (map smart-str* elems)))
+
+(defn object-aget [^objects a i]
+  (aget a i))
 
 (defn fast-constantly [v]
   (fn ([] v)
@@ -63,7 +64,7 @@
 (defn throw-illegal [& args]
   (throw (js/Error. (apply str args))))
 
-;; need to get the expansion function like this so that 
+;; need to get the expansion function like this so that
 ;; this code compiles in a clojure environment where cljs.analyzer
 ;; namespace does not exist
 #+clj
@@ -90,35 +91,75 @@
 (defn intern* [ns name val]
   (throw-illegal "intern not supported in ClojureScript"))
 
-;; so that macros.clj compiles appropriately when
-;; run in cljs (this code isn't called in that case)
-#+cljs
-(defn gen-uuid-str []
-  (throw-illegal "Cannot get UUID in Javascript"))
-
-#+clj
-(defn gen-uuid-str []
-  (str (java.util.UUID/randomUUID)))
-
 (defn benchmark [iters afn]
   (time
    (dotimes [_ iters]
      (afn))))
 
-(deftype ExecutorFunctions [type traverse-executor transform-executor])
+(deftype ExecutorFunctions [traverse-executor transform-executor])
+
+(deftype ParameterizedRichNav [rich-nav params params-idx])
+
+(defprotocol RichNavigator
+  (rich-select* [this params params-idx vals structure next-fn])
+  (rich-transform* [this params params-idx vals structure next-fn])
+  )
+
+#+clj
+(defmacro exec-rich-select* [this & args]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
+    `(.rich-select* ~hinted ~@args)
+    ))
+
+#+cljs
+(defn exec-rich-select* [this params params-idx vals structure next-fn]
+  (rich-select* ^not-native this params params-idx vals structure next-fn))
+
+#+clj
+(defmacro exec-rich-transform* [this & args]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
+    `(.rich-transform* ~hinted ~@args)
+    ))
+
+#+cljs
+(defn exec-rich-transform* [this params params-idx vals structure next-fn]
+  (rich-transform* ^not-native this params params-idx vals structure next-fn))
+
+#+clj
+(defmacro exec-select* [this & args]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
+    `(.select* ~hinted ~@args)
+    ))
+
+#+cljs
+(defn exec-select* [this structure next-fn]
+  (p/select* ^not-native this structure next-fn))
+
+#+clj
+(defmacro exec-transform* [this & args]
+  (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
+    `(.transform* ~hinted ~@args)
+    ))
+
+#+cljs
+(defn exec-transform* [this structure next-fn]
+  (p/transform* ^not-native this structure next-fn))
 
 (def RichPathExecutor
   (->ExecutorFunctions
-    :richpath
-    (fn [params params-idx selector result-fn structure]
-      (selector params params-idx [] structure
+    (fn [^ParameterizedRichNav richnavp result-fn structure]
+      (exec-rich-select* (.-rich-nav richnavp)
+        (.-params richnavp) (.-params-idx richnavp)
+        [] structure
         (fn [_ _ vals structure]
           (result-fn
             (if (identical? vals [])
               structure
               (conj vals structure))))))
-    (fn [params params-idx transformer transform-fn structure]
-      (transformer params params-idx [] structure
+    (fn [^ParameterizedRichNav richnavp transform-fn structure]
+      (exec-rich-transform* (.-rich-nav richnavp)
+        (.-params richnavp) (.-params-idx richnavp)
+        [] structure
         (fn [_ _ vals structure]
           (if (identical? [] vals)
             (transform-fn structure)
@@ -127,22 +168,28 @@
 
 (def LeanPathExecutor
   (->ExecutorFunctions
-    :leanpath
-    (fn [params params-idx selector result-fn structure]
-      (selector structure result-fn))
-    (fn [params params-idx transformer transform-fn structure]
-      (transformer structure transform-fn))
+    (fn [nav result-fn structure]
+      (exec-select* nav structure result-fn))
+    (fn [nav transform-fn structure]
+      (exec-transform* nav structure transform-fn))
     ))
 
-(defrecord TransformFunctions [executors selector transformer])
-
-(defrecord CompiledPath [transform-fns params params-idx])
+(defrecord CompiledPath [executors nav])
 
 (defn compiled-path? [o]
   (instance? CompiledPath o))
 
-(defn no-params-compiled-path [transform-fns]
-  (->CompiledPath transform-fns nil 0))
+(defn no-params-rich-compiled-path [rich-nav]
+  (->CompiledPath
+    RichPathExecutor
+    (->ParameterizedRichNav
+      rich-nav
+      nil
+      0
+      )))
+
+(defn lean-compiled-path [nav]
+  (->CompiledPath LeanPathExecutor nav))
 
 
 (declare bind-params*)
@@ -174,7 +221,7 @@
                  p11 p12 p13 p14 p15 p16 p17 p18 p19 p20
                  rest]
     (let [a (object-array
-              (concat 
+              (concat
                 [p01 p02 p03 p04 p05 p06 p07 p08 p09 p10
                 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20]
                 rest))]
@@ -184,11 +231,24 @@
 (defn params-needed-path? [o]
   (instance? ParamsNeededPath o))
 
+(defn extract-nav [p]
+  (if (params-needed-path? p)
+    (.-rich-nav ^ParamsNeededPath p)
+    (let [n (.-nav ^CompiledPath p)]
+      (if (instance? ParameterizedRichNav n)
+        (.-rich-nav ^ParameterizedRichNav n)
+        n
+        ))))
+
+
 (defn bind-params* [^ParamsNeededPath params-needed-path params idx]
   (->CompiledPath
-    (.-transform-fns params-needed-path)
-    params
-    idx))
+    RichPathExecutor
+    (->ParameterizedRichNav
+      (.-rich-nav params-needed-path)
+      params
+      idx
+      )))
 
 (defprotocol PathComposer
   (do-comp-paths [paths]))
@@ -203,93 +263,22 @@
        empty?
        not))
 
-(defn no-prot-error-str [obj]
-  (str "Protocol implementation cannot be found for object.
-        Extending Specter protocols should not be done inline in a deftype definition
-        because that prevents Specter from finding the protocol implementations for
-        optimized performance. Instead, you should extend the protocols via an
-        explicit extend-protocol call. \n" obj))
+(defn root-params-nav? [o]
+  (and (fn? o) (-> o meta :highernav)))
 
-#+clj
-(defn find-protocol-impl! [prot obj]
-  (let [ret (find-protocol-impl prot obj)]
-    (if (= ret obj)
-      (throw-illegal (no-prot-error-str obj))
-      ret
-      )))
-
-#+clj
-(defn structure-path-impl [this]
-  (if (fn? this)
-    ;;TODO: this isn't kosher, it uses knowledge of internals of protocols
-    (-> p/Navigator :impls (get clojure.lang.AFn))
-    (find-protocol-impl! p/Navigator this)))
-
-#+clj
-(defn collector-impl [this]
-  (find-protocol-impl! p/Collector this))
-
-
-#+cljs
-(defn structure-path-impl [obj]
-  {:select* (mk-optimized-invocation p/Navigator obj select* 2)
-   :transform* (mk-optimized-invocation p/Navigator obj transform* 2)
-   })
-
-#+cljs
-(defn collector-impl [obj]
-  {:collect-val (mk-optimized-invocation p/Collector obj collect-val 1)
-   })
-
-(defn coerce-collector [this]
-  (let [cfn (->> this
-                 collector-impl
-                 :collect-val
-                 )
-        afn (fn [params params-idx vals structure next-fn]
-              (next-fn params params-idx (conj vals (cfn this structure)) structure)
-              )]
-    (no-params-compiled-path
-      (->TransformFunctions RichPathExecutor afn afn)
-      )))
-
-
-(defn coerce-structure-path [this]
-  (let [pimpl (structure-path-impl this)
-        selector (:select* pimpl)
-        transformer (:transform* pimpl)]
-    (no-params-compiled-path
-      (->TransformFunctions
-        LeanPathExecutor
-        (fn [structure next-fn]
-          (selector this structure next-fn))
-        (fn [structure next-fn]
-          (transformer this structure next-fn)))
-      )))
-
-(defn coerce-structure-path-rich [this]
-  (let [pimpl (structure-path-impl this)
-        selector (:select* pimpl)
-        transformer (:transform* pimpl)]
-    (no-params-compiled-path
-      (->TransformFunctions
-        RichPathExecutor
-        (fn [params params-idx vals structure next-fn]
-          (selector this structure (fn [structure] (next-fn params params-idx vals structure))))
-        (fn [params params-idx vals structure next-fn]
-          (transformer this structure (fn [structure] (next-fn params params-idx vals structure)))))
-      )))
-
-(defn structure-path? [obj]
-  (or (fn? obj) (satisfies? p/Navigator obj)))
+(defn- coerce-object [this]
+  (cond (root-params-nav? this) (-> this meta :highernav :params-needed-path)
+        (satisfies? p/ImplicitNav this) (p/implicit-nav this)
+        :else (throw-illegal "Not a navigator: " this)
+    ))
 
 (defprotocol CoercePath
   (coerce-path [this]))
 
 (extend-protocol CoercePath
-  nil ; needs its own path because it doesn't count as an Object
+  nil ; needs its own coercer because it doesn't count as an Object
   (coerce-path [this]
-    (coerce-structure-path nil))
+    (coerce-object this))
 
   CompiledPath
   (coerce-path [this]
@@ -298,7 +287,7 @@
   ParamsNeededPath
   (coerce-path [this]
     this)
-  
+
   #+clj java.util.List #+cljs cljs.core/PersistentVector
   (coerce-path [this]
     (do-comp-paths this))
@@ -315,113 +304,118 @@
   #+cljs cljs.core/LazySeq
   #+cljs (coerce-path [this]
            (coerce-path (vec this)))
-  
+
   #+clj Object #+cljs default
   (coerce-path [this]
-    (cond (structure-path? this) (coerce-structure-path this)
-          (satisfies? p/Collector this) (coerce-collector this)
-          :else (throw-illegal (no-prot-error-str this))
-      )))
+    (coerce-object this)))
 
 
-(defn extype [^TransformFunctions f]
-  (let [^ExecutorFunctions exs (.-executors f)]
-    (.-type exs)
-    ))
-
-(defn- combine-same-types [[^TransformFunctions f & _ :as all]]
-  (let [^ExecutorFunctions exs (.-executors f)
-
-        t (.-type exs)
-
-        combiner
-        (if (= t :richpath)
+(defn- combine-same-types [[n & _ :as all]]
+  (let [combiner
+        (if (satisfies? RichNavigator n)
           (fn [curr next]
-            (fn [params params-idx vals structure next-fn]
-              (curr params params-idx vals structure
-                    (fn [params-next params-idx-next vals-next structure-next]
-                      (next params-next params-idx-next vals-next structure-next next-fn)
-                      ))))
+            (reify RichNavigator
+              (rich-select* [this params params-idx vals structure next-fn]
+                (exec-rich-select* curr params params-idx vals structure
+                  (fn [params-next params-idx-next vals-next structure-next]
+                    (exec-rich-select* next params-next params-idx-next
+                      vals-next structure-next next-fn)
+                    )))
+              (rich-transform* [this params params-idx vals structure next-fn]
+                (exec-rich-transform* curr params params-idx vals structure
+                  (fn [params-next params-idx-next vals-next structure-next]
+                    (exec-rich-transform* next params-next params-idx-next
+                      vals-next structure-next next-fn)
+                    )))))
           (fn [curr next]
-            (fn [structure next-fn]
-              (curr structure (fn [structure] (next structure next-fn)))))
-          )]
+            (reify Navigator
+              (select* [this structure next-fn]
+                (exec-select* curr structure
+                  (fn [structure-next]
+                    (exec-select* next structure-next next-fn))))
+              (transform* [this structure next-fn]
+                (exec-transform* curr structure
+                  (fn [structure-next]
+                    (exec-transform* next structure-next next-fn)))))))]
+    (reduce combiner all)))
 
-    (reduce (fn [^TransformFunctions curr ^TransformFunctions next]
-              (->TransformFunctions
-               exs
-               (combiner (.-selector curr) (.-selector next))
-               (combiner (.-transformer curr) (.-transformer next))
-               ))
-            all)))
-
-(defn coerce-tfns-rich [^TransformFunctions tfns]
-  (if (= (extype tfns) :richpath)
-    tfns
-    (let [selector (.-selector tfns)
-          transformer (.-transformer tfns)]
-      (->TransformFunctions
-        RichPathExecutor
-        (fn [params params-idx vals structure next-fn]
-          (selector structure (fn [structure] (next-fn params params-idx vals structure))))
-        (fn [params params-idx vals structure next-fn]
-          (transformer structure (fn [structure] (next-fn params params-idx vals structure))))
+(defn coerce-rich-navigator [nav]
+  (if (satisfies? RichNavigator nav)
+    nav
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (exec-select* nav structure (fn [structure] (next-fn params params-idx vals structure)))
+        )
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (exec-transform* nav structure (fn [structure] (next-fn params params-idx vals structure)))
         ))))
 
+(defn extract-rich-nav [p]
+  (coerce-rich-navigator (extract-nav p)))
+
 (defn capture-params-internally [path]
-  (if-not (instance? CompiledPath path)
+  (cond
+    (not (instance? CompiledPath path))
     path
-    (let [params (:params path)
-          params-idx (:params-idx path)
-          selector (-> path :transform-fns :selector)
-          transformer (-> path :transform-fns :transformer)]
+
+    (satisfies? Navigator (:nav path))
+    path
+
+    :else
+    (let [^ParameterizedRichNav prich-nav (:nav path)
+          rich-nav (.-rich-nav prich-nav)
+          params (.-params prich-nav)
+          params-idx (.-params-idx prich-nav)]
       (if (empty? params)
         path
-        (no-params-compiled-path
-          (->TransformFunctions
-            RichPathExecutor
-            (fn [x-params x-params-idx vals structure next-fn]
-              (selector params params-idx vals structure
+        (no-params-rich-compiled-path
+          (reify RichNavigator
+            (rich-select* [this params2 params-idx2 vals structure next-fn]
+              (exec-rich-select* rich-nav params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
-                  (next-fn x-params x-params-idx vals-next structure-next)
+                  (next-fn params2 params-idx2 vals-next structure-next)
                   )))
-            (fn [x-params x-params-idx vals structure next-fn]
-              (transformer params params-idx vals structure
+            (rich-transform* [this params2 params-idx2 vals structure next-fn]
+              (exec-rich-transform* rich-nav params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
-                  (next-fn x-params x-params-idx vals-next structure-next)
-                  ))))
-          )))))
+                  (next-fn params2 params-idx2 vals-next structure-next)
+                  )))))))))
+
+(defn comp-paths-internalized [path]
+  (capture-params-internally (comp-paths* path)))
 
 (extend-protocol PathComposer
   nil
-  (do-comp-paths [sp]
-    (coerce-path sp))
+  (do-comp-paths [o]
+    (coerce-path o))
   #+clj Object #+cljs default
-  (do-comp-paths [sp]
-    (coerce-path sp))
+  (do-comp-paths [o]
+    (coerce-path o))
   #+clj java.util.List #+cljs cljs.core/PersistentVector
-  (do-comp-paths [structure-paths]
-    (if (empty? structure-paths)
+  (do-comp-paths [navigators]
+    (if (empty? navigators)
       (coerce-path nil)
-      (let [coerced (->> structure-paths
+      (let [coerced (->> navigators
                          (map coerce-path)
                          (map capture-params-internally))
             combined (->> coerced
-                          (map :transform-fns)
-                          (partition-by extype)
+                          (map extract-nav)
+                          (partition-by type)
                           (map combine-same-types)
                           )
-            result-tfn (if (= 1 (count combined))
+            result-nav (if (= 1 (count combined))
                          (first combined)
                          (->> combined
-                              (map coerce-tfns-rich)
+                              (map coerce-rich-navigator)
                               combine-same-types)
                          )
             needs-params-paths (filter #(instance? ParamsNeededPath %) coerced)]
         (if (empty? needs-params-paths)
-          (no-params-compiled-path result-tfn)
+          (if (satisfies? Navigator result-nav)
+            (lean-compiled-path result-nav)
+            (no-params-rich-compiled-path result-nav))
           (->ParamsNeededPath
-            (coerce-tfns-rich result-tfn)
+            (coerce-rich-navigator result-nav)
             (->> needs-params-paths
                  (map :num-needed-params)
                  (reduce +))
@@ -479,214 +473,37 @@
     (set-cell! cell ret)
     ret))
 
-(defn- append [coll elem]
-  (-> coll vec (conj elem)))
-
-(defprotocol AddExtremes
-  (append-all [structure elements])
-  (prepend-all [structure elements]))
-
-(extend-protocol AddExtremes
-  nil
-  (append-all [_ elements]
-    elements)
-  (prepend-all [_ elements]
-    elements)
-
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
-  (append-all [structure elements]
-    (reduce conj structure elements))
-  (prepend-all [structure elements]
-    (let [ret (transient [])]
-      (as-> ret <>
-            (reduce conj! <> elements)
-            (reduce conj! <> structure)
-            (persistent! <>)
-            )))
-
-  #+clj Object #+cljs default
-  (append-all [structure elements]
-    (concat structure elements))
-  (prepend-all [structure elements]
-    (concat elements structure))
-  )
 
 
-(defprotocol UpdateExtremes
-  (update-first [s afn])
-  (update-last [s afn]))
+(defn compiled-nav-field [^CompiledPath p]
+  (.-nav p))
 
-(defprotocol GetExtremes
-  (get-first [s])
-  (get-last [s]))
+(defn compiled-executors-field [^CompiledPath p]
+  (.-executors p))
 
-(defprotocol FastEmpty
-  (fast-empty? [s]))
-
-(defn- update-first-list [l afn]
-  (cons (afn (first l)) (rest l)))
-
-(defn- update-last-list [l afn]
-  (append (butlast l) (afn (last l))))
-
-#+clj
-(defn vec-count [^clojure.lang.IPersistentVector v]
-  (.length v))
-
-#+cljs
-(defn vec-count [v]
-  (count v))
-
-#+clj
-(defn transient-vec-count [^clojure.lang.ITransientVector v]
-  (.count v))
-
-#+cljs
-(defn transient-vec-count [v]
-  (count v))
-
-(extend-protocol UpdateExtremes
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
-  (update-first [v afn]
-    (let [val (nth v 0)]
-      (assoc v 0 (afn val))
-      ))
-  (update-last [v afn]
-    ;; type-hinting vec-count to ^int caused weird errors with case
-    (let [c (int (vec-count v))]
-      (case c
-        1 (let [[e] v] [(afn e)])
-        2 (let [[e1 e2] v] [e1 (afn e2)])
-        (let [i (dec c)]
-          (assoc v i (afn (nth v i)))
-          ))))
-  #+clj Object #+cljs default
-  (update-first [l val]
-    (update-first-list l val))
-  (update-last [l val]
-    (update-last-list l val)
-    ))
-
-(extend-protocol GetExtremes
-  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
-  (get-first [v]
-    (nth v 0))
-  (get-last [v]
-    (peek v))
-  #+clj Object #+cljs default
-  (get-first [s]
-    (first s))
-  (get-last [s]
-    (last s)
-    ))
-
-
-(extend-protocol FastEmpty
-  nil
-  (fast-empty? [_] true)
-
-  #+clj clojure.lang.IPersistentVector #+cljs cljs.core/PersistentVector
-  (fast-empty? [v]
-    (= 0 (vec-count v)))
-  #+clj clojure.lang.ITransientVector #+cljs cljs.core/TransientVector
-  (fast-empty? [v]
-    (= 0 (transient-vec-count v)))
-  #+clj Object #+cljs default
-  (fast-empty? [s]
-    (empty? s))
-  )
-
-(defn walk-until [pred on-match-fn structure]
-  (if (pred structure)
-    (on-match-fn structure)
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)
-    ))
-
-(defn fn-invocation? [f]
-  (or #+clj  (instance? clojure.lang.Cons f)
-      #+clj  (instance? clojure.lang.LazySeq f)
-      #+cljs (instance? cljs.core.LazySeq f)
-      (list? f)))
-
-(defn codewalk-until [pred on-match-fn structure]
-  (if (pred structure)
-    (on-match-fn structure)
-    (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (fn-invocation? structure) (fn-invocation? ret))
-        (with-meta ret (meta structure))
-        ret
-        ))))
-
-
-(def collected?*
-  (->ParamsNeededPath
-    (->TransformFunctions
-      RichPathExecutor
-      (fn [params params-idx vals structure next-fn]
-        (let [afn (aget ^objects params params-idx)]
-          (if (afn vals)
-            (next-fn params (inc params-idx) vals structure)
-            NONE
-            )))
-      (fn [params params-idx vals structure next-fn]
-        (let [afn (aget ^objects params params-idx)]
-          (if (afn vals)
-            (next-fn params (inc params-idx) vals structure)
-            structure
-            ))))
-    1
-    ))
-
-(def DISPENSE*
-  (no-params-compiled-path
-    (->TransformFunctions
-      RichPathExecutor
-      (fn [params params-idx vals structure next-fn]
-        (next-fn params params-idx [] structure))
-      (fn [params params-idx vals structure next-fn]
-        (next-fn params params-idx [] structure))
-      )))
-
-(defn transform-fns-field [^CompiledPath path]
-  (.-transform-fns path))
-
-(defn executors-field [^TransformFunctions tfns]
-  (.-executors tfns))
 
 (defn traverse-executor-field [^ExecutorFunctions ex]
   (.-traverse-executor ex))
 
-(defn params-field [^CompiledPath path]
-  (.-params path))
 
-(defn params-idx-field [^CompiledPath path]
-  (.-params-idx path))
-
-(defn selector-field [^TransformFunctions tfns]
-  (.-selector tfns))
-
-;; amazingly doing this as a macro shows a big effect in the 
+;; amazingly doing this as a macro shows a big effect in the
 ;; benchmark for getting a value out of a nested map
 #+clj
 (defmacro compiled-traverse* [path result-fn structure]
-  `(let [tfns# (transform-fns-field ~path)
-         ex# (executors-field tfns#)]
+  `(let [nav# (compiled-nav-field ~path)
+         ex# (compiled-executors-field ~path)]
     ((traverse-executor-field ex#)
-      (params-field ~path)
-      (params-idx-field ~path)
-      (selector-field tfns#)
+      nav#
       ~result-fn
       ~structure)
     ))
 
 #+cljs
 (defn compiled-traverse* [path result-fn structure]
-  (let [tfns (transform-fns-field path)
-        ex (executors-field tfns)]
+  (let [nav (compiled-nav-field path)
+        ex (compiled-executors-field path)]
     ((traverse-executor-field ex)
-      (params-field path)
-      (params-idx-field path)
-      (selector-field tfns)
+      nav
       result-fn
       structure)
     ))
@@ -771,385 +588,38 @@
 
 (defn compiled-transform*
   [^com.rpl.specter.impl.CompiledPath path transform-fn structure]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)
-        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors tfns)]
-    ((.-transform-executor ex) (.-params path) (.-params-idx path) (.-transformer tfns) transform-fn structure)
+  (let [nav (.-nav path)
+        ^com.rpl.specter.impl.ExecutorFunctions ex (.-executors path)]
+    ((.-transform-executor ex) nav transform-fn structure)
     ))
 
-(defn not-selected?*
-  [compiled-path structure]
-  (->> structure
-       (compiled-select-any* compiled-path)
-       (identical? NONE)))
 
-(defn selected?*
-  [compiled-path structure]
-  (not (not-selected?* compiled-path structure)))
+(defn params-needed-nav
+  ^com.rpl.specter.impl.RichNavigator
+  [^com.rpl.specter.impl.ParamsNeededPath path]
+  (.-rich-nav path))
 
-(defn walk-select [pred continue-fn structure]
-  (let [ret (mutable-cell NONE)
-        walker (fn this [structure]
-                 (if (pred structure)
-                   (let [r (continue-fn structure)]
-                     (if-not (identical? r NONE)
-                       (set-cell! ret r))
-                     r
-                     )
-                   (walk/walk this identity structure)
-                   ))]
-    (walker structure)
-    (get-cell ret)
+(defn compiled-path-rich-nav
+  ^com.rpl.specter.impl.RichNavigator
+  [^com.rpl.specter.impl.CompiledPath path]
+  (let [^com.rpl.specter.impl.ParameterizedRichNav pr (.-nav path)]
+    (.-rich-nav pr)
     ))
 
-(defn key-select [akey structure next-fn]
-  (next-fn (get structure akey)))
-
-(defn key-transform [akey structure next-fn]
-  (assoc structure akey (next-fn (get structure akey))
-  ))
-
-(defn all-select [structure next-fn]
-  (doseqres NONE [e structure]
-    (next-fn e)))
-
-#+cljs
-(defn queue? [coll]
-  (= (type coll) (type #queue [])))
-
-#+clj
-(defn queue? [coll]
-  (instance? clojure.lang.PersistentQueue coll))
-
-(defprotocol AllTransformProtocol
-  (all-transform [structure next-fn]))
-
-(defn- non-transient-map-all-transform [structure next-fn empty-map]
-  (reduce-kv
-    (fn [m k v]
-      (let [[newk newv] (next-fn [k v])]
-        (assoc m newk newv)
-        ))
-    empty-map
-    structure
-    ))
-
-(extend-protocol AllTransformProtocol
-  nil
-  (all-transform [structure next-fn]
-    nil
-    )
-
-  ;; in cljs they're PersistentVector so don't need a special case
-  #+clj clojure.lang.MapEntry
-  #+clj
-  (all-transform [structure next-fn]
-    (let [newk (next-fn (key structure))
-          newv (next-fn (val structure))]
-      (clojure.lang.MapEntry. newk newv)
-      ))
-
-  #+clj clojure.lang.PersistentVector #+cljs cljs.core/PersistentVector
-  (all-transform [structure next-fn]
-    (mapv next-fn structure))
-
-  #+clj
-  clojure.lang.PersistentArrayMap
-  #+clj
-  (all-transform [structure next-fn]
-    (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)]
-      (loop [ret {}]
-        (if (.hasNext k-it)
-          (let [k (.next k-it)
-                v (.next v-it)
-                [newk newv] (next-fn [k v])]
-            (recur (assoc ret newk newv)))
-          ret
-          ))))
-
-  #+cljs
-  cljs.core/PersistentArrayMap
-  #+cljs
-  (all-transform [structure next-fn]
-    (non-transient-map-all-transform structure next-fn {})
-    )
-
-  #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
-  (all-transform [structure next-fn]
-    (non-transient-map-all-transform structure next-fn (empty structure))
-    )
-
-  #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
-  (all-transform [structure next-fn]
-    (persistent!
-      (reduce-kv
-        (fn [m k v]
-          (let [[newk newv] (next-fn [k v])]
-            (assoc! m newk newv)
-            ))
-        (transient
-          #+clj clojure.lang.PersistentHashMap/EMPTY #+cljs cljs.core.PersistentHashMap.EMPTY
-          )
-        structure
-        )))
-
-
-  #+clj
-  Object
-  #+clj
-  (all-transform [structure next-fn]
-    (let [empty-structure (empty structure)]
-      (cond (and (list? empty-structure) (not (queue? empty-structure)))
-            ;; this is done to maintain order, otherwise lists get reversed
-            (doall (map next-fn structure))
-
-            (map? structure)
-            ;; reduce-kv is much faster than doing r/map through call to (into ...)
-            (reduce-kv
-              (fn [m k v]
-                (let [[newk newv] (next-fn [k v])]
-                  (assoc m newk newv)
-                  ))
-              empty-structure
-              structure
-              )
-
-            :else
-            (->> structure (r/map next-fn) (into empty-structure))
-        )))
-
-  #+cljs
-  default
-  #+cljs 
-  (all-transform [structure next-fn]
-    (let [empty-structure (empty structure)]
-      (if (and (list? empty-structure) (not (queue? empty-structure)))
-        ;; this is done to maintain order, otherwise lists get reversed
-        (doall (map next-fn structure))
-        (into empty-structure (map #(next-fn %)) structure)
-        )))
-  )
-
-(deftype AllNavigator [])
-
-(extend-protocol p/Navigator
-  AllNavigator
-  (select* [this structure next-fn]
-    (all-select structure next-fn))
-  (transform* [this structure next-fn]
-    (all-transform structure next-fn)))
-
-(defprotocol MapValsTransformProtocol
-  (map-vals-transform [structure next-fn]))
-
-(defn map-vals-non-transient-transform [structure empty-map next-fn]
-  (reduce-kv
-    (fn [m k v]
-      (assoc m k (next-fn v)))
-    empty-map
-    structure))
-
-(extend-protocol MapValsTransformProtocol
-  nil
-  (map-vals-transform [structure next-fn]
-    nil
-    )
-
-  #+clj
-  clojure.lang.PersistentArrayMap
-  #+clj
-  (map-vals-transform [structure next-fn]
-    (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)]
-      (loop [ret {}]
-        (if (.hasNext k-it)
-          (let [k (.next k-it)
-                v (.next v-it)]
-            (recur (assoc ret k (next-fn v))))
-          ret
-          ))))
-
-  #+cljs
-  cljs.core/PersistentArrayMap
-  #+cljs
-  (map-vals-transform [structure next-fn]
-    (map-vals-non-transient-transform structure {} next-fn)
-    )
-
-  #+clj clojure.lang.PersistentTreeMap #+cljs cljs.core/PersistentTreeMap
-  (map-vals-transform [structure next-fn]
-    (map-vals-non-transient-transform structure (empty structure) next-fn)
-    )
-
-  #+clj clojure.lang.PersistentHashMap #+cljs cljs.core/PersistentHashMap
-  (map-vals-transform [structure next-fn]
-    (persistent!
-      (reduce-kv
-        (fn [m k v]
-          (assoc! m k (next-fn v)))
-        (transient
-          #+clj clojure.lang.PersistentHashMap/EMPTY #+cljs cljs.core.PersistentHashMap.EMPTY
-          )
-        structure
-        )))
-
-  #+clj Object #+cljs default
-  (map-vals-transform [structure next-fn]
-    (reduce-kv
-      (fn [m k v]
-        (assoc m k (next-fn v)))
-      (empty structure)
-      structure))
-  )
-
-
-(deftype ValCollect [])
-
-(extend-protocol p/Collector
-  ValCollect
-  (collect-val [this structure]
-    structure))
-
-(deftype PosNavigator [getter updater])
-
-(extend-protocol p/Navigator
-  PosNavigator
-  (select* [this structure next-fn]
-    (if-not (fast-empty? structure)
-      (next-fn ((.-getter this) structure))
-      NONE))
-  (transform* [this structure next-fn]
-    (if (fast-empty? structure)
-      structure
-      ((.-updater this) structure next-fn))))
-
-(defn srange-select [structure start end next-fn]
-  (next-fn (-> structure vec (subvec start end))))
-
-(defn srange-transform [structure start end next-fn]
-  (let [structurev (vec structure)
-        newpart (next-fn (-> structurev (subvec start end)))
-        res (concat (subvec structurev 0 start)
-                    newpart
-                    (subvec structurev end (count structure)))]
-    (if (vector? structure)
-      (vec res)
-      res
-      )))
-
-(defn- matching-indices [aseq p]
-  (keep-indexed (fn [i e] (if (p e) i)) aseq))
-
-(defn matching-ranges [aseq p]
-  (first
-    (reduce
-      (fn [[ranges curr-start curr-last :as curr] i]
-        (cond
-          (nil? curr-start)
-          [ranges i i]
-
-          (= i (inc curr-last))
-          [ranges curr-start i]
-
-          :else
-          [(conj ranges [curr-start (inc curr-last)]) i i]
-          ))
-      [[] nil nil]
-      (concat (matching-indices aseq p) [-1])
-    )))
-
-(extend-protocol p/Navigator
-  nil
-  (select* [this structure next-fn]
-    (next-fn structure))
-  (transform* [this structure next-fn]
-    (next-fn structure)
-    ))
-
-(deftype TransientEndNavigator [])
-
-(extend-protocol p/Navigator
-  TransientEndNavigator
-  (select* [this structure next-fn]
-    (next-fn []))
-  (transform* [this structure next-fn]
-    (let [res (next-fn [])]
-      (reduce conj! structure res))))
-
-(defn extract-basic-filter-fn [path]
-  (cond (fn? path)
+(defn coerce-compiled->rich-nav [path]
+  (if (instance? ParamsNeededPath path)
+    path
+    (let [nav (.-nav ^CompiledPath path)]
+      (if (satisfies? Navigator nav)
+        (no-params-rich-compiled-path (coerce-rich-navigator nav))
         path
+        ))))
 
-        (and (coll? path)
-             (every? fn? path))
-        (reduce
-          (fn [combined afn]
-            (fn [structure]
-              (and (combined structure) (afn structure))
-              ))
-          path
-          )))
-
-
-
-(defn if-select [params params-idx vals structure next-fn then-tester then-s then-params else-s]
-  (let [test? (then-tester structure)
-        sel (if test?
-              then-s
-              else-s)
-        idx (if test? params-idx (+ params-idx then-params))]
-    (sel params
-         idx
-         vals
-         structure
-         next-fn
-         )))
-
-(defn if-transform [params params-idx vals structure next-fn then-tester then-t then-params else-t]
-  (let [test? (then-tester structure)
-        tran (if test?
-               then-t
-               else-t)
-        idx (if test? params-idx (+ params-idx then-params))]
-    (tran params
-          idx
-          vals
-          structure
-          next-fn
-          )))
-
-(defn terminal* [params params-idx vals structure]
-  (let [afn (aget ^objects params params-idx)]
-    (if (identical? vals [])
-      (afn structure)
-      (apply afn (conj vals structure)))
-      ))
-
-(defn filter-select [afn structure next-fn]
-  (if (afn structure)
-    (next-fn structure)
-    NONE))
-
-(defn filter-transform [afn structure next-fn]
-  (if (afn structure)
-    (next-fn structure)
-    structure))
-
-(defn compiled-selector [^com.rpl.specter.impl.CompiledPath path]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
-    (.-selector tfns)))
-
-(defn compiled-transformer [^com.rpl.specter.impl.CompiledPath path]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
-    (.-transformer tfns)))
-
-(defn params-needed-selector [^com.rpl.specter.impl.ParamsNeededPath path]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
-    (.-selector tfns)))
-
-(defn params-needed-transformer [^com.rpl.specter.impl.ParamsNeededPath path]
-  (let [^com.rpl.specter.impl.TransformFunctions tfns (.-transform-fns path)]
-      (.-transformer tfns)))
+(defn fn-invocation? [f]
+  (or #+clj  (instance? clojure.lang.Cons f)
+      #+clj  (instance? clojure.lang.LazySeq f)
+      #+cljs (instance? cljs.core.LazySeq f)
+      (list? f)))
 
 (defrecord LayeredNav [underlying])
 
@@ -1160,8 +630,9 @@
 
 (defn verify-layerable! [anav]
   (if-not
-    (and (instance? ParamsNeededPath anav)
-         (> (:num-needed-params anav) 0))
+    (or (root-params-nav? anav)
+        (and (instance? ParamsNeededPath anav)
+             (> (:num-needed-params anav) 0)))
     (throw-illegal "defnavconstructor must be used on a navigator defined with
       defnav with at least one parameter")
     ))
@@ -1206,6 +677,18 @@
   ([] (must-cache-paths! true))
   ([v] (set-cell! MUST-CACHE-PATHS v)))
 
+(defn constant-node? [node]
+  (cond (record? node) false
+        (number? node) true
+        (keyword? node) true
+        (string? node) true
+        (vector? node) (every? constant-node? node)
+        (set? node) (every? constant-node? node)
+        (map? node) (and (every? constant-node? (vals node))
+                         (every? constant-node? (keys node)))
+        :else false
+    ))
+
 (defn- extract-original-code [p]
   (cond
     (instance? LocalSym p) (:sym p)
@@ -1216,8 +699,7 @@
     ))
 
 (defn- valid-navigator? [v]
-  (or (structure-path? v)
-      (satisfies? p/Collector v)
+  (or (satisfies? p/ImplicitNav v)
       (instance? CompiledPath v)))
 
 #+cljs
@@ -1228,17 +710,26 @@
     (bind-params* precompiled params 0)
     ))
 
+(defn filter-select [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    NONE))
+
+(defn filter-transform [afn structure next-fn]
+  (if (afn structure)
+    (next-fn structure)
+    structure))
+
 (def pred*
   (->ParamsNeededPath
-    (->TransformFunctions
-      RichPathExecutor
-      (fn [params params-idx vals structure next-fn]
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
             (next-fn params (inc params-idx) vals structure)
             NONE
             )))
-      (fn [params params-idx vals structure next-fn]
+      (rich-transform* [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
             (next-fn params (inc params-idx) vals structure)
@@ -1247,29 +738,48 @@
     1
     ))
 
+(def collected?*
+  (->ParamsNeededPath
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
+            (next-fn params (inc params-idx) vals structure)
+            NONE
+            )))
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (let [afn (aget ^objects params params-idx)]
+          (if (afn vals)
+            (next-fn params (inc params-idx) vals structure)
+            structure
+            ))))
+    1
+    ))
+
 (def rich-compiled-path-proxy
   (->ParamsNeededPath
-    (->TransformFunctions
-      RichPathExecutor
-      (fn [params params-idx vals structure next-fn]
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
         (let [apath ^CompiledPath (aget ^objects params params-idx)
-              transform-fns ^TransformFunctions (.-transform-fns apath)
-              selector (.-selector transform-fns)]
-          (selector
-            (.-params apath)
-            (.-params-idx apath)
+              pnav ^ParameterizedRichNav (.-nav apath)
+              nav (.-rich-nav pnav)]
+          (exec-rich-select*
+            nav
+            (.-params pnav)
+            (.-params-idx pnav)
             vals
             structure
             (fn [_ _ vals-next structure-next]
               (next-fn params params-idx vals-next structure-next))
             )))
-      (fn [params params-idx vals structure next-fn]
+      (rich-transform* [this params params-idx vals structure next-fn]
         (let [apath ^CompiledPath (aget ^objects params params-idx)
-              transform-fns ^TransformFunctions (.-transform-fns apath)
-              transformer (.-transformer transform-fns)]
-          (transformer
-            (.-params apath)
-            (.-params-idx apath)
+              pnav ^ParameterizedRichNav (.-nav apath)
+              nav (.-rich-nav pnav)]
+          (exec-rich-transform*
+            nav
+            (.-params pnav)
+            (.-params-idx pnav)
             vals
             structure
             (fn [_ _ vals-next structure-next]
@@ -1277,6 +787,41 @@
             ))))
     1
     ))
+
+(def lean-compiled-path-proxy
+  (->ParamsNeededPath
+    (reify RichNavigator
+      (rich-select* [this params params-idx vals structure next-fn]
+        (let [^CompiledPath apath (aget ^objects params params-idx)
+              ^Navigator nav (.-nav apath)]
+          (exec-select*
+            nav
+            structure
+            (fn [structure-next]
+              (next-fn params params-idx vals structure-next))
+            )))
+      (rich-transform* [this params params-idx vals structure next-fn]
+        (let [^CompiledPath apath (aget ^objects params params-idx)
+              ^Navigator nav (.-nav apath)]
+          (exec-transform*
+            nav
+            structure
+            (fn [structure-next]
+              (next-fn params params-idx vals structure-next))
+            ))))
+    1
+    ))
+
+(defn srange-transform* [structure start end next-fn]
+  (let [structurev (vec structure)
+        newpart (next-fn (-> structurev (subvec start end)))
+        res (concat (subvec structurev 0 start)
+                    newpart
+                    (subvec structurev end (count structure)))]
+    (if (vector? structure)
+      (vec res)
+      res
+      )))
 
 (defn- variadic-arglist? [al]
   (contains? (set al) '&))
@@ -1293,7 +838,7 @@
     (when-not ret
       (throw-illegal "Invalid # arguments at " code))
     (if (variadic-arglist? ret)
-      (srange-transform ret (- len 2) len
+      (srange-transform* ret (- len 2) len
         (fn [_] (repeatedly (- c (- len 2)) gensym)))
       ret
       )))
@@ -1347,15 +892,13 @@
             (if (-> v meta :dynamic)
               (magic-fail! "Var " (:sym op) " is dynamic")
               (cond
-                (instance? ParamsNeededPath vv)
-                ;;TODO: if all params are constants, then just bind the path right here
-                ;;otherwise, add the params
-                ;;  - could extend this to see if it contains nested function calls which
-                ;;    are only on constants
-                (do
-                  (swap! params-atom #(vec (concat % ps)))
-                  vv
-                  )
+                (or (root-params-nav? vv) (instance? ParamsNeededPath vv))
+                (if (every? constant-node? ps)
+                  (apply vv ps)
+                  (do
+                    (swap! params-atom #(vec (concat % ps)))
+                    (coerce-path vv)
+                    ))
 
                 (and (fn? vv) (-> v meta :pathedfn))
                 ;;TODO: update this to ignore args that aren't symbols or have :nopath
@@ -1394,10 +937,14 @@
                     ))
 
                 (and (fn? vv) (-> vv meta :layerednav))
-                (do
-                  (swap! params-atom conj (:code p))
-                  rich-compiled-path-proxy
-                  )
+                (if (every? constant-node? ps)
+                  (apply vv ps)
+                  (do
+                    (swap! params-atom conj (:code p))
+                    (if (= (-> vv meta :layerednav) :lean)
+                      lean-compiled-path-proxy
+                      rich-compiled-path-proxy
+                      )))
 
                 :else
                 (magic-fail! "Var " (:sym op) " must be either a parameterized "
@@ -1517,24 +1064,20 @@
         m (-> protpath-prot :sigs keys first)
         expected-params (num-needed-params protpath)]
     (doseq [[atype apath] extensions]
-      (let [p (comp-paths* apath)
-            rp (assoc p :transform-fns (coerce-tfns-rich (:transform-fns p)))
-            needed-params (num-needed-params rp)]
+      (let [p (comp-paths-internalized apath)
+            needed-params (num-needed-params p)
+            rich-nav (extract-rich-nav p)
+            ]
         (if-not (= needed-params expected-params)
           (throw-illegal "Invalid number of params in extended protocol path, expected "
               expected-params " but got " needed-params))
-        (extend atype protpath-prot {m (fn [_] rp)})
+        (extend atype protpath-prot {m (fn [_] rich-nav)})
         ))))
 
 (defn parameterize-path [apath params params-idx]
   (if (instance? CompiledPath apath)
     apath
     (bind-params* apath params params-idx)
-    ))
-
-(defn extract-rich-tfns [apath]
-  (let [tfns (coerce-tfns-rich (:transform-fns apath))]
-    [(:selector tfns) (:transformer tfns)]
     ))
 
 (defn mk-jump-next-fn [next-fn init-idx total-params]

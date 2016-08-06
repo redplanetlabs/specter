@@ -8,7 +8,7 @@
         [com.rpl.specter.macros :only
          [defnav
           defpathedfn]])
-  (:require [com.rpl.specter.impl :as i]
+  (:require [com.rpl.specter.navs :as n]
             [com.rpl.specter :refer [subselect selected?]]))
 
 (defnav
@@ -21,9 +21,17 @@
   (transform* [this structure next-fn]
     (assoc! structure key (next-fn (get structure key)))))
 
-(def END!
-  "Navigates to an empty (persistent) vector at the end of a transient vector."
-  (i/comp-paths* (i/->TransientEndNavigator)))
+
+
+(defnav
+  ^{:doc "Navigates to an empty (persistent) vector at the end of a transient vector."}
+  END!
+  []
+  (select* [this structure next-fn]
+    (next-fn []))
+  (transform* [this structure next-fn]
+    (let [res (next-fn [])]
+      (reduce conj! structure res))))
 
 (defn- t-get-first
   [tv]
@@ -31,7 +39,7 @@
 
 (defn- t-get-last
   [tv]
-  (nth tv (dec (i/transient-vec-count tv))))
+  (nth tv (dec (n/transient-vec-count tv))))
 
 (defn- t-update-first
   [tv next-fn]
@@ -39,16 +47,17 @@
 
 (defn- t-update-last
   [tv next-fn]
-  (let [i (dec (i/transient-vec-count tv))]
+  (let [i (dec (n/transient-vec-count tv))]
     (assoc! tv i (next-fn (nth tv i)))))
+
 
 (def FIRST!
   "Navigates to the first element of a transient vector."
-  (i/->PosNavigator t-get-first t-update-first))
+  (n/PosNavigator t-get-first t-update-first))
 
 (def LAST!
   "Navigates to the last element of a transient vector."
-  (i/->PosNavigator t-get-last t-update-last))
+  (n/PosNavigator t-get-last t-update-last))
 
 #+clj
 (defn- select-keys-from-transient-map

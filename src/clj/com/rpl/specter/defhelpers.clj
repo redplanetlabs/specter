@@ -13,7 +13,7 @@
                     ~@setters
                     (com.rpl.specter.impl/bind-params* this# ~a 0)
                     )))]
-    `(defrecord ~'ParamsNeededPath [~'transform-fns ~'num-needed-params]
+    `(defrecord ~'ParamsNeededPath [~'rich-nav ~'num-needed-params]
        ~fn-type
        ~@impls
        ~var-arity-impl

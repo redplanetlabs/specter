@@ -1291,7 +1291,7 @@
 (deftest multi-path-vals-test
   (is (= {:a 1 :b 6 :c 3}
          (transform [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
-           + 
+           +
            {:a 1 :b 2 :c 3})))
   (is (= [[1 2] [3 2]]
          (select [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
