@@ -1,0 +1,4 @@
+#!/bin/bash
+
+
+java -server -XX:MaxPermSize=128m -XX:MaxInlineSize=100 -cp `lein classpath` clojure.main scripts/benchmarks.clj 

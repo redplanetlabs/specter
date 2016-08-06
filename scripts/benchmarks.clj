@@ -29,7 +29,7 @@
 
 (defn average-time-ms [iters amt-per-iter afn]
   (avg
-    ;; treat 1st run as warmup 
+    ;; treat 1st run as warmup
     (next
       (for [i (range (inc iters))]
         (time-ms amt-per-iter afn)))))
@@ -223,26 +223,24 @@
 
 (let [data (vec (range 1000))
       tdata (transient data)
-      tdata2 (transient data)
-      idx 600]
+      tdata2 (transient data)]
   (run-benchmark "transient comparison: assoc'ing in vectors"
     2500000
-    (assoc data idx 0)
-    (assoc! tdata idx 0)
-    (setval (keypath idx) 0 data)
-    (setval (keypath! idx) 0 tdata2)))
+    (assoc data 600 0)
+    (assoc! tdata 600 0)
+    (setval (keypath 600) 0 data)
+    (setval (keypath! 600) 0 tdata2)))
 
 (let [data (into {} (for [k (range 1000)]
                       [k (rand)]))
       tdata (transient data)
-      tdata2 (transient data)
-      idx 600]
+      tdata2 (transient data)]
   (run-benchmark "transient comparison: assoc'ing in maps"
     1500000
-    (assoc data idx 0)
-    (assoc! tdata idx 0)
-    (setval (keypath idx) 0 data)
-    (setval (keypath! idx) 0 tdata2)))
+    (assoc data 600 0)
+    (assoc! tdata 600 0)
+    (setval (keypath 600) 0 data)
+    (setval (keypath! 600) 0 tdata2)))
 
 (defn modify-submap
   [m]
