@@ -960,8 +960,10 @@
 
       :else
       (cond (set? p)
-            (do (swap! params-atom conj p)
-                pred*)
+            (if (constant-node? p)
+              p
+              (do (swap! params-atom conj p)
+                pred*))
 
             (keyword? p)
             p
