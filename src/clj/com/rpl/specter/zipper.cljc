@@ -1,10 +1,10 @@
 (ns com.rpl.specter.zipper
-  #+cljs (:require-macros
+  #?(:cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [defnav nav declarepath providepath]])
-  #+clj
+              :refer [defnav nav declarepath providepath]]))
+  #?(:clj
   (:use
-    [com.rpl.specter.macros :only [defnav nav declarepath providepath]])
+    [com.rpl.specter.macros :only [defnav nav declarepath providepath]]))
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
@@ -43,9 +43,9 @@
 
 ;; (multi-path RIGHT LEFT) will not navigate to the right and left
 ;; of the currently navigated element because locations aren't stable
-;; like they are for maps/graphs. The path following RIGHT could 
+;; like they are for maps/graphs. The path following RIGHT could
 ;; insert lots of elements all over the sequence, and there's no
-;; way to determine how to get "back". 
+;; way to determine how to get "back".
 (def ^{:doc "Navigate to the element to the right.
              If no element there, works like STOP."}
   RIGHT (mk-zip-nav zip/right))
@@ -103,7 +103,7 @@
     ))
 
 (defnav ^{:doc "Navigate to the subsequence containing only
-                 the node currently pointed to. This works just 
+                 the node currently pointed to. This works just
                  like srange and can be used to remove elements
                  from the structure"}
   NODE-SEQ []

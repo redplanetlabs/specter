@@ -1,25 +1,25 @@
 (ns com.rpl.specter.zipper-test
-  #+cljs (:require-macros
+  #?(:cljs (:require-macros
            [cljs.test :refer [is deftest]]
            [cljs.test.check.cljs-test :refer [defspec]]
            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
            [com.rpl.specter.macros
              :refer [declarepath providepath select select-one select-one!
                      select-first transform setval replace-in]]
-           )
+           ))
   (:use
-    #+clj [clojure.test :only [deftest is]]
-    #+clj [clojure.test.check.clojure-test :only [defspec]]
-    #+clj [com.rpl.specter.test-helpers :only [for-all+]]
-    #+clj [com.rpl.specter.macros
-           :only [declarepath providepath select select-one select-one!
-                  select-first transform setval replace-in]]
+    #?(:clj [clojure.test :only [deftest is]])
+    #?(:clj [clojure.test.check.clojure-test :only [defspec]])
+    #?(:clj [com.rpl.specter.test-helpers :only [for-all+]])
+    #?(:clj [com.rpl.specter.macros
+             :only [declarepath providepath select select-one select-one!
+                    select-first transform setval replace-in]])
     )
-  (:require #+clj [clojure.test.check.generators :as gen]
-            #+clj [clojure.test.check.properties :as prop]
-            #+cljs [cljs.test.check :as tc]
-            #+cljs [cljs.test.check.generators :as gen]
-            #+cljs [cljs.test.check.properties :as prop :include-macros true]
+  (:require #?(:clj [clojure.test.check.generators :as gen])
+            #?(:clj [clojure.test.check.properties :as prop])
+            #?(:cljs [cljs.test.check :as tc])
+            #?(:cljs [cljs.test.check.generators :as gen])
+            #?(:cljs [cljs.test.check.properties :as prop :include-macros true])
             [com.rpl.specter :as s]
             [com.rpl.specter.zipper :as z]))
 

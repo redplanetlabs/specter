@@ -1,5 +1,5 @@
 (ns com.rpl.specter
-  #+cljs (:require-macros
+  #?(:cljs (:require-macros
             [com.rpl.specter.macros
               :refer
               [fixed-pathed-collector
@@ -12,17 +12,17 @@
               ]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]
-            )
+            ))
   (:use [com.rpl.specter.protocols :only [ImplicitNav]]
-    #+clj [com.rpl.specter.macros :only
-            [fixed-pathed-collector
-             fixed-pathed-nav
-             defcollector
-             defnav
-             defpathedfn
-             richnav
-             defnavconstructor]]
-    #+clj [com.rpl.specter.util-macros :only [doseqres]]
+    #?(:clj [com.rpl.specter.macros :only
+              [fixed-pathed-collector
+               fixed-pathed-nav
+               defcollector
+               defnav
+               defpathedfn
+               richnav
+               defnavconstructor]])
+    #?(:clj [com.rpl.specter.util-macros :only [doseqres]])
     )
   (:require [com.rpl.specter.impl :as i]
             [com.rpl.specter.navs :as n]
@@ -525,16 +525,16 @@
   ImplicitNav
   (implicit-nav [this] STAY))
 
-(extend-type #+clj clojure.lang.Keyword #+cljs cljs.core/Keyword
+(extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   ImplicitNav
   (implicit-nav [this] (keypath this))
   )
 
-(extend-type #+clj clojure.lang.AFn #+cljs function
+(extend-type #?(:clj clojure.lang.AFn :cljs function)
   ImplicitNav
   (implicit-nav [this] (pred this)))
 
-(extend-type #+clj clojure.lang.PersistentHashSet #+cljs cljs.core/PersistentHashSet
+(extend-type #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
   ImplicitNav
   (implicit-nav [this] (pred this)))
 
