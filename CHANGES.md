@@ -6,7 +6,7 @@
 * Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
 * Added `IndirectNav` protocol for turning a value type into a navigator.
 * Higher order navigators (like `selected?`, `subselect`) more intelligently parameterize the nested paths and use the leaner execution mode if none of the nested paths require late-bound parameterization or value collection.
-* Removed `variadic-pathed-nav`
+* Removed `variable-pathed-nav`
 
 ## 0.12.0
 
