@@ -677,6 +677,18 @@
   ([] (must-cache-paths! true))
   ([v] (set-cell! MUST-CACHE-PATHS v)))
 
+(defn constant-node? [node]
+  (cond (record? node) false
+        (number? node) true
+        (keyword? node) true
+        (string? node) true
+        (vector? node) (every? constant-node? node)
+        (set? node) (every? constant-node? node)
+        (map? node) (and (every? constant-node? (vals node))
+                         (every? constant-node? (keys node)))
+        :else false
+    ))
+
 (defn- extract-original-code [p]
   (cond
     (instance? LocalSym p) (:sym p)
@@ -881,14 +893,12 @@
               (magic-fail! "Var " (:sym op) " is dynamic")
               (cond
                 (or (root-params-nav? vv) (instance? ParamsNeededPath vv))
-                ;;TODO: if all params are constants, then just bind the path right here
-                ;;otherwise, add the params
-                ;;  - could extend this to see if it contains nested function calls which
-                ;;    are only on constants
-                (do
-                  (swap! params-atom #(vec (concat % ps)))
-                  (coerce-path vv)
-                  )
+                (if (every? constant-node? ps)
+                  (apply vv ps)
+                  (do
+                    (swap! params-atom #(vec (concat % ps)))
+                    (coerce-path vv)
+                    ))
 
                 (and (fn? vv) (-> v meta :pathedfn))
                 ;;TODO: update this to ignore args that aren't symbols or have :nopath
@@ -927,13 +937,14 @@
                     ))
 
                 (and (fn? vv) (-> vv meta :layerednav))
-                (do
-                  ;;TODO: if all args are constant then invoke it right here
-                  (swap! params-atom conj (:code p))
-                  (if (= (-> vv meta :layerednav) :lean)
-                    lean-compiled-path-proxy
-                    rich-compiled-path-proxy
-                    ))
+                (if (every? constant-node? ps)
+                  (apply vv ps)
+                  (do
+                    (swap! params-atom conj (:code p))
+                    (if (= (-> vv meta :layerednav) :lean)
+                      lean-compiled-path-proxy
+                      rich-compiled-path-proxy
+                      )))
 
                 :else
                 (magic-fail! "Var " (:sym op) " must be either a parameterized "
