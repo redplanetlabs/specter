@@ -4,7 +4,8 @@
 * Redesigned internals so navigators use interface dispatch rather than storing transform/selection functions as separate fields
 * `defnav` with parameters now produces a function that returns the parameterized nav when invoked (with parameters in the closure rather than being late-bound parameterized). These functions can still be composed without their parameters, falling back to the late-bound parameterized codepath in that case. The end result of this is more optimized execution when parameters are provided immediately.
 * Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
-* Added `IndirectNav` protocol for turning a value type into a navigator. 
+* Added `IndirectNav` protocol for turning a value type into a navigator.
+* Higher order navigators (like `selected?`, `subselect`) more intelligently parameterize the nested paths and use the leaner execution mode if none of the nested paths require late-bound parameterization or value collection.
 * Removed `variadic-pathed-nav`
 
 ## 0.12.0
