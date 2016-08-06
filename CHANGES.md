@@ -1,6 +1,15 @@
+## 0.13.0 (unreleased)
+
+* BREAKING CHANGE: May no longer extend the `Navigator` or `Collector` protocols. All navigators must be defined with `defnav`. Existing types can be turned into navigators with the new `IndirectNav` protocol.
+* Redesigned internals so navigators use interface dispatch rather than storing transform/selection functions as separate fields
+* `defnav` with parameters now produces a function that returns the parameterized nav when invoked (with parameters in the closure rather than being late-bound parameterized). These functions can still be composed without their parameters, falling back to the late-bound parameterized codepath in that case. The end result of this is more optimized execution when parameters are provided immediately.
+* Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
+* Added `IndirectNav` protocol for turning a value type into a navigator. 
+* Removed `variadic-pathed-nav`
+
 ## 0.12.0
 
-* BREAKING CHANGE: Changed semantics of `Navigator` protocol `select*` in order to enable very large performance improvements to `select`, `select-one`, `select-first`, and `select-one!`. Custom navigators will need to be updated to conform to the new required semantics. Codebases that do not use custom navigators do not require any changes. See the docstring on the protocol for the details. 
+* BREAKING CHANGE: Changed semantics of `Navigator` protocol `select*` in order to enable very large performance improvements to `select`, `select-one`, `select-first`, and `select-one!`. Custom navigators will need to be updated to conform to the new required semantics. Codebases that do not use custom navigators do not require any changes. See the docstring on the protocol for the details.
 * Added `select-any` operation which selects a single element navigated to by the path. Which element returned is undefined. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
 * Added `selected-any?` operation that returns true if any element is navigated to.
 * Added `traverse` operation which returns a reducible object of all the elements navigated to by the path. Very efficient.
@@ -33,7 +42,7 @@ transformations with `transform` one after another when the transformations shar
 * Huge performance improvement for `END` on vectors
 * Added specialized MAP-VALS navigator that is twice as fast as using [ALL LAST]
 * Dropped support for Clojurescript below v1.7.10
-* Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or non-collection value, the path will not factor. 
+* Added :notpath metadata to signify pathedfn arguments that should be treated as regular arguments during inline factoring. If one of these arguments is not a static var reference or non-collection value, the path will not factor.
 * Bug fix: `transformed` transform-fn no longer factors into `pred` when an anonymous function during inline factoring
 * Bug fix: Fixed nil->val to not replace the val on `false`
 * Bug fix: Eliminate reflection when using primitive parameters in an inline cached path
@@ -83,7 +92,7 @@ transformations with `transform` one after another when the transformations shar
 
 ## 0.9.1
 * Fixed reflection in protocol path code
-* Optimized late-bound parameterization for JVM implementation by directly creating the object array rather than use object-array 
+* Optimized late-bound parameterization for JVM implementation by directly creating the object array rather than use object-array
 * Incorrectly specified function names in defpath will now throw error
 
 ## 0.9.0
@@ -110,7 +119,7 @@ transformations with `transform` one after another when the transformations shar
 ## 0.6.2
 * Added not-selected? selector
 * Added transformed selector
-* Sped up CLJS implementation for comp-paths by replacing obj-extends? call with satisfies? 
+* Sped up CLJS implementation for comp-paths by replacing obj-extends? call with satisfies?
 * Fixed CLJS implementation to extend core types appropriately
 * Used not-native hint to enable direct method invocation to speed up CLJS implementation
 
