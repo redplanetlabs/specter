@@ -7,6 +7,7 @@
 * Added `IndirectNav` protocol for turning a value type into a navigator.
 * Higher order navigators (like `selected?`, `subselect`) more intelligently parameterize the nested paths and use the leaner execution mode if none of the nested paths require late-bound parameterization or value collection.
 * Removed `variable-pathed-nav`
+* Switched codebase from cljx to cljc
 
 ## 0.12.0
 
