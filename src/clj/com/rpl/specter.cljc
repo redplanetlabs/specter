@@ -514,11 +514,15 @@
     (transform* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))))
 
-(def
+(defnav
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
           late-bound parameterized version of using a function directly in a path."}
   pred
-  i/pred*
+  [afn]
+  (select* [this structure next-fn]
+    (if (afn structure) (next-fn structure) NONE))
+  (transform* [this structure next-fn]
+    (if (afn structure) (next-fn structure) structure))
   )
 
 (extend-type nil
