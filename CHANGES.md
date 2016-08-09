@@ -8,6 +8,9 @@
 * Higher order navigators (like `selected?`, `subselect`) more intelligently parameterize the nested paths and use the leaner execution mode if none of the nested paths require late-bound parameterization or value collection.
 * Removed `variable-pathed-nav`
 * Switched codebase from cljx to cljc
+* Improved performance of ALL and MAP-VALS on PersistentArrayMap by about 2x
+* Bug fix: ALL and MAP-VALS transforms on PersistentArrayMap above the threshold now output PersistentArrayMap instead of PersistentHashMap
+
 
 ## 0.12.0
 
