@@ -107,15 +107,18 @@
   #?(:clj
   (all-transform [structure next-fn]
     (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)]
-      (loop [ret {}]
+          v-it (.valIterator structure)
+          array (i/fast-object-array (* 2 (.count structure)))]
+      (loop [i 0]
         (if (.hasNext k-it)
           (let [k (.next k-it)
                 v (.next v-it)
                 [newk newv] (next-fn [k v])]
-            (recur (assoc ret newk newv)))
-          ret
-          )))))
+            (aset array i newk)
+            (aset array (inc i) newv)
+            (recur (+ i 2)))))
+      (clojure.lang.PersistentArrayMap. array)
+      )))
 
   #?(:cljs cljs.core/PersistentArrayMap)
   #?(:cljs
@@ -197,14 +200,18 @@
   #?(:clj
   (map-vals-transform [structure next-fn]
     (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)]
-      (loop [ret {}]
+          v-it (.valIterator structure)
+          array (i/fast-object-array (* 2 (.count structure)))]
+      (loop [i 0]
         (if (.hasNext k-it)
           (let [k (.next k-it)
-                v (.next v-it)]
-            (recur (assoc ret k (next-fn v))))
-          ret
-          )))))
+                v (.next v-it)
+                newv (next-fn v)]
+            (aset array i k)
+            (aset array (inc i) newv)
+            (recur (+ i 2)))))
+      (clojure.lang.PersistentArrayMap. array)
+      )))
 
   #?(:cljs cljs.core/PersistentArrayMap)
   #?(:cljs
