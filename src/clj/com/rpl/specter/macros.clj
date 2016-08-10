@@ -9,13 +9,13 @@
 (defn ^:no-doc gensyms [amt]
   (vec (repeatedly amt gensym)))
 
-(defn ^:no-doc determine-params-impls [[name1 & impl1] [name2 & impl2]]
-  (if-not (= #{name1 name2} #{'select* 'transform*})
-    (i/throw-illegal "defnav must implement select* and transform*, instead got "
-                     name1 " and " name2))
-  (if (= name1 'select*)
-    [impl1 impl2]
-    [impl2 impl1]))
+(defn ^:no-doc determine-params-impls [impls]
+  (let [grouped (->> impls (map (fn [[n & body]] [n body])) (into {}))]
+    (if-not (= #{'select* 'transform*} (-> grouped keys set))
+      (i/throw-illegal "defnav must implement select* and transform*, instead got "
+                       (keys grouped)))
+    grouped
+    ))
 
 (defmacro richnav
   "Defines a navigator with full access to collected vals, the parameters array,
@@ -24,8 +24,9 @@
   `next-fn` will automatically skip ahead in params array by `num-params`, so the
   index passed to it is ignored.
   This is the lowest level way of making navigators."
-  [num-params impl1 impl2]
-  (let [[[s-params & s-body] [t-params & t-body]] (determine-params-impls impl1 impl2)
+  [num-params & impls]
+  (let [{[s-params & s-body] 'select*
+         [t-params & t-body] 'transform*} (determine-params-impls impls)
         s-next-fn-sym (last s-params)
         s-pidx-sym (nth s-params 2)
         t-next-fn-sym (last t-params)
@@ -63,9 +64,9 @@
        )))
 
 (defmacro ^:no-doc rich-nav-with-bindings [num-params-code bindings & impls]
-  (let [[[[_ s-structure-sym s-next-fn-sym] & s-body]
-         [[_ t-structure-sym t-next-fn-sym] & t-body]]
-        (apply determine-params-impls impls)
+  (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
+         [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*}
+        (determine-params-impls impls)
         params-sym (gensym "params")
         params-idx-sym (gensym "params-idx")
         ]
