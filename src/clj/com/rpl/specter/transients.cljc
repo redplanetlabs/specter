@@ -1,13 +1,13 @@
 (ns com.rpl.specter.transients
   #?(:cljs
-  (:require-macros [com.rpl.specter.macros
-                    :refer
-                    [defnav
-                     defpathedfn]]))
+     (:require-macros [com.rpl.specter.macros
+                       :refer
+                       [defnav
+                        defpathedfn]]))
   (:use #?(:clj
-        [com.rpl.specter.macros :only
-         [defnav
-          defpathedfn]]))
+           [com.rpl.specter.macros :only
+            [defnav
+             defpathedfn]]))
   (:require [com.rpl.specter.navs :as n]
             [com.rpl.specter :refer [subselect selected?]]))
 
@@ -60,29 +60,29 @@
   (n/PosNavigator t-get-last t-update-last))
 
 #?(
-:clj
-(defn- select-keys-from-transient-map
-  "Selects keys from transient map, because built-in select-keys uses
+   :clj
+   (defn- select-keys-from-transient-map
+     "Selects keys from transient map, because built-in select-keys uses
   `find` which is unsupported."
-  [m m-keys]
-  (loop [result {}
-         m-keys m-keys]
-    (if-not (seq m-keys)
-      result
-      (let [k (first m-keys)
+     [m m-keys]
+     (loop [result {}
+            m-keys m-keys]
+       (if-not (seq m-keys)
+         result
+         (let [k (first m-keys)
             ;; support Clojure 1.6 where contains? is broken on transients
-            item (get m k ::not-found)]
-        (recur (if-not (identical? item ::not-found)
-                 (assoc result k item)
-                 result)
-               (rest m-keys))))))
+               item (get m k ::not-found)]
+           (recur (if-not (identical? item ::not-found)
+                    (assoc result k item)
+                    result)
+                  (rest m-keys))))))
 
-:cljs
-(defn- select-keys-from-transient-map
-  "Uses select-keys on a transient map."
-  [m m-keys]
-  (select-keys m m-keys))
-)
+   :cljs
+   (defn- select-keys-from-transient-map
+     "Uses select-keys on a transient map."
+     [m m-keys]
+     (select-keys m m-keys)))
+
 
 (defnav
   ^{:doc "Navigates to the specified persistent submap of a transient map."}

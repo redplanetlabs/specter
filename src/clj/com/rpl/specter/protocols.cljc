@@ -15,8 +15,8 @@
   (transform* [this structure next-fn]
     "An implementation of `transform*` must use `next-fn` to transform
      any subvalues of `structure` and then merge those transformed values
-     back into `structure`. Everything else in `structure` must be unchanged."
-    ))
+     back into `structure`. Everything else in `structure` must be unchanged."))
+
 
 (defprotocol Collector
   "Do not use this protocol directly. All navigators must be created using

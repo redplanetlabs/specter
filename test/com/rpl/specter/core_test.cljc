@@ -1,15 +1,15 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
-           [cljs.test :refer [is deftest]]
-           [cljs.test.check.cljs-test :refer [defspec]]
-           [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
-           [com.rpl.specter.test-helpers :refer [ic-test]]
-           [com.rpl.specter.macros
-             :refer [paramsfn defprotocolpath defnav extend-protocolpath
-                     nav declarepath providepath select select-one select-one!
-                     select-first transform setval replace-in defnavconstructor
-                     select-any selected-any? collected? traverse
-                     multi-transform]]))
+            [cljs.test :refer [is deftest]]
+            [cljs.test.check.cljs-test :refer [defspec]]
+            [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
+            [com.rpl.specter.test-helpers :refer [ic-test]]
+            [com.rpl.specter.macros
+              :refer [paramsfn defprotocolpath defnav extend-protocolpath
+                      nav declarepath providepath select select-one select-one!
+                      select-first transform setval replace-in defnavconstructor
+                      select-any selected-any? collected? traverse
+                      multi-transform]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -19,9 +19,9 @@
                     nav declarepath providepath select select-one select-one!
                     select-first transform setval replace-in defnavconstructor
                     select-any selected-any? collected? traverse
-                    multi-transform]])
+                    multi-transform]]))
 
-    )
+
 
   (:require #?(:clj [clojure.test.check.generators :as gen])
             #?(:clj [clojure.test.check.properties :as prop])
@@ -55,8 +55,8 @@
                      (gen-map-with-keys gen/keyword gen/int kw)))
      pred (gen/elements [odd? even?])]
     (= (select [s/ALL kw pred] v)
-       (->> v (map kw) (filter pred))
-       )))
+       (->> v (map kw) (filter pred)))))
+
 
 (defspec select-pos-extreme-pred
   (for-all+
@@ -64,48 +64,48 @@
     pred (gen/elements [odd? even?])
     pos (gen/elements [[s/FIRST first] [s/LAST last]])]
    (= (select-one [(s/filterer pred) (first pos)] v)
-      (->> v (filter pred) ((last pos)))
-      )))
+      (->> v (filter pred) ((last pos))))))
+
 
 (defspec select-all-on-map
   (for-all+
     [m (limit-size 5 (gen/map gen/keyword gen/int))
      p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
     (= (select p m)
-       (for [[k v] m] v))
-    ))
+       (for [[k v] m] v))))
+
 
 (deftest select-one-test
    (is (thrown? #?(:clj Exception :cljs js/Error) (select-one [s/ALL even?] [1 2 3 4])))
-   (is (= 1 (select-one [s/ALL odd?] [2 4 1 6])))
-   )
+   (is (= 1 (select-one [s/ALL odd?] [2 4 1 6]))))
+
 
 (deftest select-first-test
   (is (= 7 (select-first [(s/filterer odd?) s/ALL #(> % 4)] [3 4 2 3 7 5 9 8])))
-  (is (nil? (select-first [s/ALL even?] [1 3 5 9])))
-  )
+  (is (nil? (select-first [s/ALL even?] [1 3 5 9]))))
+
 
 (defspec transform-all-on-map
   (for-all+
     [m (limit-size 5 (gen/map gen/keyword gen/int))
      p (gen/elements [s/MAP-VALS [s/ALL s/LAST]])]
     (= (transform p inc m)
-       (into {} (for [[k v] m] [k (inc v)]))
-       )))
+       (into {} (for [[k v] m] [k (inc v)])))))
+
 
 (defspec transform-all
   (for-all+
    [v (gen/vector gen/int)]
    (let [v2 (transform [s/ALL] inc v)]
-    (and (vector? v2) (= v2 (map inc v)))
-    )))
+    (and (vector? v2) (= v2 (map inc v))))))
+
 
 (defspec transform-all-list
   (for-all+
    [v (gen/list gen/int)]
    (let [v2 (transform [s/ALL] inc v)]
-     (and (seq? v2) (= v2 (map inc v)))
-     )))
+     (and (seq? v2) (= v2 (map inc v))))))
+
 
 (defspec transform-all-filter
   (for-all+
@@ -113,24 +113,24 @@
     pred (gen/elements [odd? even?])
     action (gen/elements [inc dec])]
    (let [v2 (transform [s/ALL pred] action v)]
-     (= v2 (map (fn [v] (if (pred v) (action v) v)) v))
-     )))
+     (= v2 (map (fn [v] (if (pred v) (action v) v)) v)))))
+
 
 (defspec transform-last
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
    (let [v2 (transform [s/LAST] pred v)]
-     (= v2 (concat (butlast v) [(pred (last v))]))
-     )))
+     (= v2 (concat (butlast v) [(pred (last v))])))))
+
 
 (defspec transform-first
   (for-all+
    [v (gen/not-empty (gen/vector gen/int))
     pred (gen/elements [inc dec])]
    (let [v2 (transform [s/FIRST] pred v)]
-     (= v2 (concat [(pred (first v))] (rest v) ))
-     )))
+     (= v2 (concat [(pred (first v))] (rest v))))))
+
 
 (defspec transform-filterer-all-equivalency
   (prop/for-all
@@ -141,8 +141,8 @@
    (let [v (into target-type s)
          v2 (transform [(s/filterer pred) s/ALL] updater v)
          v3 (transform [s/ALL pred] updater v)]
-     (and (= v2 v3) (= (type v2) (type v3)))
-     )))
+     (and (= v2 v3) (= (type v2) (type v3))))))
+
 
 (defspec transform-with-context
   (for-all+
@@ -153,8 +153,8 @@
     (= (transform [(s/collect-one kw2) kw1 pred] + m)
        (if (pred (kw1 m))
           (assoc m kw1 (+ (kw1 m) (kw2 m)))
-          m
-          ))))
+          m))))
+
 
 (defn differing-elements [v1 v2]
   (->> (map vector v1 v2)
@@ -171,8 +171,8 @@
          differing-elems (differing-elements v v2)]
      (and (= (count v2) (count v))
           (= (count differing-elems) 1)
-          (every? (complement pred) (drop (first differing-elems) v2))
-          ))))
+          (every? (complement pred) (drop (first differing-elems) v2))))))
+
 
 ;; max sizes prevent too much data from being generated and keeps test from taking forever
 (defspec transform-keyword
@@ -187,8 +187,8 @@
     pred (gen/elements [inc dec])]
    (let [m2 (transform [k1 k2] pred m1)]
      (and (= (assoc-in m1 [k1 k2] nil) (assoc-in m2 [k1 k2] nil))
-          (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2])))
-     )))
+          (= (pred (get-in m1 [k1 k2])) (get-in m2 [k1 k2]))))))
+
 
 (defspec replace-in-test
   (for-all+
@@ -200,8 +200,8 @@
                         (apply concat))
           user-ret (if (empty? user-ret) nil user-ret)]
       (= (replace-in [s/ALL even?] (fn [v] [(inc v) [v v]]) v)
-         [res user-ret]
-         ))))
+         [res user-ret]))))
+
 
 (defspec replace-in-custom-merge
   (for-all+
@@ -211,8 +211,8 @@
           user-ret (if last-even {:a last-even})]
       (= (replace-in [s/ALL even?] (fn [v] [(inc v) v]) v :merge-fn (fn [curr new]
                                                                         (assoc curr :a new)))
-         [res user-ret]
-         ))))
+         [res user-ret]))))
+
 
 (defspec srange-extremes-test
   (for-all+
@@ -221,15 +221,15 @@
    (let [b (setval s/BEGINNING v2 v)
          e (setval s/END v2 v)]
      (and (= b (concat v2 v))
-          (= e (concat v v2)))
-     )))
+          (= e (concat v v2))))))
+
 
 (defspec srange-test
   (for-all+
    [v (gen/vector gen/int)
     b (gen/elements (-> v count inc range))
-    e (gen/elements (range b (-> v count inc)))
-    ]
+    e (gen/elements (range b (-> v count inc)))]
+
    (let [sv (subvec v b e)
          predcount (fn [pred v] (->> v (filter pred) count))
          even-count (partial predcount even?)
@@ -237,13 +237,13 @@
          b (transform (s/srange b e) (fn [r] (filter odd? r)) v)]
      (and (= (odd-count v) (odd-count b))
           (= (+ (even-count b) (even-count sv))
-             (even-count v)))
-     )))
+             (even-count v))))))
+
 
 (deftest structure-path-directly-test
   (is (= 3 (select-one :b {:a 1 :b 3})))
-  (is (= 5 (select-one (s/comp-paths :a :b) {:a {:b 5}})))
-  )
+  (is (= 5 (select-one (s/comp-paths :a :b) {:a {:b 5}}))))
+
 
 (deftest atom-test
   (let [v (transform s/ATOM inc (atom 1))]
@@ -256,23 +256,23 @@
      afn (gen/elements [inc dec])]
     (= (first (select (s/view afn) i))
        (afn i)
-       (transform (s/view afn) identity i)
-       )))
+       (transform (s/view afn) identity i))))
+
 
 (defspec must-test
   (for-all+
     [k1 gen/int
      k2 (gen/such-that #(not= k1 %) gen/int)
      m (gen-map-with-keys gen/int gen/int k1)
-     op (gen/elements [inc dec])
-     ]
+     op (gen/elements [inc dec])]
+
     (let [m (dissoc m k2)]
       (and (= (transform (s/must k1) op m)
               (transform (s/keypath k1) op m))
            (= (transform (s/must k2) op m) m)
            (= (select (s/must k1) m) (select (s/keypath k1) m))
-           (empty? (select (s/must k2) m))
-           ))))
+           (empty? (select (s/must k2) m))))))
+
 
 (defspec parser-test
   (for-all+
@@ -283,18 +283,18 @@
     (and (= (select-one! (s/parser afn bfn) i)
             (afn i))
          (= (transform (s/parser afn bfn) cfn i)
-            (-> i afn cfn bfn))
-         )))
+            (-> i afn cfn bfn)))))
+
 
 (deftest selected?-test
   (is (= [[1 3 5] [2 :a] [7 11 4 2 :a] [10 1 :a] []]
          (setval [s/ALL (s/selected? s/ALL even?) s/END]
                  [:a]
-                 [[1 3 5] [2] [7 11 4 2] [10 1] []]
-                 )))
+                 [[1 3 5] [2] [7 11 4 2] [10 1] []])))
+
   (is (= [2 4] (select [s/ALL (s/selected? even?)] [1 2 3 4])))
-  (is (= [1 3] (select [s/ALL (s/not-selected? even?)] [1 2 3 4])))
-  )
+  (is (= [1 3] (select [s/ALL (s/not-selected? even?)] [1 2 3 4]))))
+
 
 (defspec identity-test
   (for-all+
@@ -313,8 +313,8 @@
     c gen/int]
    (= (transform [(s/putval c) kw] + m)
       (transform [kw (s/putval c)] + m)
-      (assoc m kw (+ c (get m kw)))
-      )))
+      (assoc m kw (+ c (get m kw))))))
+
 
 (defspec empty-selector-test
   (for-all+
@@ -324,8 +324,8 @@
       (select nil v)
       (select (s/comp-paths) v)
       (select (s/comp-paths nil) v)
-      (select [nil nil nil] v)
-      )))
+      (select [nil nil nil] v))))
+
 
 (defspec empty-selector-transform-test
   (for-all+
@@ -335,20 +335,20 @@
            (transform nil identity m)
            (transform [] identity m)
            (transform (s/comp-paths []) identity m)
-           (transform (s/comp-paths nil nil) identity m)
-           )
+           (transform (s/comp-paths nil nil) identity m))
+
         (= (transform kw inc m)
            (transform [nil kw] inc m)
            (transform (s/comp-paths kw nil) inc m)
-           (transform (s/comp-paths nil kw nil) inc m)
-           ))))
+           (transform (s/comp-paths nil kw nil) inc m)))))
+
 
 (deftest compose-empty-comp-path-test
   (let [m {:a 1}]
     (is (= [1]
            (select [:a (s/comp-paths)] m)
-           (select [(s/comp-paths) :a] m)
-           ))))
+           (select [(s/comp-paths) :a] m)))))
+
 
 (defspec mixed-selector-test
   (for-all+
@@ -364,8 +364,8 @@
       (select [(s/comp-paths k1) k2] m)
       (select [(s/comp-paths k1 k2) nil] m)
       (select [(s/comp-paths) k1 k2] m)
-      (select [k1 (s/comp-paths) k2] m)
-      )))
+      (select [k1 (s/comp-paths) k2] m))))
+
 
 (deftest cond-path-test
   (is (= [4 2 6 8 10]
@@ -376,16 +376,16 @@
   (is (= [6 2 10 6 14]
          (transform [(s/putval 2)
                      s/ALL
-                    (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
+                     (s/if-path odd? [(s/view inc) (s/view inc)] (s/view dec))]
                     *
-                    [1 2 3 4 5]
-                    )))
+                    [1 2 3 4 5])))
+
   (is (= 2
          (transform [(s/putval 2)
-                  (s/if-path odd? (s/view inc))]
+                     (s/if-path odd? (s/view inc))]
                   *
-                  2)))
-  )
+                  2))))
+
 
 (defspec cond-path-selector-test
   (for-all+
@@ -399,48 +399,48 @@
                  k1
                  k2
                  k3))
-    pred (gen/elements [odd? even?])
-    ]
+    pred (gen/elements [odd? even?])]
+
    (let [v1 (get m k1)
          k (if (pred v1) k2 k3)]
      (and
        (= (transform (s/if-path [k1 pred] k2 k3) inc m)
           (transform k inc m))
        (= (select (s/if-path [k1 pred] k2 k3) m)
-          (select k m))
-       ))))
+          (select k m))))))
+
 
 (deftest optimized-if-path-test
   (is (= [-4 -2] (select [s/ALL (s/if-path [even? neg?] s/STAY)]
                    [1 2 -3 -4 0 -2])))
   (is (= [1 2 -3 4 0 2] (transform [s/ALL (s/if-path [even? neg?] s/STAY)]
                           -
-                          [1 2 -3 -4 0 -2])))
-  )
+                          [1 2 -3 -4 0 -2]))))
+
 
 (defspec multi-path-test
   (for-all+
     [k1 (limit-size 3 gen/keyword)
-    k2 (limit-size 3 gen/keyword)
-    m (limit-size 5
-                (gen-map-with-keys
-                 gen/keyword
-                 gen/int
-                 k1
-                 k2))
-    ]
+     k2 (limit-size 3 gen/keyword)
+     m (limit-size 5
+                 (gen-map-with-keys
+                  gen/keyword
+                  gen/int
+                  k1
+                  k2))]
+
     (= (transform (s/multi-path k1 k2) inc m)
        (->> m
             (transform k1 inc)
-            (transform k2 inc)))
-    ))
+            (transform k2 inc)))))
+
 
 (deftest empty-pos-transform
   (is (empty? (select s/FIRST [])))
   (is (empty? (select s/LAST [])))
   (is (= [] (transform s/FIRST inc [])))
-  (is (= [] (transform s/LAST inc [])))
-  )
+  (is (= [] (transform s/LAST inc []))))
+
 
 (defspec set-filter-test
   (for-all+
@@ -448,13 +448,13 @@
      k2 (gen/such-that #(not= k1 %) gen/keyword)
      k3 (gen/such-that (complement #{k1 k2}) gen/keyword)
      v (gen/vector (gen/elements [k1 k2 k3]))]
-    (= (filter #{k1 k2} v) (select [s/ALL #{k1 k2}] v))
-    ))
+    (= (filter #{k1 k2} v) (select [s/ALL #{k1 k2}] v))))
+
 
 (deftest nil-select-one-test
   (is (= nil (select-one! s/ALL [nil])))
-  (is (thrown? #?(:clj Exception :cljs js/Error) (select-one! s/ALL [])))
-  )
+  (is (thrown? #?(:clj Exception :cljs js/Error) (select-one! s/ALL []))))
+
 
 
 (defspec transformed-test
@@ -463,8 +463,8 @@
      pred (gen/elements [even? odd?])
      op   (gen/elements [inc dec])]
     (= (select-one (s/transformed [s/ALL pred] op) v)
-       (transform [s/ALL pred] op v))
-    ))
+       (transform [s/ALL pred] op v))))
+
 
 (defspec basic-parameterized-composition-test
   (for-all+
@@ -475,12 +475,12 @@
                   gen/keyword
                   (gen-map-with-keys gen/keyword gen/int k2)
                   k1))
-    pred (gen/elements [inc dec])]
+     pred (gen/elements [inc dec])]
     (let [p (s/comp-paths s/keypath s/keypath)]
       (and
         (= (s/compiled-select (p k1 k2) m1) (select [k1 k2] m1))
-        (= (s/compiled-transform (p k1 k2) pred m1) (transform [k1 k2] pred m1))
-        ))))
+        (= (s/compiled-transform (p k1 k2) pred m1) (transform [k1 k2] pred m1))))))
+
 
 (defspec various-orders-comp-test
   (for-all+
@@ -495,24 +495,24 @@
                     (gen-map-with-keys
                       gen/keyword
                       gen/int
-                      k3
-                      )
+                      k3)
+
                     k2)
                   k1))
-    pred (gen/elements [inc dec])]
+     pred (gen/elements [inc dec])]
     (let [paths [((s/comp-paths s/keypath s/keypath k3) k1 k2)
                  (s/comp-paths k1 k2 k3)
                  ((s/comp-paths s/keypath k2 s/keypath) k1 k3)
                  ((s/comp-paths k1 s/keypath k3) k2)
                  (s/comp-paths k1 (s/keypath k2) k3)
                  ((s/comp-paths (s/keypath k1) s/keypath (s/keypath k3)) k2)
-                 ((s/comp-paths s/keypath (s/keypath k2) s/keypath) k1 k3)
-                 ]
-          ]
+                 ((s/comp-paths s/keypath (s/keypath k2) s/keypath) k1 k3)]]
+
+
       (and
         (apply = (for [p paths] (s/compiled-select p m1)))
-        (apply = (for [p paths] (s/compiled-transform p pred m1)))
-        ))))
+        (apply = (for [p paths] (s/compiled-transform p pred m1)))))))
+
 
 (defspec filterer-param-test
   (for-all+
@@ -524,8 +524,8 @@
                         gen/keyword
                         gen/int
                         k
-                        k2
-                        )))
+                        k2)))
+
      pred (gen/elements [odd? even?])
      updater (gen/elements [inc dec])]
     (and
@@ -536,8 +536,8 @@
            v)
          (s/compiled-transform (s/comp-paths (s/filterer k pred) s/ALL k2)
            updater
-           v))
-      )))
+           v)))))
+
 
 (deftest nested-param-paths
   (let [p (s/filterer s/keypath (s/selected? s/ALL s/keypath (s/filterer s/keypath even?) s/ALL))
@@ -545,13 +545,13 @@
         p3 (s/filterer :a (s/selected? s/ALL :b (s/filterer :c even?) s/ALL))
         data [{:a [{:b [{:c 4 :d 5}]}]}
               {:a [{:c 3}]}
-              {:a [{:b [{:c 7}] :e [1]}]}]
-        ]
+              {:a [{:b [{:c 7}] :e [1]}]}]]
+
     (is (= (select p2 data)
            (select p3 data)
-           [[{:a [{:b [{:c 4 :d 5}]}]}]]
-           ))
-    ))
+           [[{:a [{:b [{:c 4 :d 5}]}]}]]))))
+
+
 
 (defspec subselect-nested-vectors
   (for-all+
@@ -581,8 +581,8 @@
                                     v)]
        (and (= (map k v) (reverse (map k v2)))
             (= (map #(dissoc % k) v)
-               (map #(dissoc % k) v2))) ; only key k was touched in any of the maps
-       ))))
+               (map #(dissoc % k) v2))))))) ; only key k was touched in any of the maps
+
 
 (defspec param-multi-path-test
   (for-all+
@@ -595,28 +595,28 @@
            gen/int
            k1
            k2
-           k3
-           ))
+           k3))
+
      pred1 (gen/elements [odd? even?])
      pred2 (gen/elements [odd? even?])
-     updater (gen/elements [inc dec])
-     ]
-     (let [paths [((s/multi-path [s/keypath pred1] [s/keypath pred2] k3) k1 k2)
-                  ((s/multi-path [k1 pred1] [s/keypath pred2] s/keypath) k2 k3)
-                  ((s/multi-path [s/keypath pred1] [s/keypath pred2] s/keypath) k1 k2 k3)
-                  (s/multi-path [k1 pred1] [k2 pred2] k3)
-                  ((s/multi-path [k1 pred1] [s/keypath pred2] k3) k2)
-                  ]]
-      (and
-        (apply =
-          (for [p paths]
-            (select p m)
-            ))
-        (apply =
-          (for [p paths]
-            (transform p updater m)
-            ))
-        ))))
+     updater (gen/elements [inc dec])]
+
+    (let [paths [((s/multi-path [s/keypath pred1] [s/keypath pred2] k3) k1 k2)
+                 ((s/multi-path [k1 pred1] [s/keypath pred2] s/keypath) k2 k3)
+                 ((s/multi-path [s/keypath pred1] [s/keypath pred2] s/keypath) k1 k2 k3)
+                 (s/multi-path [k1 pred1] [k2 pred2] k3)
+                 ((s/multi-path [k1 pred1] [s/keypath pred2] k3) k2)]]
+
+     (and
+       (apply =
+         (for [p paths]
+           (select p m)))
+
+       (apply =
+         (for [p paths]
+           (transform p updater m)))))))
+
+
 
 (defspec paramsfn-test
   (for-all+
@@ -626,8 +626,8 @@
      comparator (gen/elements [= > <])]
     (let [cpath (s/comp-paths s/ALL (paramsfn [p] [v] (comparator v p)))]
       (= (transform (cpath val) op v)
-         (transform [s/ALL #(comparator % val)] op v)))
-      ))
+         (transform [s/ALL #(comparator % val)] op v)))))
+
 
 (defspec subset-test
   (for-all+
@@ -644,8 +644,8 @@
       (and
         (= (transform (s/subset s3) identity combined) combined)
         (= (setval (s/subset s3) #{} combined) (set/difference combined s2))
-        (= (setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))
-        ))))
+        (= (setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))))))
+
 
 (deftest submap-test
   (is (= [{:foo 1}]
@@ -665,8 +665,8 @@
   (is (= {:a #{:b :c :d}}
          (setval [:a s/NIL->SET (s/subset #{})] #{:b} {:a #{:c :d}})))
   (is (= {:a [:b]}
-         (setval [:a s/NIL->VECTOR s/END] [:b] nil)))
-  )
+         (setval [:a s/NIL->VECTOR s/END] [:b] nil))))
+
 
 (defspec void-test
   (for-all+
@@ -677,8 +677,8 @@
       (= s1 (transform s/STOP inc s1))
       (= s1 (transform [s/ALL s/STOP s/ALL] inc s1))
       (= (transform [s/ALL (s/cond-path even? nil odd? s/STOP)] inc s1)
-         (transform [s/ALL even?] inc s1))
-      )))
+         (transform [s/ALL even?] inc s1)))))
+
 
 (deftest stay-continue-tests
   (is (= [[1 2 [:a :b]] [3 [:a :b]] [:a :b [:a :b]]]
@@ -688,8 +688,8 @@
   (is (= [[1 2 3] 1 3]
          (select (s/stay-then-continue s/ALL odd?) [1 2 3])))
   (is (= [1 3 [1 2 3]]
-         (select (s/continue-then-stay s/ALL odd?) [1 2 3])))
-  )
+         (select (s/continue-then-stay s/ALL odd?) [1 2 3]))))
+
 
 
 (declarepath MyWalker)
@@ -698,19 +698,19 @@
   (s/if-path vector?
     (s/if-path [s/FIRST #(= :abc %)]
       (s/continue-then-stay s/ALL MyWalker)
-      [s/ALL MyWalker]
-      )))
+      [s/ALL MyWalker])))
+
 
 (deftest recursive-path-test
   (is (= [9 1 10 3 1]
          (select [MyWalker s/ALL number?]
-           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]])
-           ))
+           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]])))
+
   (is (= [:bb [:aa 34 [:abc 11 [:ccc 9 8 [:abc 10 2]]]] [:abc 2 [:abc 4]]]
          (transform [MyWalker s/ALL number?] inc
-           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]])
-           ))
-  )
+           [:bb [:aa 34 [:abc 10 [:ccc 9 8 [:abc 9 1]]]] [:abc 1 [:abc 3]]]))))
+
+
 
 (declarepath map-key-walker [akey])
 
@@ -722,23 +722,23 @@
 
 (deftest recursive-params-path-test
   (is (= #{1 2 3} (set (select (map-key-walker :aaa)
-                                 {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}}))))
+                               {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}}))))
   (is (= {:a {:aaa 4 :b {:c {:aaa 3} :aaa 2}}}
          (transform (map-key-walker :aaa) inc
                       {:a {:aaa 3  :b {:c {:aaa 2} :aaa 1}}})))
   (is (= {:a {:c {:b "X"}}}
-         (setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}})))
-  )
+         (setval (map-key-walker :b) "X" {:a {:c {:b {:d 1}}}}))))
+
 
 (deftest recursive-params-composable-path-test
   (let [p (s/comp-paths s/keypath map-key-walker)]
-    (is (= [1] (select (p 1 :a) [{:a 3} {:a 1} {:a 2}])))
-    ))
+    (is (= [1] (select (p 1 :a) [{:a 3} {:a 1} {:a 2}])))))
+
 
 (deftest all-map-test
   (is (= {3 3} (transform [s/ALL s/FIRST] inc {2 3})))
-  (is (= {3 21 4 31} (transform [s/ALL s/ALL] inc {2 20 3 30})))
-  )
+  (is (= {3 21 4 31} (transform [s/ALL s/ALL] inc {2 20 3 30}))))
+
 
 (declarepath NestedHigherOrderWalker [k])
 
@@ -746,113 +746,113 @@
   (s/if-path vector?
     (s/if-path [s/FIRST (paramsfn [k] [e] (= k e))]
       (s/continue-then-stay s/ALL (s/params-reset NestedHigherOrderWalker))
-      [s/ALL (s/params-reset NestedHigherOrderWalker)]
-      )))
+      [s/ALL (s/params-reset NestedHigherOrderWalker)])))
+
 
 (deftest nested-higher-order-walker-test
   (is (= [:q [:abc :I 3] [:ccc [:abc :I] [:abc :I "a" [:abc :I [:abc :I [:d]]]]]]
          (setval [(NestedHigherOrderWalker :abc) (s/srange 1 1)]
-                   [:I]
-                   [:q [:abc 3] [:ccc [:abc] [:abc "a" [:abc [:abc [:d]]]]]]
-                   ))))
+                 [:I]
+                 [:q [:abc 3] [:ccc [:abc] [:abc "a" [:abc [:abc [:d]]]]]]))))
+
 
 #?(:clj
-(deftest large-params-test
-  (let [path (apply s/comp-paths (repeat 25 s/keypath))
-        m (reduce
-            (fn [m k]
-              {k m})
-            :a
-            (reverse (range 25)))]
-    (is (= :a (select-one (apply path (range 25)) m)))
-    )))
+   (deftest large-params-test
+     (let [path (apply s/comp-paths (repeat 25 s/keypath))
+           m (reduce
+               (fn [m k]
+                 {k m})
+               :a
+               (reverse (range 25)))]
+       (is (= :a (select-one (apply path (range 25)) m))))))
+
 ;;TODO: there's a bug in clojurescript that won't allow
 ;; non function implementations of IFn to have more than 20 arguments
 
 #?(:clj
-(do
-  (defprotocolpath AccountPath [])
-  (defrecord Account [funds])
-  (defrecord User [account])
-  (defrecord Family [accounts])
-  (extend-protocolpath AccountPath User :account Family [:accounts s/ALL])
-  ))
-
-#?(:clj
-(deftest protocolpath-basic-test
-  (let [data [(->User (->Account 30))
-              (->User (->Account 50))
-              (->Family [(->Account 51) (->Account 52)])]]
-    (is (= [30 50 51 52]
-           (select [s/ALL AccountPath :funds] data)))
-    (is (= [(->User (->Account 31))
-            (->User (->Account 51))
-            (->Family [(->Account 52) (->Account 53)])]
-           (transform [s/ALL AccountPath :funds]
-                      inc
-                      data)))
-    )))
-
-#?(:clj
-(do
-  (defprotocolpath LabeledAccountPath [label])
-  (defrecord LabeledUser [account])
-  (defrecord LabeledFamily [accounts])
-  (extend-protocolpath LabeledAccountPath
-    LabeledUser [:account s/keypath]
-    LabeledFamily [:accounts s/keypath s/ALL])
-  ))
-
-#?(:clj
-(deftest protocolpath-params-test
-  (let [data [(->LabeledUser {:a (->Account 30)})
-              (->LabeledUser {:a (->Account 50)})
-              (->LabeledFamily {:a [(->Account 51) (->Account 52)]})]]
-    (is (= [30 50 51 52]
-           (select [s/ALL (LabeledAccountPath :a) :funds] data)))
-    (is (= [(->LabeledUser {:a (->Account 31)})
-            (->LabeledUser {:a (->Account 51)})
-            (->LabeledFamily {:a [(->Account 52) (->Account 53)]})]
-           (transform [s/ALL (LabeledAccountPath :a) :funds]
-                      inc
-                      data)))
-    )))
+   (do
+     (defprotocolpath AccountPath [])
+     (defrecord Account [funds])
+     (defrecord User [account])
+     (defrecord Family [accounts])
+     (extend-protocolpath AccountPath User :account Family [:accounts s/ALL])))
 
 
 #?(:clj
-(do
-  (defprotocolpath CustomWalker [])
-  (extend-protocolpath CustomWalker
-    Object nil
-    clojure.lang.PersistentHashMap [(s/keypath :a) CustomWalker]
-    clojure.lang.PersistentArrayMap [(s/keypath :a) CustomWalker]
-    clojure.lang.PersistentVector [s/ALL CustomWalker]
-    )))
+   (deftest protocolpath-basic-test
+     (let [data [(->User (->Account 30))
+                 (->User (->Account 50))
+                 (->Family [(->Account 51) (->Account 52)])]]
+       (is (= [30 50 51 52]
+              (select [s/ALL AccountPath :funds] data)))
+       (is (= [(->User (->Account 31))
+               (->User (->Account 51))
+               (->Family [(->Account 52) (->Account 53)])]
+              (transform [s/ALL AccountPath :funds]
+                         inc
+                         data))))))
+
 
 #?(:clj
-(deftest mixed-rich-regular-protocolpath
-  (is (= [1 2 3 11 21 22 25]
-         (select [CustomWalker number?] [{:a [1 2 :c [3]]} [[[[[[11]]] 21 [22 :c 25]]]]])))
-  (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
-         (transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))
-  ))
+   (do
+     (defprotocolpath LabeledAccountPath [label])
+     (defrecord LabeledUser [account])
+     (defrecord LabeledFamily [accounts])
+     (extend-protocolpath LabeledAccountPath
+       LabeledUser [:account s/keypath]
+       LabeledFamily [:accounts s/keypath s/ALL])))
+
+
+#?(:clj
+   (deftest protocolpath-params-test
+     (let [data [(->LabeledUser {:a (->Account 30)})
+                 (->LabeledUser {:a (->Account 50)})
+                 (->LabeledFamily {:a [(->Account 51) (->Account 52)]})]]
+       (is (= [30 50 51 52]
+              (select [s/ALL (LabeledAccountPath :a) :funds] data)))
+       (is (= [(->LabeledUser {:a (->Account 31)})
+               (->LabeledUser {:a (->Account 51)})
+               (->LabeledFamily {:a [(->Account 52) (->Account 53)]})]
+              (transform [s/ALL (LabeledAccountPath :a) :funds]
+                         inc
+                         data))))))
+
+
+
+#?(:clj
+   (do
+     (defprotocolpath CustomWalker [])
+     (extend-protocolpath CustomWalker
+       Object nil
+       clojure.lang.PersistentHashMap [(s/keypath :a) CustomWalker]
+       clojure.lang.PersistentArrayMap [(s/keypath :a) CustomWalker]
+       clojure.lang.PersistentVector [s/ALL CustomWalker])))
+
+
+#?(:clj
+   (deftest mixed-rich-regular-protocolpath
+     (is (= [1 2 3 11 21 22 25]
+            (select [CustomWalker number?] [{:a [1 2 :c [3]]} [[[[[[11]]] 21 [22 :c 25]]]]])))
+     (is (= [2 3 [[[4]] :b 0] {:a 4 :b 10}]
+            (transform [CustomWalker number?] inc [1 2 [[[3]] :b -1] {:a 3 :b 10}])))))
+
 
 
 #?(
-:clj
-(defn make-queue [coll]
-  (reduce
-    #(conj %1 %2)
-    clojure.lang.PersistentQueue/EMPTY
-    coll))
+   :clj
+   (defn make-queue [coll]
+     (reduce
+       #(conj %1 %2)
+       clojure.lang.PersistentQueue/EMPTY
+       coll))
 
-:cljs
-(defn make-queue [coll]
-  (reduce
-    #(conj %1 %2)
-    #queue []
-    coll))
-)
+   :cljs
+   (defn make-queue [coll]
+     (reduce
+       #(conj %1 %2)
+       #queue []
+       coll)))
+
 
 (defspec transform-idempotency 50
          (for-all+
@@ -896,8 +896,8 @@
   (is (= 1 (select-one! (double-str-keypath "a" "b") {"ab" 1 "c" 2})))
   (is (= 1 (select-one! (some-keypath) {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
   (is (= 2 (select-one! (some-keypath "a") {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
-  (is (= 3 (select-one! (some-keypath 1 2 3 4 5) {"a" 1 "a!" 2 "bbb" 3 "d" 4})))
-  )
+  (is (= 3 (select-one! (some-keypath 1 2 3 4 5) {"a" 1 "a!" 2 "bbb" 3 "d" 4}))))
+
 
 (def ^:dynamic *APATH* s/keypath)
 
@@ -936,8 +936,8 @@
     (*APATH* k)
     str
     {:a 1 :b 2}
-    [[:a] [:b] [:c]]
-    )
+    [[:a] [:b] [:c]])
+
   (binding [*APATH* s/must]
     (ic-test
       false
@@ -945,50 +945,50 @@
       (*APATH* k)
       inc
       {:a 1 :b 2}
-      [[:a] [:b] [:c]]
-      ))
+      [[:a] [:b] [:c]]))
+
   (ic-test
     true
     [k k2]
     [s/ALL (s/selected? (s/must k) #(> % 2)) (s/must k2)]
     dec
     [{:a 1 :b 2} {:a 10 :b 6} {:c 7 :b 8} {:c 1 :d 9} {:c 3 :d -1}]
-    [[:a :b] [:b :a] [:c :d] [:b :c]]
-    )
+    [[:a :b] [:b :a] [:c :d] [:b :c]])
+
   (ic-test
     true
     []
     [(s/transformed s/STAY inc)]
     inc
     10
-    []
-    )
+    [])
+
 
   (s/must-cache-paths!)
   (is (thrown? #?(:clj Exception :cljs js/Error)
-    (select (if true :a :b) nil)
-    ))
+       (select (if true :a :b) nil)))
+
   (is (thrown? #?(:clj Exception :cljs js/Error)
-    (select (*APATH* :a) nil)
-    ))
+       (select (*APATH* :a) nil)))
+
   (is (thrown? #?(:clj Exception :cljs js/Error)
-    (select [:a (identity even?)] {:a 2})
-    ))
+       (select [:a (identity even?)] {:a 2})))
+
   ;; this tests a bug that existed before ^:staticparam annotation
   ;; for pathedfns
   (is (thrown? #?(:clj Exception :cljs js/Error)
-    (select [(s/putval 10) (s/transformed s/STAY #(inc %))] 10)
-    ))
+       (select [(s/putval 10) (s/transformed s/STAY #(inc %))] 10)))
+
   (let [p :a]
     (is (thrown? #?(:clj Exception :cljs js/Error)
-      (select [p even?] {:a 2})
-      )))
+         (select [p even?] {:a 2}))))
+
   (let [p :a]
     (is (thrown? #?(:clj Exception :cljs js/Error)
-      (select [s/ALL (s/selected? p even?)] [{:a 2}])
-      )))
-  (s/must-cache-paths! false)
-  )
+         (select [s/ALL (s/selected? p even?)] [{:a 2}]))))
+
+  (s/must-cache-paths! false))
+
 
 (deftest nested-inline-caching-test
   (is (= [[1]]
@@ -998,52 +998,52 @@
                (fn [v]
                  (select [(s/keypath v) (s/keypath a)]
                    {:a {:b 1}})))
-             :a
-             ))))
-  )
+             :a)))))
+
+
 
 (defspec continuous-subseqs-filter-equivalence
   (for-all+
     [aseq (gen/vector (gen/elements [1 2 3 :a :b :c 4 5 :d :e]))
      pred (gen/elements [keyword? number?])]
     (= (setval (s/continuous-subseqs pred) nil aseq)
-       (filter (complement pred) aseq))
-    ))
+       (filter (complement pred) aseq))))
+
 
 (deftest continuous-subseqs-test
   (is (= [1 "ab" 2 3 "c" 4 "def"]
          (transform
            (s/continuous-subseqs string?)
            (fn [s] [(apply str s)])
-           [1 "a" "b" 2 3 "c" 4 "d" "e" "f"]
-           )))
+           [1 "a" "b" 2 3 "c" 4 "d" "e" "f"])))
+
   (is (= [[] [2] [4 6]]
          (select
            [(s/continuous-subseqs number?) (s/filterer even?)]
-           [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"]
-           )))
-  )
+           [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"]))))
+
+
 
 ;; there was a bug where the transform-fn was being factored by inline caching
 ;; this verifies that it doesn't do inline caching
 (deftest transformed-inline-caching
   (dotimes [i 10]
-    (is (= [(inc i)] (select (s/transformed s/STAY #(+ % i)) 1)))
-    ))
+    (is (= [(inc i)] (select (s/transformed s/STAY #(+ % i)) 1)))))
+
 
 ;; test for issue #103
 (deftest nil->val-regression-test
   (is (= false (transform (s/nil->val true) identity false)))
-  (is (= false (select-one! (s/nil->val true) false)))
-  )
+  (is (= false (select-one! (s/nil->val true) false))))
+
 
 #?(:clj
-(deftest all-map-entry
-  (let [e (transform s/ALL inc (first {1 3}))]
-    (is (instance? clojure.lang.MapEntry e))
-    (is (= 2 (key e)))
-    (is (= 4 (val e)))
-    )))
+   (deftest all-map-entry
+     (let [e (transform s/ALL inc (first {1 3}))]
+       (is (instance? clojure.lang.MapEntry e))
+       (is (= 2 (key e)))
+       (is (= 4 (val e))))))
+
 
 (deftest select-on-empty-vector
   (is (= s/NONE (select-any s/ALL [])))
@@ -1054,8 +1054,8 @@
   (is (nil? (select-first s/FIRST [])))
   (is (nil? (select-one s/FIRST [])))
   (is (nil? (select-first s/LAST [])))
-  (is (nil? (select-one s/LAST [])))
-  )
+  (is (nil? (select-one s/LAST []))))
+
 
 (defspec select-first-one-any-equivalency
   (for-all+
@@ -1067,17 +1067,17 @@
           r3 (select-one [s/ALL (s/pred apred)] data)
           r4 (first (select [s/ALL (s/pred apred)] data))
           r5 (select-any [s/FIRST (s/pred apred)] data)
-          r6 (select-any [s/LAST (s/pred apred)] data)
-          ]
+          r6 (select-any [s/LAST (s/pred apred)] data)]
+
       (or (and (= r1 s/NONE) (nil? r2) (nil? r3) (nil? r4)
                (= r5 s/NONE) (= r6 s/NONE))
-          (and (not= r1 s/NONE) (some? r1) (= r1 r2 r3 r4 r5 r6)))
-      )))
+          (and (not= r1 s/NONE) (some? r1) (= r1 r2 r3 r4 r5 r6))))))
+
 
 (deftest select-any-static-fn
   (is (= 2 (select-any even? 2)))
-  (is (= s/NONE (select-any odd? 2)))
-  )
+  (is (= s/NONE (select-any odd? 2))))
+
 
 (deftest select-any-keywords
   (is (= s/NONE (select-any [:a even?] {:a 1})))
@@ -1086,8 +1086,8 @@
   (is (= 2 (select-any [(s/keypath "a") even?] {"a" 2})))
   (is (= s/NONE (select-any (s/must :b) {:a 1 :c 3})))
   (is (= 2 (select-any (s/must :b) {:a 1 :b 2 :c 3})))
-  (is (= s/NONE (select-any [(s/must :b) odd?] {:a 1 :b 2 :c 3})))
-  )
+  (is (= s/NONE (select-any [(s/must :b) odd?] {:a 1 :b 2 :c 3}))))
+
 
 (defspec select-any-ALL
   (for-all+
@@ -1096,21 +1096,21 @@
     (let [r1 (select [s/ALL pred] v)
           r2 (select-any [s/ALL pred] v)]
       (or (and (empty? r1) (= s/NONE r2))
-          (contains? (set r1) r2)
-          ))))
+          (contains? (set r1) r2)))))
+
 
 (deftest select-any-beginning-end
   (is (= [] (select-any s/BEGINNING [1 2 3]) (select-any s/END [1])))
-  (is (= s/NONE (select-any [s/BEGINNING s/STOP] [1 2 3]) (select-any [s/END s/STOP] [2 3])))
-  )
+  (is (= s/NONE (select-any [s/BEGINNING s/STOP] [1 2 3]) (select-any [s/END s/STOP] [2 3]))))
+
 
 (deftest select-any-walker
   (let [data [1 [2 3 4] [[6]]]]
     (is (= s/NONE (select-any (s/walker keyword?) data)))
     (is (= s/NONE (select-any [(s/walker number?) neg?] data)))
     (is (#{1 3} (select-any [(s/walker number?) odd?] data)))
-    (is (#{2 4 6} (select-any [(s/walker number?) even?] data)))
-    ))
+    (is (#{2 4 6} (select-any [(s/walker number?) even?] data)))))
+
 
 (defspec selected-any?-select-equivalence
   (for-all+
@@ -1118,8 +1118,8 @@
      pred (gen/elements [even? odd?])]
     (let [r1 (not (empty? (select [s/ALL pred] v)))
           r2 (selected-any? [s/ALL pred] v)]
-      (= r1 r2)
-      )))
+      (= r1 r2))))
+
 
 (defn div-by-3? [v]
   (= 0 (mod v 3)))
@@ -1130,29 +1130,29 @@
      pred (gen/elements [even? odd?])]
     (and
       (= (select-any [s/ALL pred] v)
-         (select-any [s/ALL (s/selected? pred)] v)
-         )
+         (select-any [s/ALL (s/selected? pred)] v))
+
       (= (select-any [s/ALL pred div-by-3?] v)
-         (select-any [s/ALL (s/selected? pred) div-by-3?] v)
-         )
-      )))
+         (select-any [s/ALL (s/selected? pred) div-by-3?] v)))))
+
+
 
 (deftest multi-path-select-any-test
   (is (= s/NONE (select-any (s/multi-path s/STOP s/STOP) 1)))
   (is (= 1 (select-any (s/multi-path s/STAY s/STOP) 1)
            (select-any (s/multi-path s/STOP s/STAY) 1)
-           (select-any (s/multi-path s/STOP s/STAY s/STOP) 1)
-           ))
-  (is (= s/NONE (select-any [(s/multi-path s/STOP s/STAY) even?] 1)))
-  )
+           (select-any (s/multi-path s/STOP s/STAY s/STOP) 1)))
+
+  (is (= s/NONE (select-any [(s/multi-path s/STOP s/STAY) even?] 1))))
+
 
 (deftest if-path-select-any-test
   (is (= s/NONE (select-any (s/if-path even? s/STAY) 1)))
   (is (= 2 (select-any (s/if-path even? s/STAY s/STAY) 2)))
   (is (= s/NONE (select-any [(s/if-path even? s/STAY s/STAY) odd?] 2)))
   (is (= 2 (select-any (s/if-path odd? s/STOP s/STAY) 2)))
-  (is (= s/NONE (select-any [(s/if-path odd? s/STOP s/STAY) odd?] 2)))
-  )
+  (is (= s/NONE (select-any [(s/if-path odd? s/STOP s/STAY) odd?] 2))))
+
 
 (defspec transient-vector-test
   (for-all+
@@ -1202,13 +1202,13 @@
   (is (nil? (transform s/ALL inc nil)))
   (is (empty? (select s/FIRST nil)))
   (is (empty? (select s/LAST nil)))
-  (is (empty? (select s/ALL nil)))
-  )
+  (is (empty? (select s/ALL nil))))
+
 
 (deftest map-vals-nil
   (is (= nil (transform s/MAP-VALS inc nil)))
-  (is (empty? (select s/MAP-VALS nil)))
-  )
+  (is (empty? (select s/MAP-VALS nil))))
+
 
 (defspec dispense-test
   (for-all+
@@ -1224,8 +1224,8 @@
                m)
        (select [(s/collect-one (s/keypath k2))
                 (s/keypath k3)]
-               m)
-       )))
+               m))))
+
 
 (deftest collected?-test
   (let [data {:active-id 1 :items [{:id 1 :name "a"} {:id 2 :name "b"}]}]
@@ -1235,18 +1235,18 @@
                         s/ALL
                         (s/collect-one :id)
                         (collected? [a i] (= a i))
-                        s/DISPENSE
-                        ]
-                        data)
+                        s/DISPENSE]
+
+                       data)
            (select-any [(s/collect-one :active-id)
                         :items
                         s/ALL
                         (s/collect-one :id)
                         (collected? v (apply = v))
-                        s/DISPENSE
-                        ]
-                        data)
-           )))
+                        s/DISPENSE]
+
+                       data))))
+
   (let [data {:active 3 :items [{:id 1 :val 0} {:id 3 :val 11}]}]
     (is (= (transform [:items s/ALL (s/selected? :id #(= % 3)) :val] inc data)
            (transform [(s/collect-one :active)
@@ -1257,8 +1257,8 @@
                        s/DISPENSE
                        :val]
                       inc
-                      data)
-           ))))
+                      data)))))
+
 
 (defspec traverse-test
   (for-all+
@@ -1269,8 +1269,8 @@
       (= (reduce + (traverse [s/ALL p] v))
          (reduce + (filter p v)))
       (= (reduce + i (traverse [s/ALL p] v))
-         (reduce + i (filter p v)))
-      )))
+         (reduce + i (filter p v))))))
+
 
 (declarepath KeyAccumWalker [k])
 (providepath KeyAccumWalker
@@ -1286,8 +1286,8 @@
     (is (= {"e1" {"e2" {"e1" "e1e2e1" "e2" "e1e2e2"}}}
            (transform (KeyAccumWalker :template)
              (fn [& all] (apply str (butlast all)))
-             data)))
-    ))
+             data)))))
+
 
 (deftest multi-path-vals-test
   (is (= {:a 1 :b 6 :c 3}
@@ -1296,14 +1296,14 @@
            {:a 1 :b 2 :c 3})))
   (is (= [[1 2] [3 2]]
          (select [(s/multi-path (s/collect-one :a) (s/collect-one :c)) :b]
-           {:a 1 :b 2 :c 3})))
-  )
+           {:a 1 :b 2 :c 3}))))
+
 
 (deftest sorted-map-by-transform
   (let [amap (sorted-map-by > 1 10 2 20 3 30)]
     (is (= [3 2 1] (keys (transform s/MAP-VALS inc amap))))
-    (is (= [3 2 1] (keys (transform [s/ALL s/LAST] inc amap))))
-    ))
+    (is (= [3 2 1] (keys (transform [s/ALL s/LAST] inc amap))))))
+
 
 (deftest setval-vals-collection-test
   (is (= 2 (setval s/VAL 2 :a))))
@@ -1317,17 +1317,17 @@
        (multi-transform
          (s/multi-path [(s/keypath kw1) s/VAL (s/terminal +)]
                        [(s/keypath kw2) (s/terminal dec)])
-         m
-         ))))
+         m))))
+
 
 (deftest multi-transform-overrun-error
-  (is (thrown? #?(:clj Exception :cljs js/Error) (multi-transform s/STAY 3)))
-  )
+  (is (thrown? #?(:clj Exception :cljs js/Error) (multi-transform s/STAY 3))))
+
 
 (deftest terminal-val-test
   (is (= 3 (multi-transform (s/terminal-val 3) 2)))
-  (is (= 3 (multi-transform [s/VAL (s/terminal-val 3)] 2)))
-  )
+  (is (= 3 (multi-transform [s/VAL (s/terminal-val 3)] 2))))
+
 
 
 (deftest multi-path-order-test
@@ -1337,8 +1337,7 @@
             [odd? (s/terminal #(* 2 %))]
             [even? (s/terminal-val 100)]
             [#(= 100 %) (s/terminal inc)]
-            [#(= 101 %) (s/terminal inc)]
+            [#(= 101 %) (s/terminal inc)])
 
-            )
-           1
-           ))))
+
+           1))))

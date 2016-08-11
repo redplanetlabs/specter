@@ -3,8 +3,8 @@
         [com.rpl.specter.impl :only [RichNavigator]])
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as cljwalk]
-            [com.rpl.specter.defnavhelpers :as dnh])
-  )
+            [com.rpl.specter.defnavhelpers :as dnh]))
+
 
 (defn ^:no-doc gensyms [amt]
   (vec (repeatedly amt gensym)))
@@ -14,8 +14,8 @@
     (if-not (= #{'select* 'transform*} (-> grouped keys set))
       (i/throw-illegal "defnav must implement select* and transform*, instead got "
                        (keys grouped)))
-    grouped
-    ))
+    grouped))
+
 
 (defmacro richnav
   "Defines a navigator with full access to collected vals, the parameters array,
@@ -30,8 +30,8 @@
         s-next-fn-sym (last s-params)
         s-pidx-sym (nth s-params 2)
         t-next-fn-sym (last t-params)
-        t-pidx-sym (nth t-params 2)
-        ]
+        t-pidx-sym (nth t-params 2)]
+
     `(let [num-params# ~num-params
            nav# (reify RichNavigator
                   (~'rich-select* ~s-params
@@ -39,12 +39,12 @@
                       ~@s-body))
                   (~'rich-transform* ~t-params
                     (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
-                      ~@t-body))
-                  )]
+                      ~@t-body)))]
+
        (if (zero? num-params#)
          (i/no-params-rich-compiled-path nav#)
-         (i/->ParamsNeededPath nav# num-params#)
-         ))))
+         (i/->ParamsNeededPath nav# num-params#)))))
+
 
 (defmacro ^:no-doc lean-nav* [& impls]
   `(reify Navigator ~@impls))
@@ -60,16 +60,15 @@
                                           binding-fn-syms))
         body (op-maker binding-declarations)]
     `(let [~@binding-fn-declarations]
-       ~body
-       )))
+       ~body)))
 
 (defmacro ^:no-doc rich-nav-with-bindings [num-params-code bindings & impls]
   (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
          [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*}
         (determine-params-impls impls)
         params-sym (gensym "params")
-        params-idx-sym (gensym "params-idx")
-        ]
+        params-idx-sym (gensym "params-idx")]
+
     (operation-with-bindings
       bindings
       params-sym
@@ -84,8 +83,8 @@
                                              next-params-idx#
                                              vals#
                                              structure#))]
-              ~@s-body
-              ))
+              ~@s-body))
+
           (~'rich-transform* [this# ~params-sym ~params-idx-sym vals# ~t-structure-sym next-fn#]
             (let [~@binding-declarations
                   next-params-idx# (+ ~params-idx-sym ~num-params-code)
@@ -94,9 +93,9 @@
                                              next-params-idx#
                                              vals#
                                              structure#))]
-              ~@t-body
-              ))
-          )))))
+              ~@t-body)))))))
+
+
 
 (defmacro ^:no-doc collector-with-bindings [num-params-code bindings impl]
   (let [[_ [_ structure-sym] & body] impl
@@ -110,21 +109,21 @@
         `(let [num-params# ~num-params-code
                cfn# (fn [~params-sym ~params-idx-sym vals# ~structure-sym next-fn#]
                       (let [~@binding-declarations]
-                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body)) ~structure-sym)
-                        ))]
+                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body)) ~structure-sym)))]
+
           (reify RichNavigator
             (~'rich-select* [this# params# params-idx# vals# structure# next-fn#]
               (cfn# params# params-idx# vals# structure# next-fn#))
             (~'rich-transform* [this# params# params-idx# vals# structure# next-fn#]
-              (cfn# params# params-idx# vals# structure# next-fn#))
-            ))))))
+              (cfn# params# params-idx# vals# structure# next-fn#))))))))
+
 
 (defn- delta-param-bindings [params]
   (->> params
        (map-indexed (fn [i p] [p `(dnh/param-delta ~i)]))
        (apply concat)
-       vec
-       ))
+       vec))
+
 
 (defmacro nav
   "Defines a navigator with late bound parameters. This navigator can be precompiled
@@ -143,10 +142,10 @@
        (i/->ParamsNeededPath
         (rich-nav-with-bindings ~(count params)
                                ~(delta-param-bindings params)
-                               ~@impls
-                               )
-       ~(count params))}
-       )))
+                               ~@impls)
+
+        ~(count params))})))
+
 
 (defmacro collector
   "Defines a Collector with late bound parameters. This collector can be precompiled
@@ -157,8 +156,8 @@
   [params body]
   `(let [rich-nav# (collector-with-bindings ~(count params)
                                            ~(delta-param-bindings params)
-                                           ~body
-                                           )]
+                                           ~body)]
+
      (if ~(empty? params)
        (i/no-params-rich-compiled-path rich-nav#)
        (vary-meta
@@ -172,9 +171,9 @@
           :params-needed-path
           (i/->ParamsNeededPath
            rich-nav#
-           ~(count params)
-           )}
-         ))))
+           ~(count params))}))))
+
+
 
 (defn ^:no-doc fixed-pathed-operation [bindings op-maker]
   (let [bindings (partition 2 bindings)
@@ -184,8 +183,8 @@
         compiled-syms (vec (gensyms (count bindings)))
         runtime-bindings (vec (mapcat
                                (fn [l c d]
-                                 `[~l (dnh/bound-params ~c ~d)]
-                                 )
+                                 `[~l (dnh/bound-params ~c ~d)])
+
                                late-path-syms
                                compiled-syms
                                delta-syms))
@@ -195,10 +194,10 @@
            ~compiled-syms compiled#
            deltas# (cons 0 (reductions + (map i/num-needed-params compiled#)))
            ~delta-syms deltas#
-           ~total-params-sym (last deltas#)
-           ]
-       ~body
-       )))
+           ~total-params-sym (last deltas#)]
+
+       ~body)))
+
 
 (defmacro fixed-pathed-nav
   "This helper is used to define navigators that take in a fixed number of other
@@ -212,16 +211,16 @@
             lean-bindings (mapcat vector late-syms compiled-syms)]
         `(if (zero? ~total-params-sym)
            (let [~@lean-bindings]
-             (i/lean-compiled-path (lean-nav* ~@impls))
-             )
+             (i/lean-compiled-path (lean-nav* ~@impls)))
+
            (i/->ParamsNeededPath
             (rich-nav-with-bindings ~total-params-sym
                                     ~runtime-bindings
-                                    ~@impls
-                                    )
-            ~total-params-sym
-            )))
-      )))
+                                    ~@impls)
+
+            ~total-params-sym))))))
+
+
 
 
 (defmacro fixed-pathed-collector
@@ -241,21 +240,21 @@
            (i/->ParamsNeededPath
             (collector-with-bindings ~total-params-sym
                                      ~runtime-bindings
-                                     ~@body
-                                     )
-            ~total-params-sym
-            ))))))
+                                     ~@body)
+
+            ~total-params-sym))))))
+
 
 (defmacro paramsfn [params [structure-sym] & impl]
   `(nav ~params
     (~'select* [this# structure# next-fn#]
                (let [afn# (fn [~structure-sym] ~@impl)]
-                 (i/filter-select afn# structure# next-fn#)
-                 ))
+                 (i/filter-select afn# structure# next-fn#)))
+
     (~'transform* [this# structure# next-fn#]
                   (let [afn# (fn [~structure-sym] ~@impl)]
-                    (i/filter-transform afn# structure# next-fn#)
-                    ))))
+                    (i/filter-transform afn# structure# next-fn#)))))
+
 
 (defmacro defnav [name & body]
   `(def ~name (nav ~@body)))
@@ -293,24 +292,24 @@
          num-params (count params)
          ssym (gensym "structure")
          rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
-         retrieve `(~m ~ssym)
-         ]
+         retrieve `(~m ~ssym)]
+
      `(do
         (defprotocol ~prot-name (~m [structure#]))
         (let [nav# (reify RichNavigator
                      (~'rich-select* [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-select* inav# ~@rargs)
-                         ))
+                         (i/exec-rich-select* inav# ~@rargs)))
+
                      (~'rich-transform* [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-transform* inav# ~@rargs)
-                         )))]
+                         (i/exec-rich-transform* inav# ~@rargs))))]
+
           (def ~name
             (if (= ~num-params 0)
               (i/no-params-rich-compiled-path nav#)
-              (i/->ParamsNeededPath nav# ~num-params)
-              )))))))
+              (i/->ParamsNeededPath nav# ~num-params))))))))
+
 
 
 
@@ -342,12 +341,12 @@
                        (~'rich-select* [this# ~@rargs]
                          (~select-exec ~declared ~@rargs))
                        (~'rich-transform* [this# ~@rargs]
-                         (~transform-exec ~declared ~@rargs)
-                         ))]
+                         (~transform-exec ~declared ~@rargs)))]
+
             (if (= ~num-params 0)
               (i/no-params-rich-compiled-path nav#)
-              (i/->ParamsNeededPath nav# ~num-params)
-              )))))))
+              (i/->ParamsNeededPath nav# ~num-params))))))))
+
 
 (defmacro providepath [name apath]
   `(let [comped# (i/comp-paths-internalized ~apath)
@@ -357,8 +356,8 @@
        (i/throw-illegal "Invalid number of params in provided path, expected "
                         expected-params# " but got " needed-params#))
      (def ~(declared-name name)
-       (i/extract-rich-nav (i/coerce-compiled->rich-nav comped#))
-       )))
+       (i/extract-rich-nav (i/coerce-compiled->rich-nav comped#)))))
+
 
 (defmacro extend-protocolpath
   "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
@@ -420,15 +419,15 @@
                  (i/throw-illegal "Expected result navigator '" (quote ~anav)
                                   "' from nav constructor '" (quote ~name) "'"
                                   " constructed with the provided constructor '" (quote ~csym)
-                                  "'"))
-               ))))]
+                                  "'"))))))]
+
     `(def ~name
        (vary-meta
         (let [~csym (i/layered-wrapper ~anav)]
           (fn ~@checked-code))
-        assoc :layerednav (or (-> ~anav meta :highernav :type) :rich)
-        ))
-    ))
+        assoc :layerednav (or (-> ~anav meta :highernav :type) :rich)))))
+
+
 
 
 (defn ^:no-doc ic-prepare-path [locals-set path]
@@ -440,8 +439,8 @@
     (if (contains? locals-set path)
       `(com.rpl.specter.impl/->LocalSym ~path (quote ~path))
       ;; var-get doesn't work in cljs, so capture the val in the macro instead
-      `(com.rpl.specter.impl/->VarUse ~path (var ~path) (quote ~path))
-      )
+      `(com.rpl.specter.impl/->VarUse ~path (var ~path) (quote ~path)))
+
 
     (i/fn-invocation? path)
     (let [[op & params] path]
@@ -452,12 +451,12 @@
         `(com.rpl.specter.impl/->FnInvocation
           ~(ic-prepare-path locals-set op)
           ~(mapv #(ic-prepare-path locals-set %) params)
-          (quote ~path)))
-      )
+          (quote ~path))))
+
 
     :else
-    `(quote ~path)
-    ))
+    `(quote ~path)))
+
 
 (defn ^:no-doc ic-possible-params [path]
   (do
@@ -473,10 +472,10 @@
              (concat [e] (rest e) (ic-possible-params e))
 
              (vector? e)
-             (ic-possible-params e)
-             ))
-     path
-     )))
+             (ic-possible-params e)))
+
+     path)))
+
 
 (defn cljs-macroexpand [env form]
   (let [expand-fn (i/cljs-analyzer-macroexpand-1)
@@ -490,13 +489,13 @@
            (#{'fn 'fn* 'cljs.core/fn} (first form)))
     form
     (let [expanded (if (seq? form) (cljs-macroexpand env form) form)]
-      (cljwalk/walk #(cljs-macroexpand-all* env %) identity expanded)
-      )))
+      (cljwalk/walk #(cljs-macroexpand-all* env %) identity expanded))))
+
 
 (defn cljs-macroexpand-all [env form]
   (let [ret (cljs-macroexpand-all* env form)]
-    ret
-    ))
+    ret))
+
 
 ;; still possible to mess this up with alter-var-root
 (defmacro path
@@ -509,15 +508,15 @@
         platform (if (contains? &env :locals) :cljs :clj)
         local-syms (if (= platform :cljs)
                      (-> &env :locals keys set) ;cljs
-                     (-> &env keys set) ;clj
-                     )
+                     (-> &env keys set)) ;clj
+
         used-locals-cell (i/mutable-cell [])
         _ (cljwalk/postwalk
            (fn [e]
              (if (local-syms e)
                (i/update-cell! used-locals-cell #(conj % e))
-               e
-               ))
+               e))
+
            path)
         used-locals (i/get-cell used-locals-cell)
 
@@ -549,10 +548,10 @@
                                      (alter-var-root
                                       (var ~cache-sym)
                                       (fn [_#] (i/mutable-cell)))
-                                     nil
-                                     ))))
-                         cache-sym
-                         )
+                                     nil))))
+
+                         cache-sym)
+
         add-cache-code (if (= platform :clj)
                          `(i/set-cell! ~cache-sym ~info-sym)
                          `(def ~cache-sym ~info-sym))
@@ -567,9 +566,9 @@
           `(i/handle-params
             ~precompiled-sym
             ~params-maker-sym
-            ~(mapv (fn [p] `(fn [] ~p)) possible-params)
-            ))
-        ]
+            ~(mapv (fn [p] `(fn [] ~p)) possible-params)))]
+
+
     (if (= platform :clj)
       (i/intern* *ns* cache-sym (i/mutable-cell)))
     `(let [info# ~get-cache-code
@@ -580,13 +579,13 @@
                               ~prepared-path
                               ~(str *ns*)
                               (quote ~used-locals)
-                              (quote ~possible-params)
-                              )]
+                              (quote ~possible-params))]
+
                ~add-cache-code
-               ~info-sym
-               )
-             info#
-             )
+               ~info-sym)
+
+             info#)
+
 
            ~precompiled-sym (.-precompiled info#)
            ~params-maker-sym (.-params-maker info#)]
@@ -594,10 +593,10 @@
          (i/comp-paths* ~(if (= (count path) 1) (first path) (vec path)))
          (if (nil? ~params-maker-sym)
            ~precompiled-sym
-           ~handle-params-code
-           )
-         ))
-    ))
+           ~handle-params-code)))))
+
+
+
 
 (defmacro select
   "Navigates to and returns a sequence of all the elements specified by the path.
@@ -705,5 +704,4 @@
   to capture all the collected values as a single vector."
   [params & body]
   (let [platform (if (contains? &env :locals) :cljs :clj)]
-    `(i/collected?* (~'fn [~params] ~@body))
-    ))
+    `(i/collected?* (~'fn [~params] ~@body))))

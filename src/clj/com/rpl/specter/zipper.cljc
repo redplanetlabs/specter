@@ -3,8 +3,8 @@
             [com.rpl.specter.macros
               :refer [defnav nav declarepath providepath]]))
   #?(:clj
-  (:use
-    [com.rpl.specter.macros :only [defnav nav declarepath providepath]]))
+     (:use
+       [com.rpl.specter.macros :only [defnav nav declarepath providepath]]))
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
@@ -12,8 +12,8 @@
   (select* [this structure next-fn]
     (next-fn (constructor structure)))
   (transform* [this structure next-fn]
-    (zip/root (next-fn (constructor structure)))
-    ))
+    (zip/root (next-fn (constructor structure)))))
+
 
 (def VECTOR-ZIP (zipper zip/vector-zip))
 (def SEQ-ZIP (zipper zip/seq-zip))
@@ -34,12 +34,12 @@
   (nav []
     (select* [this structure next-fn]
       (let [ret (znav structure)]
-        (if ret (next-fn ret))
-        ))
+        (if ret (next-fn ret))))
+
     (transform* [this structure next-fn]
       (let [ret (znav structure)]
-        (if ret (next-fn ret) structure)
-        ))))
+        (if ret (next-fn ret) structure)))))
+
 
 ;; (multi-path RIGHT LEFT) will not navigate to the right and left
 ;; of the currently navigated element because locations aren't stable
@@ -69,12 +69,12 @@
         inserts (reduce
                   (fn [z e] (-> z (inserter e) mover))
                   structure
-                  to-insert
-                  )]
+                  to-insert)]
+
     (if backer
       (reduce (fn [z _] (backer z)) inserts to-insert)
-      inserts)
-    ))
+      inserts)))
+
 
 (defnav ^{:doc "Navigate to the empty subsequence directly to the
                  right of this element."}
@@ -82,8 +82,8 @@
   (select* [this structure next-fn]
     (next-fn []))
   (transform* [this structure next-fn]
-    (inner-insert structure next-fn zip/insert-right zip/right zip/left)
-    ))
+    (inner-insert structure next-fn zip/insert-right zip/right zip/left)))
+
 
 (defnav ^{:doc "Navigate to the empty subsequence directly to the
                  left of this element."}
@@ -91,16 +91,16 @@
   (select* [this structure next-fn]
     (next-fn []))
   (transform* [this structure next-fn]
-    (inner-insert structure next-fn zip/insert-left identity nil)
-    ))
+    (inner-insert structure next-fn zip/insert-left identity nil)))
+
 
 (defnav NODE []
   (select* [this structure next-fn]
-    (next-fn (zip/node structure))
-    )
+    (next-fn (zip/node structure)))
+
   (transform* [this structure next-fn]
-    (zip/edit structure next-fn)
-    ))
+    (zip/edit structure next-fn)))
+
 
 (defnav ^{:doc "Navigate to the subsequence containing only
                  the node currently pointed to. This works just
@@ -108,13 +108,13 @@
                  from the structure"}
   NODE-SEQ []
   (select* [this structure next-fn]
-    (next-fn [(zip/node structure)])
-    )
+    (next-fn [(zip/node structure)]))
+
   (transform* [this structure next-fn]
     (let [to-insert (next-fn [(zip/node structure)])
           inserted (reduce zip/insert-left structure to-insert)]
-      (zip/remove inserted)
-      )))
+      (zip/remove inserted))))
+
 
 (declarepath ^{:doc "Navigate the zipper to the first element
                      in the structure matching predfn. A linear scan
@@ -124,8 +124,8 @@
 (providepath find-first
   (s/if-path [NODE s/pred]
     s/STAY
-    [NEXT (s/params-reset find-first)]
-    ))
+    [NEXT (s/params-reset find-first)]))
+
 
 (declarepath ^{:doc "Navigate to every element reachable using calls
                      to NEXT"}
@@ -134,5 +134,4 @@
 (providepath NEXT-WALK
   (s/stay-then-continue
     NEXT
-    NEXT-WALK
-    ))
+    NEXT-WALK))

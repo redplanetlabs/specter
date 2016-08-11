@@ -8,19 +8,19 @@
                defnav
                defpathedfn
                richnav
-               defnavconstructor
-              ]]
+               defnavconstructor]]
+
             [com.rpl.specter.util-macros :refer
-              [doseqres]]
-            ))
+              [doseqres]]))
+
   (:use #?(:clj [com.rpl.specter macros])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]
-             #?(:clj [clojure.core.reducers :as r])
-            [com.rpl.specter.defnavhelpers] ; so that for cljs it's loaded as macros expand to this
-             )
-  )
+            #?(:clj [clojure.core.reducers :as r])
+            [com.rpl.specter.defnavhelpers])) ; so that for cljs it's loaded as macros expand to this
+
+
 
 (defn- append [coll elem]
   (-> coll vec (conj elem)))
@@ -42,34 +42,34 @@
                    (let [r (continue-fn structure)]
                      (if-not (identical? r i/NONE)
                        (i/set-cell! ret r))
-                     r
-                     )
-                   (walk/walk this identity structure)
-                   ))]
+                     r)
+
+                   (walk/walk this identity structure)))]
+
     (walker structure)
-    (i/get-cell ret)
-    ))
+    (i/get-cell ret)))
+
 
 (defn key-select [akey structure next-fn]
   (next-fn (get structure akey)))
 
 (defn key-transform [akey structure next-fn]
-  (assoc structure akey (next-fn (get structure akey))
-  ))
+  (assoc structure akey (next-fn (get structure akey))))
+
 
 (defn all-select [structure next-fn]
   (doseqres i/NONE [e structure]
     (next-fn e)))
 
 #?(
-:clj
-(defn queue? [coll]
-  (instance? clojure.lang.PersistentQueue coll))
+   :clj
+   (defn queue? [coll]
+     (instance? clojure.lang.PersistentQueue coll))
 
-:cljs
-(defn queue? [coll]
-  (= (type coll) (type #queue [])))
-)
+   :cljs
+   (defn queue? [coll]
+     (= (type coll) (type #queue []))))
+
 
 (defprotocol AllTransformProtocol
   (all-transform [structure next-fn]))
@@ -78,26 +78,26 @@
   (reduce-kv
     (fn [m k v]
       (let [[newk newv] (next-fn [k v])]
-        (assoc m newk newv)
-        ))
+        (assoc m newk newv)))
+
     empty-map
-    structure
-    ))
+    structure))
+
 
 (extend-protocol AllTransformProtocol
   nil
   (all-transform [structure next-fn]
-    nil
-    )
+    nil)
+
 
   ;; in cljs they're PersistentVector so don't need a special case
   #?(:clj clojure.lang.MapEntry)
   #?(:clj
-  (all-transform [structure next-fn]
-    (let [newk (next-fn (key structure))
-          newv (next-fn (val structure))]
-      (clojure.lang.MapEntry. newk newv)
-      )))
+     (all-transform [structure next-fn]
+       (let [newk (next-fn (key structure))
+             newv (next-fn (val structure))]
+         (clojure.lang.MapEntry. newk newv))))
+
 
   #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (all-transform [structure next-fn]
@@ -105,31 +105,31 @@
 
   #?(:clj clojure.lang.PersistentArrayMap)
   #?(:clj
-  (all-transform [structure next-fn]
-    (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)
-          array (i/fast-object-array (* 2 (.count structure)))]
-      (loop [i 0]
-        (if (.hasNext k-it)
-          (let [k (.next k-it)
-                v (.next v-it)
-                [newk newv] (next-fn [k v])]
-            (aset array i newk)
-            (aset array (inc i) newv)
-            (recur (+ i 2)))))
-      (clojure.lang.PersistentArrayMap. array)
-      )))
+     (all-transform [structure next-fn]
+       (let [k-it (.keyIterator structure)
+             v-it (.valIterator structure)
+             array (i/fast-object-array (* 2 (.count structure)))]
+         (loop [i 0]
+           (if (.hasNext k-it)
+             (let [k (.next k-it)
+                   v (.next v-it)
+                   [newk newv] (next-fn [k v])]
+               (aset array i newk)
+               (aset array (inc i) newv)
+               (recur (+ i 2)))))
+         (clojure.lang.PersistentArrayMap. array))))
+
 
   #?(:cljs cljs.core/PersistentArrayMap)
   #?(:cljs
-  (all-transform [structure next-fn]
-    (non-transient-map-all-transform structure next-fn {})
-    ))
+     (all-transform [structure next-fn]
+       (non-transient-map-all-transform structure next-fn {})))
+
 
   #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap)
   (all-transform [structure next-fn]
-    (non-transient-map-all-transform structure next-fn (empty structure))
-    )
+    (non-transient-map-all-transform structure next-fn (empty structure)))
+
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
   (all-transform [structure next-fn]
@@ -137,48 +137,48 @@
       (reduce-kv
         (fn [m k v]
           (let [[newk newv] (next-fn [k v])]
-            (assoc! m newk newv)
-            ))
+            (assoc! m newk newv)))
+
         (transient
-          #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY)
-          )
-        structure
-        )))
+          #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
+
+        structure)))
+
 
 
   #?(:clj Object)
   #?(:clj
-  (all-transform [structure next-fn]
-    (let [empty-structure (empty structure)]
-      (cond (and (list? empty-structure) (not (queue? empty-structure)))
+     (all-transform [structure next-fn]
+       (let [empty-structure (empty structure)]
+         (cond (and (list? empty-structure) (not (queue? empty-structure)))
             ;; this is done to maintain order, otherwise lists get reversed
-            (doall (map next-fn structure))
+               (doall (map next-fn structure))
 
-            (map? structure)
+               (map? structure)
             ;; reduce-kv is much faster than doing r/map through call to (into ...)
-            (reduce-kv
-              (fn [m k v]
-                (let [[newk newv] (next-fn [k v])]
-                  (assoc m newk newv)
-                  ))
-              empty-structure
-              structure
-              )
+               (reduce-kv
+                 (fn [m k v]
+                   (let [[newk newv] (next-fn [k v])]
+                     (assoc m newk newv)))
 
-            :else
-            (->> structure (r/map next-fn) (into empty-structure))
-        ))))
+                 empty-structure
+                 structure)
+
+
+               :else
+               (->> structure (r/map next-fn) (into empty-structure))))))
+
 
   #?(:cljs default)
   #?(:cljs
-  (all-transform [structure next-fn]
-    (let [empty-structure (empty structure)]
-      (if (and (list? empty-structure) (not (queue? empty-structure)))
+     (all-transform [structure next-fn]
+       (let [empty-structure (empty structure)]
+         (if (and (list? empty-structure) (not (queue? empty-structure)))
         ;; this is done to maintain order, otherwise lists get reversed
-        (doall (map next-fn structure))
-        (into empty-structure (map #(next-fn %)) structure)
-        ))))
-  )
+           (doall (map next-fn structure))
+           (into empty-structure (map #(next-fn %)) structure))))))
+
+
 
 (defprotocol MapValsTransformProtocol
   (map-vals-transform [structure next-fn]))
@@ -193,36 +193,36 @@
 (extend-protocol MapValsTransformProtocol
   nil
   (map-vals-transform [structure next-fn]
-    nil
-    )
+    nil)
+
 
   #?(:clj clojure.lang.PersistentArrayMap)
   #?(:clj
-  (map-vals-transform [structure next-fn]
-    (let [k-it (.keyIterator structure)
-          v-it (.valIterator structure)
-          array (i/fast-object-array (* 2 (.count structure)))]
-      (loop [i 0]
-        (if (.hasNext k-it)
-          (let [k (.next k-it)
-                v (.next v-it)
-                newv (next-fn v)]
-            (aset array i k)
-            (aset array (inc i) newv)
-            (recur (+ i 2)))))
-      (clojure.lang.PersistentArrayMap. array)
-      )))
+     (map-vals-transform [structure next-fn]
+       (let [k-it (.keyIterator structure)
+             v-it (.valIterator structure)
+             array (i/fast-object-array (* 2 (.count structure)))]
+         (loop [i 0]
+           (if (.hasNext k-it)
+             (let [k (.next k-it)
+                   v (.next v-it)
+                   newv (next-fn v)]
+               (aset array i k)
+               (aset array (inc i) newv)
+               (recur (+ i 2)))))
+         (clojure.lang.PersistentArrayMap. array))))
+
 
   #?(:cljs cljs.core/PersistentArrayMap)
   #?(:cljs
-  (map-vals-transform [structure next-fn]
-    (map-vals-non-transient-transform structure {} next-fn)
-    ))
+     (map-vals-transform [structure next-fn]
+       (map-vals-non-transient-transform structure {} next-fn)))
+
 
   #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap)
   (map-vals-transform [structure next-fn]
-    (map-vals-non-transient-transform structure (empty structure) next-fn)
-    )
+    (map-vals-non-transient-transform structure (empty structure) next-fn))
+
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
   (map-vals-transform [structure next-fn]
@@ -231,10 +231,10 @@
         (fn [m k v]
           (assoc! m k (next-fn v)))
         (transient
-          #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY)
-          )
-        structure
-        )))
+          #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
+
+        structure)))
+
 
   #?(:clj Object :cljs default)
   (map-vals-transform [structure next-fn]
@@ -242,8 +242,8 @@
       (fn [m k v]
         (assoc m k (next-fn v)))
       (empty structure)
-      structure))
-  )
+      structure)))
+
 
 (defn srange-select [structure start end next-fn]
   (next-fn (-> structure vec (subvec start end))))
@@ -265,11 +265,11 @@
           [ranges curr-start i]
 
           :else
-          [(conj ranges [curr-start (inc curr-last)]) i i]
-          ))
+          [(conj ranges [curr-start (inc curr-last)]) i i]))
+
       [[] nil nil]
-      (concat (matching-indices aseq p) [-1])
-    )))
+      (concat (matching-indices aseq p) [-1]))))
+
 
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
@@ -280,10 +280,10 @@
         (reduce
           (fn [combined afn]
             (fn [structure]
-              (and (combined structure) (afn structure))
-              ))
-          path
-          )))
+              (and (combined structure) (afn structure))))
+
+          path)))
+
 
 
 
@@ -299,8 +299,8 @@
          idx
          vals
          structure
-         next-fn
-         )))
+         next-fn)))
+
 
 
 (defn if-transform [params params-idx vals structure next-fn then-tester then-nav then-params else-nav]
@@ -315,15 +315,15 @@
       idx
       vals
       structure
-      next-fn
-      )))
+      next-fn)))
+
 
 (defn terminal* [params params-idx vals structure]
   (let [afn (aget ^objects params params-idx)]
     (if (identical? vals [])
       (afn structure)
-      (apply afn (conj vals structure)))
-      ))
+      (apply afn (conj vals structure)))))
+
 
 
 (defprotocol AddExtremes
@@ -345,15 +345,15 @@
       (as-> ret <>
             (reduce conj! <> elements)
             (reduce conj! <> structure)
-            (persistent! <>)
-            )))
+            (persistent! <>))))
+
 
   #?(:clj Object :cljs default)
   (append-all [structure elements]
     (concat structure elements))
   (prepend-all [structure elements]
-    (concat elements structure))
-  )
+    (concat elements structure)))
+
 
 
 (defprotocol UpdateExtremes
@@ -384,31 +384,31 @@
   (append (butlast l) (afn (last l))))
 
 #?(
-:clj
-(defn vec-count [^clojure.lang.IPersistentVector v]
-  (.length v))
+   :clj
+   (defn vec-count [^clojure.lang.IPersistentVector v]
+     (.length v))
 
-:cljs
-(defn vec-count [v]
-  (count v))
-)
+   :cljs
+   (defn vec-count [v]
+     (count v)))
+
 
 #?(
-:clj
-(defn transient-vec-count [^clojure.lang.ITransientVector v]
-  (.count v))
+   :clj
+   (defn transient-vec-count [^clojure.lang.ITransientVector v]
+     (.count v))
 
-:cljs
-(defn transient-vec-count [v]
-  (count v))
-)
+   :cljs
+   (defn transient-vec-count [v]
+     (count v)))
+
 
 (extend-protocol UpdateExtremes
   #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (update-first [v afn]
     (let [val (nth v 0)]
-      (assoc v 0 (afn val))
-      ))
+      (assoc v 0 (afn val))))
+
   (update-last [v afn]
     ;; type-hinting vec-count to ^int caused weird errors with case
     (let [c (int (vec-count v))]
@@ -416,14 +416,14 @@
         1 (let [[e] v] [(afn e)])
         2 (let [[e1 e2] v] [e1 (afn e2)])
         (let [i (dec c)]
-          (assoc v i (afn (nth v i)))
-          ))))
+          (assoc v i (afn (nth v i)))))))
+
   #?(:clj Object :cljs default)
   (update-first [l val]
     (update-first-list l val))
   (update-last [l val]
-    (update-last-list l val)
-    ))
+    (update-last-list l val)))
+
 
 (extend-protocol GetExtremes
   #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
@@ -435,8 +435,8 @@
   (get-first [s]
     (first s))
   (get-last [s]
-    (last s)
-    ))
+    (last s)))
+
 
 
 (extend-protocol FastEmpty
@@ -451,14 +451,14 @@
     (= 0 (transient-vec-count v)))
   #?(:clj Object :cljs default)
   (fast-empty? [s]
-    (empty? s))
-  )
+    (empty? s)))
+
 
 (defn walk-until [pred on-match-fn structure]
   (if (pred structure)
     (on-match-fn structure)
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)
-    ))
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)))
+
 
 (defn codewalk-until [pred on-match-fn structure]
   (if (pred structure)
@@ -466,8 +466,8 @@
     (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
       (if (and (i/fn-invocation? structure) (i/fn-invocation? ret))
         (with-meta ret (meta structure))
-        ret
-        ))))
+        ret))))
+
 
 (def DISPENSE*
   (i/no-params-rich-compiled-path

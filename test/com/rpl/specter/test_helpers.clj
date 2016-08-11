@@ -1,9 +1,9 @@
 (ns com.rpl.specter.test-helpers
-  (:require [clojure.test.check             
+  (:require [clojure.test.check
              [generators :as gen]
              [properties :as prop]]
-            [clojure.test]
-            )
+            [clojure.test])
+
   (:use [com.rpl.specter.macros :only [select transform]]
         [com.rpl.specter :only [select* transform* must-cache-paths!]]))
 
@@ -19,7 +19,7 @@
                 `(gen/return ~vars)
                 (reverse parts))]
     `(prop/for-all [~vars ~genned]
-                   ~@body )))
+                   ~@body)))
 
 
 (defmacro ic-test [must-cache? params-decl apath transform-fn data params]
@@ -29,13 +29,12 @@
            icfntran# (fn [~@params-decl] (transform ~apath ~transform-fn ~data))
            regfnsel# (fn [~@params-decl] (select* ~apath ~data))
            regfntran# (fn [~@params-decl] (transform* ~apath ~transform-fn ~data))
-           params# (if (empty? ~params) [[]] ~params)
-           ]
+           params# (if (empty? ~params) [[]] ~params)]
+
       (must-cache-paths! ~must-cache?)
       (dotimes [_# 3]
         (doseq [ps# params#]
           (~is-sym (= (apply icfnsel# ps#) (apply regfnsel# ps#)))
-          (~is-sym (= (apply icfntran# ps#) (apply regfntran# ps#)))
-          ))
-      (must-cache-paths! false)
-      )))
+          (~is-sym (= (apply icfntran# ps#) (apply regfntran# ps#)))))
+
+      (must-cache-paths! false))))
