@@ -94,7 +94,7 @@ Example 2: Replace every continuous sequence of odd numbers with its sum:
 ;; => [4 6 8 35 16]
 ```
 
-This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/0.11.1/src/clj/com/rpl/specter/protocols.cljx).
+This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/protocols.cljc).
 
 Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
 
@@ -117,9 +117,9 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 Specter's API is contained in these files:
 
 - [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
-- [specter.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljx): This contains the built-in navigators and functional versions of `select/transform/etc.`
-- [transients.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transients.cljx): This contains navigators for transient collections.
-- [zipper.cljx](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljx): This integrates zipper-based navigation into Specter.
+- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and functional versions of `select/transform/etc.`
+- [transients.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transients.cljc): This contains navigators for transient collections.
+- [zipper.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljc): This integrates zipper-based navigation into Specter.
 
 # Questions?
 
