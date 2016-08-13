@@ -9,6 +9,7 @@
 
   (:require [com.rpl.specter.protocols :as p]
             [clojure.string :as s]
+            [clojure.walk :as walk]
             #?(:clj [com.rpl.specter.defhelpers :as dh])
             #?(:clj [riddley.walk :as riddley]))
 
@@ -651,6 +652,14 @@
       #?(:clj  (instance? clojure.lang.LazySeq f))
       #?(:cljs (instance? cljs.core.LazySeq f))
       (list? f)))
+
+(defn codewalk-until [pred on-match-fn structure]
+  (if (pred structure)
+    (on-match-fn structure)
+    (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
+      (if (and (fn-invocation? structure) (fn-invocation? ret))
+        (with-meta ret (meta structure))
+        ret))))
 
 (defrecord LayeredNav [underlying])
 

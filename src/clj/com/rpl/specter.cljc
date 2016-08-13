@@ -328,6 +328,7 @@
           In a transform, that subset in the original set is changed to the
           new value of the subset."}
   subset
+  {:inline-next-fn true}
   [aset]
   (select* [this structure next-fn]
     (next-fn (set/intersection structure aset)))
@@ -344,6 +345,7 @@
           In a transform, that submap in the original map is changed to the new
           value of the submap."}
   submap
+  {:inline-next-fn true}
   [m-keys]
   (select* [this structure next-fn]
     (next-fn (select-keys structure m-keys)))
@@ -371,7 +373,7 @@
   (select* [this structure next-fn]
     (n/walk-select afn next-fn structure))
   (transform* [this structure next-fn]
-    (n/codewalk-until afn next-fn structure)))
+    (i/codewalk-until afn next-fn structure)))
 
 (defpathedfn subselect
   "Navigates to a sequence that contains the results of (select ...),
@@ -397,6 +399,7 @@
 (defnav
   ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
   keypath
+  {:inline-next-fn true}
   [key]
   (select* [this structure next-fn]
     (next-fn (get structure key)))
@@ -407,6 +410,7 @@
 (defnav
   ^{:doc "Navigates to the key only if it exists in the map."}
   must
+  {:inline-next-fn true}
   [k]
   (select* [this structure next-fn]
     (if (contains? structure k)
@@ -421,6 +425,7 @@
 (defnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
   view
+  {:inline-next-fn true}
   [afn]
   (select* [this structure next-fn]
     (next-fn (afn structure)))
@@ -433,6 +438,7 @@
           transforms, the transformed value then has `unparse-fn` run on
           it to get the final value at this point."}
   parser
+  {:inline-next-fn true}
   [parse-fn unparse-fn]
   (select* [this structure next-fn]
     (next-fn (parse-fn structure)))
@@ -518,6 +524,7 @@
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
           late-bound parameterized version of using a function directly in a path."}
   pred
+  {:inline-next-fn true}
   [afn]
   (select* [this structure next-fn]
     (if (afn structure) (next-fn structure) NONE))
@@ -546,6 +553,7 @@
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
           navigated at the structure."}
   nil->val
+  {:inline-next-fn true}
   [v]
   (select* [this structure next-fn]
     (next-fn (if (nil? structure) v structure)))

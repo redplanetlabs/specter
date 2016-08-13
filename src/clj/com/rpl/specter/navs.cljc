@@ -460,14 +460,6 @@
     (walk/walk (partial walk-until pred on-match-fn) identity structure)))
 
 
-(defn codewalk-until [pred on-match-fn structure]
-  (if (pred structure)
-    (on-match-fn structure)
-    (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
-      (if (and (i/fn-invocation? structure) (i/fn-invocation? ret))
-        (with-meta ret (meta structure))
-        ret))))
-
 
 (def DISPENSE*
   (i/no-params-rich-compiled-path

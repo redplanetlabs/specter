@@ -62,13 +62,13 @@
     `(let [~@binding-fn-declarations]
        ~body)))
 
-(defmacro ^:no-doc rich-nav-with-bindings [num-params-code bindings & impls]
+
+(defn- rich-nav-with-bindings-not-inlined [num-params-code bindings impls]
   (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
          [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*}
         (determine-params-impls impls)
         params-sym (gensym "params")
         params-idx-sym (gensym "params-idx")]
-
     (operation-with-bindings
       bindings
       params-sym
@@ -95,6 +95,44 @@
                                              structure#))]
               ~@t-body)))))))
 
+(defn inline-next-fn [body next-fn-sym extra-params]
+  (i/codewalk-until
+    #(and (i/fn-invocation? %) (= next-fn-sym (first %)))
+    (fn [code]
+      (let [code (map #(inline-next-fn % next-fn-sym extra-params) code)]
+        (concat [next-fn-sym] extra-params (rest code))))
+    body))
+
+(defn- rich-nav-with-bindings-inlined [num-params-code bindings impls]
+  (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
+         [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*}
+        (determine-params-impls impls)
+        params-sym (gensym "params")
+        params-idx-sym (gensym "params-idx")
+        vals-sym (gensym "vals")
+        next-params-idx-sym (gensym "next-params-idx")
+        s-body (inline-next-fn s-body s-next-fn-sym [params-sym next-params-idx-sym vals-sym])
+        t-body (inline-next-fn t-body t-next-fn-sym [params-sym next-params-idx-sym vals-sym])]
+    (operation-with-bindings
+      bindings
+      params-sym
+      params-idx-sym
+      (fn [binding-declarations]
+        `(reify RichNavigator
+          (~'rich-select* [this# ~params-sym ~params-idx-sym ~vals-sym ~s-structure-sym ~s-next-fn-sym]
+            (let [~@binding-declarations
+                  ~next-params-idx-sym (+ ~params-idx-sym ~num-params-code)]
+              ~@s-body))
+
+          (~'rich-transform* [this# ~params-sym ~params-idx-sym ~vals-sym ~t-structure-sym ~t-next-fn-sym]
+            (let [~@binding-declarations
+                  ~next-params-idx-sym (+ ~params-idx-sym ~num-params-code)]
+              ~@t-body)))))))
+
+(defmacro ^:no-doc rich-nav-with-bindings [opts num-params-code bindings & impls]
+  (if (:inline-next-fn opts)
+    (rich-nav-with-bindings-inlined num-params-code bindings impls)
+    (rich-nav-with-bindings-not-inlined num-params-code bindings impls)))
 
 
 (defmacro ^:no-doc collector-with-bindings [num-params-code bindings impl]
@@ -130,21 +168,25 @@
   with other navigators without knowing the parameters. When precompiled with other
   navigators, the resulting path takes in parameters for all navigators in the path
   that needed parameters (in the order in which they were declared)."
-  [params & impls]
-  (if (empty? params)
-    `(i/lean-compiled-path (lean-nav* ~@impls))
-    `(vary-meta
-      (fn ~params (i/lean-compiled-path (lean-nav* ~@impls)))
-      assoc
-      :highernav
-      {:type :lean
-       :params-needed-path
-       (i/->ParamsNeededPath
-        (rich-nav-with-bindings ~(count params)
-                               ~(delta-param-bindings params)
-                               ~@impls)
+  [& impl]
+  (let [[opts params & impls] (if (map? (first impl))
+                                impl
+                                (cons {} impl))]
+    (if (empty? params)
+      `(i/lean-compiled-path (lean-nav* ~@impls))
+      `(vary-meta
+        (fn ~params (i/lean-compiled-path (lean-nav* ~@impls)))
+        assoc
+        :highernav
+        {:type :lean
+         :params-needed-path
+         (i/->ParamsNeededPath
+          (rich-nav-with-bindings ~opts
+                                  ~(count params)
+                                  ~(delta-param-bindings params)
+                                  ~@impls)
 
-        ~(count params))})))
+          ~(count params))}))))
 
 
 (defmacro collector
@@ -214,7 +256,8 @@
              (i/lean-compiled-path (lean-nav* ~@impls)))
 
            (i/->ParamsNeededPath
-            (rich-nav-with-bindings ~total-params-sym
+            (rich-nav-with-bindings {}
+                                    ~total-params-sym
                                     ~runtime-bindings
                                     ~@impls)
 
