@@ -400,6 +400,11 @@
 (defn comp-paths-internalized [path]
   (capture-params-internally (comp-paths* path)))
 
+(defn nav-type [n]
+  (if (satisfies? RichNavigator n)
+    :rich
+    :lean))
+
 (extend-protocol PathComposer
   nil
   (do-comp-paths [o]
@@ -416,7 +421,7 @@
                          (map capture-params-internally))
             combined (->> coerced
                           (map extract-nav)
-                          (partition-by type)
+                          (partition-by nav-type)
                           (map combine-same-types))
 
             result-nav (if (= 1 (count combined))
