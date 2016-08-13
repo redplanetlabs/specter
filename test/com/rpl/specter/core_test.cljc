@@ -9,7 +9,7 @@
                       nav declarepath providepath select select-one select-one!
                       select-first transform setval replace-in defnavconstructor
                       select-any selected-any? collected? traverse
-                      multi-transform]]))
+                      multi-transform path]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -19,7 +19,7 @@
                     nav declarepath providepath select select-one select-one!
                     select-first transform setval replace-in defnavconstructor
                     select-any selected-any? collected? traverse
-                    multi-transform]]))
+                    multi-transform path]]))
 
 
 
@@ -1341,3 +1341,10 @@
 
 
            1))))
+
+(deftest inline-lean-path
+  ;; use executors from ALL because it's a lean navigator
+  (let [e (.-executors s/ALL)]
+    (is (identical? e (.-executors (path :a (s/view inc)))))
+    (is (identical? e (.-executors (path (s/keypath :a) (s/srange 2 7)))))
+    (is (identical? e (.-executors (path :a (s/selected? (s/view inc) (s/selected? (s/srange 2 7)))))))))

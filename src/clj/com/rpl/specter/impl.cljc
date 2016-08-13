@@ -709,7 +709,9 @@
   ([v] (set-cell! MUST-CACHE-PATHS v)))
 
 (defn constant-node? [node]
-  (cond (record? node) false
+  (cond (and (instance? VarUse node)
+             (-> node :var meta :dynamic not)) true
+        (record? node) false
         (number? node) true
         (keyword? node) true
         (string? node) true
@@ -718,6 +720,16 @@
         (map? node) (and (every? constant-node? (vals node))
                          (every? constant-node? (keys node)))
         :else false))
+
+(defn extract-constant [node]
+  (cond (some #(% node) [number? keyword? string?]) node
+        (instance? VarUse node) (:val node)
+        (vector? node) (vec (map extract-constant node))
+        (set? node) (set (map extract-constant node))
+        (map? node) (->> node
+                         (map (fn [[k v]] [(extract-constant k) (extract-constant v)]))
+                         (into {}))
+        :else (throw-illegal "Unknown node " node)))
 
 
 (defn- extract-original-code [p]
@@ -925,7 +937,7 @@
               (cond
                 (or (root-params-nav? vv) (instance? ParamsNeededPath vv))
                 (if (every? constant-node? ps)
-                  (apply vv ps)
+                  (apply vv (map extract-constant ps))
                   (do
                     (swap! params-atom #(vec (concat % ps)))
                     (coerce-path vv)))
@@ -969,7 +981,7 @@
 
                 (and (fn? vv) (-> vv meta :layerednav))
                 (if (every? constant-node? ps)
-                  (apply vv ps)
+                  (apply vv (map extract-constant ps))
                   (do
                     (swap! params-atom conj (:code p))
                     (if (= (-> vv meta :layerednav) :lean)
@@ -992,7 +1004,7 @@
       :else
       (cond (set? p)
             (if (constant-node? p)
-              p
+              (extract-constant p)
               (do (swap! params-atom conj p)
                 pred*))
 
