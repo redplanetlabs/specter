@@ -1,6 +1,6 @@
 # Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way. 
+Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way.
 
 Here are three areas where Specter greatly improves Clojure programming:
 
@@ -31,7 +31,7 @@ Example 2: Increment every even number nested within map of vector of maps
 
 (map-vals data
   (fn [v]
-    (mapv 
+    (mapv
       (fn [m]
         (map-vals
           m
@@ -44,18 +44,18 @@ Example 2: Increment every even number nested within map of vector of maps
 
 **Specter is much faster than Clojure's limited built-in alternatives**
 
-Example 1: Specter's `select` is 27% faster than `get-in`:
+Example 1: Specter's `select-any` is 30% faster than `get-in`:
 
 ```clojure
 (time
   (dotimes [_ 10000000]
     (get-in {:a {:b {:c 1}}} [:a :b :c])))
-"Elapsed time: 640.666 msecs"
+"Elapsed time: 604.618 msecs"
 
 (time
   (dotimes [_ 10000000]
-    (select [:a :b :c] {:a {:b {:c 1}}})))
-"Elapsed time: 470.167 msecs"
+    (select-any [:a :b :c] {:a {:b {:c 1}}})))
+"Elapsed time: 427.528 msecs"
 ```
 
 Example 2: Specter's `transform` is 6x faster than `update-in`:
@@ -69,7 +69,7 @@ Example 2: Specter's `transform` is 6x faster than `update-in`:
 (time
   (dotimes [_ 10000000]
     (transform [:a :b :c] inc {:a {:b {:c 1}}})))
-"Elapsed time: 1699.016 msecs"
+"Elapsed time: 1616.762 msecs"
 ```
 
 **Specter makes sophisticated tasks – that are difficult to program manually – easy**
@@ -229,7 +229,7 @@ user> (transform [ALL (collect-one :b) :a even?]
 [{:b 3, :a 1} {:b -10, :a -8} {:b 10, :a 14} {:a 3}]
 ```
 
-The transform function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the transform is performed to :a's value. 
+The transform function receives as arguments all the collected values followed by the navigated to value. So in this case `+` receives the value of the :b key followed by the value of the :a key, and the transform is performed to :a's value.
 
 The four built-in ways for collecting values are `VAL`, `collect`, `collect-one`, and `putval`. `VAL` just adds whatever element it's currently on to the value list, while `collect` and `collect-one` take in a selector to navigate to the desired value. `collect` works just like `select` by finding a sequence of values, while `collect-one` expects to only navigate to a single value. Finally, `putval` adds an external value into the collected values list.
 
