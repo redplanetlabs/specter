@@ -1,11 +1,11 @@
 (ns com.rpl.specter.impl
   #?(:cljs (:require-macros
             [com.rpl.specter.defhelpers :refer [define-ParamsNeededPath]]
-            [com.rpl.specter.util-macros :refer [doseqres]]))
+            [com.rpl.specter.util-macros :refer [doseqres definterface+]]))
 
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val Navigator]]
-        #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
+        #?(:clj [com.rpl.specter.util-macros :only [doseqres definterface+]]))
 
   (:require [com.rpl.specter.protocols :as p]
             [clojure.string :as s]
@@ -104,35 +104,35 @@
 
 (deftype ExecutorFunctions [traverse-executor transform-executor])
 
-(deftype ParameterizedRichNav [rich-nav params params-idx])
+(deftype ParameterizedRichNav [rich-nav params ^long params-idx])
 
-(defprotocol RichNavigator
-  (rich-select* [this params params-idx vals structure next-fn])
-  (rich-transform* [this params params-idx vals structure next-fn]))
-
-
-#?(
-   :clj
-   (defmacro exec-rich-select* [this & args]
-     (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
-       `(.rich-select* ~hinted ~@args)))
-
-
-   :cljs
-   (defn exec-rich-select* [this params params-idx vals structure next-fn]
-     (rich-select* ^not-native this params params-idx vals structure next-fn)))
+(definterface+ RichNavigator
+  (rich_select [this params ^long params-idx vals structure next-fn])
+  (rich_transform [this params ^long params-idx vals structure next-fn]))
 
 
 #?(
    :clj
-   (defmacro exec-rich-transform* [this & args]
+   (defmacro exec-rich_select [this & args]
      (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
-       `(.rich-transform* ~hinted ~@args)))
+       `(.rich_select ~hinted ~@args)))
 
 
    :cljs
-   (defn exec-rich-transform* [this params params-idx vals structure next-fn]
-     (rich-transform* ^not-native this params params-idx vals structure next-fn)))
+   (defn exec-rich_select [this params params-idx vals structure next-fn]
+     (rich_select ^not-native this params params-idx vals structure next-fn)))
+
+
+#?(
+   :clj
+   (defmacro exec-rich_transform [this & args]
+     (let [hinted (with-meta this {:tag 'com.rpl.specter.impl.RichNavigator})]
+       `(.rich_transform ~hinted ~@args)))
+
+
+   :cljs
+   (defn exec-rich_transform [this params params-idx vals structure next-fn]
+     (rich_transform ^not-native this params params-idx vals structure next-fn)))
 
 
 #?(
@@ -162,7 +162,7 @@
 (def RichPathExecutor
   (->ExecutorFunctions
     (fn [^ParameterizedRichNav richnavp result-fn structure]
-      (exec-rich-select* (.-rich-nav richnavp)
+      (exec-rich_select (.-rich-nav richnavp)
         (.-params richnavp) (.-params-idx richnavp)
         [] structure
         (fn [_ _ vals structure]
@@ -171,7 +171,7 @@
               structure
               (conj vals structure))))))
     (fn [^ParameterizedRichNav richnavp transform-fn structure]
-      (exec-rich-transform* (.-rich-nav richnavp)
+      (exec-rich_transform (.-rich-nav richnavp)
         (.-params richnavp) (.-params-idx richnavp)
         [] structure
         (fn [_ _ vals structure]
@@ -326,22 +326,30 @@
   (coerce-path [this]
     (coerce-object this)))
 
+#?(:clj
+   (defn rich-nav? [o]
+     (instance? RichNavigator o))
+
+   :cljs
+   (defn rich-nav? [o]
+     (satisfies? RichNavigator o)))
+
 
 (defn- combine-same-types [[n & _ :as all]]
   (let [combiner
-        (if (satisfies? RichNavigator n)
+        (if (rich-nav? n)
           (fn [curr next]
             (reify RichNavigator
-              (rich-select* [this params params-idx vals structure next-fn]
-                (exec-rich-select* curr params params-idx vals structure
+              (rich_select [this params params-idx vals structure next-fn]
+                (exec-rich_select curr params params-idx vals structure
                   (fn [params-next params-idx-next vals-next structure-next]
-                    (exec-rich-select* next params-next params-idx-next
+                    (exec-rich_select next params-next params-idx-next
                       vals-next structure-next next-fn))))
 
-              (rich-transform* [this params params-idx vals structure next-fn]
-                (exec-rich-transform* curr params params-idx vals structure
+              (rich_transform [this params params-idx vals structure next-fn]
+                (exec-rich_transform curr params params-idx vals structure
                   (fn [params-next params-idx-next vals-next structure-next]
-                    (exec-rich-transform* next params-next params-idx-next
+                    (exec-rich_transform next params-next params-idx-next
                       vals-next structure-next next-fn))))))
 
           (fn [curr next]
@@ -357,13 +365,13 @@
     (reduce combiner all)))
 
 (defn coerce-rich-navigator [nav]
-  (if (satisfies? RichNavigator nav)
+  (if (rich-nav? nav)
     nav
     (reify RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+      (rich_select [this params params-idx vals structure next-fn]
         (exec-select* nav structure (fn [structure] (next-fn params params-idx vals structure))))
 
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (exec-transform* nav structure (fn [structure] (next-fn params params-idx vals structure)))))))
 
 
@@ -387,13 +395,13 @@
         path
         (no-params-rich-compiled-path
           (reify RichNavigator
-            (rich-select* [this params2 params-idx2 vals structure next-fn]
-              (exec-rich-select* rich-nav params params-idx vals structure
+            (rich_select [this params2 params-idx2 vals structure next-fn]
+              (exec-rich_select rich-nav params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
                   (next-fn params2 params-idx2 vals-next structure-next))))
 
-            (rich-transform* [this params2 params-idx2 vals structure next-fn]
-              (exec-rich-transform* rich-nav params params-idx vals structure
+            (rich_transform [this params2 params-idx2 vals structure next-fn]
+              (exec-rich_transform rich-nav params params-idx vals structure
                 (fn [_ _ vals-next structure-next]
                   (next-fn params2 params-idx2 vals-next structure-next))))))))))
 
@@ -402,7 +410,7 @@
   (capture-params-internally (comp-paths* path)))
 
 (defn nav-type [n]
-  (if (satisfies? RichNavigator n)
+  (if (rich-nav? n)
     :rich
     :lean))
 
@@ -775,13 +783,13 @@
 (def pred*
   (->ParamsNeededPath
     (reify RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+      (rich_select [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
             (next-fn params (inc params-idx) vals structure)
             NONE)))
 
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn structure)
             (next-fn params (inc params-idx) vals structure)
@@ -793,13 +801,13 @@
 (def collected?*
   (->ParamsNeededPath
     (reify RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+      (rich_select [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn vals)
             (next-fn params (inc params-idx) vals structure)
             NONE)))
 
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (let [afn (aget ^objects params params-idx)]
           (if (afn vals)
             (next-fn params (inc params-idx) vals structure)
@@ -811,11 +819,11 @@
 (def rich-compiled-path-proxy
   (->ParamsNeededPath
     (reify RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+      (rich_select [this params params-idx vals structure next-fn]
         (let [apath ^CompiledPath (aget ^objects params params-idx)
               pnav ^ParameterizedRichNav (.-nav apath)
               nav (.-rich-nav pnav)]
-          (exec-rich-select*
+          (exec-rich_select
             nav
             (.-params pnav)
             (.-params-idx pnav)
@@ -824,11 +832,11 @@
             (fn [_ _ vals-next structure-next]
               (next-fn params params-idx vals-next structure-next)))))
 
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (let [apath ^CompiledPath (aget ^objects params params-idx)
               pnav ^ParameterizedRichNav (.-nav apath)
               nav (.-rich-nav pnav)]
-          (exec-rich-transform*
+          (exec-rich_transform
             nav
             (.-params pnav)
             (.-params-idx pnav)
@@ -843,7 +851,7 @@
 (def lean-compiled-path-proxy
   (->ParamsNeededPath
     (reify RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+      (rich_select [this params params-idx vals structure next-fn]
         (let [^CompiledPath apath (aget ^objects params params-idx)
               ^Navigator nav (.-nav apath)]
           (exec-select*
@@ -852,7 +860,7 @@
             (fn [structure-next]
               (next-fn params params-idx vals structure-next)))))
 
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (let [^CompiledPath apath (aget ^objects params params-idx)
               ^Navigator nav (.-nav apath)]
           (exec-transform*

@@ -1,9 +1,9 @@
 (ns com.rpl.specter.macros
-  (:use [com.rpl.specter.protocols :only [Navigator]]
-        [com.rpl.specter.impl :only [RichNavigator]])
+  (:use [com.rpl.specter.protocols :only [Navigator]])
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as cljwalk]
-            [com.rpl.specter.defnavhelpers :as dnh]))
+            [com.rpl.specter.defnavhelpers :as dnh])
+  (:import [com.rpl.specter.impl RichNavigator]))
 
 
 (defn ^:no-doc gensyms [amt]
@@ -34,10 +34,10 @@
 
     `(let [num-params# ~num-params
            nav# (reify RichNavigator
-                  (~'rich-select* ~s-params
+                  (~'rich_select ~s-params
                     (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
                       ~@s-body))
-                  (~'rich-transform* ~t-params
+                  (~'rich_transform ~t-params
                     (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
                       ~@t-body)))]
 
@@ -75,7 +75,7 @@
       params-idx-sym
       (fn [binding-declarations]
         `(reify RichNavigator
-          (~'rich-select* [this# ~params-sym ~params-idx-sym vals# ~s-structure-sym next-fn#]
+          (~'rich_select [this# ~params-sym ~params-idx-sym vals# ~s-structure-sym next-fn#]
             (let [~@binding-declarations
                   next-params-idx# (+ ~params-idx-sym ~num-params-code)
                   ~s-next-fn-sym (fn [structure#]
@@ -85,7 +85,7 @@
                                              structure#))]
               ~@s-body))
 
-          (~'rich-transform* [this# ~params-sym ~params-idx-sym vals# ~t-structure-sym next-fn#]
+          (~'rich_transform [this# ~params-sym ~params-idx-sym vals# ~t-structure-sym next-fn#]
             (let [~@binding-declarations
                   next-params-idx# (+ ~params-idx-sym ~num-params-code)
                   ~t-next-fn-sym (fn [structure#]
@@ -119,12 +119,12 @@
       params-idx-sym
       (fn [binding-declarations]
         `(reify RichNavigator
-          (~'rich-select* [this# ~params-sym ~params-idx-sym ~vals-sym ~s-structure-sym ~s-next-fn-sym]
+          (~'rich_select [this# ~params-sym ~params-idx-sym ~vals-sym ~s-structure-sym ~s-next-fn-sym]
             (let [~@binding-declarations
                   ~next-params-idx-sym (+ ~params-idx-sym ~num-params-code)]
               ~@s-body))
 
-          (~'rich-transform* [this# ~params-sym ~params-idx-sym ~vals-sym ~t-structure-sym ~t-next-fn-sym]
+          (~'rich_transform [this# ~params-sym ~params-idx-sym ~vals-sym ~t-structure-sym ~t-next-fn-sym]
             (let [~@binding-declarations
                   ~next-params-idx-sym (+ ~params-idx-sym ~num-params-code)]
               ~@t-body)))))))
@@ -150,9 +150,9 @@
                         (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body)) ~structure-sym)))]
 
           (reify RichNavigator
-            (~'rich-select* [this# params# params-idx# vals# structure# next-fn#]
+            (~'rich_select [this# params# params-idx# vals# structure# next-fn#]
               (cfn# params# params-idx# vals# structure# next-fn#))
-            (~'rich-transform* [this# params# params-idx# vals# structure# next-fn#]
+            (~'rich_transform [this# params# params-idx# vals# structure# next-fn#]
               (cfn# params# params-idx# vals# structure# next-fn#))))))))
 
 
@@ -340,13 +340,13 @@
      `(do
         (defprotocol ~prot-name (~m [structure#]))
         (let [nav# (reify RichNavigator
-                     (~'rich-select* [this# ~@rargs]
+                     (~'rich_select [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-select* inav# ~@rargs)))
+                         (i/exec-rich_select inav# ~@rargs)))
 
-                     (~'rich-transform* [this# ~@rargs]
+                     (~'rich_transform [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-transform* inav# ~@rargs))))]
+                         (i/exec-rich_transform inav# ~@rargs))))]
 
           (def ~name
             (if (= ~num-params 0)
@@ -368,11 +368,11 @@
   ([name params]
    (let [platform (if (contains? &env :locals) :cljs :clj)
          select-exec (if (= platform :clj)
-                       `i/exec-rich-select*
-                       `i/rich-select*)
+                       `i/exec-rich_select
+                       `i/rich_select)
          transform-exec (if (= platform :clj)
-                          `i/exec-rich-transform*
-                          `i/rich-transform*)
+                          `i/exec-rich_transform
+                          `i/rich_transform)
          num-params (count params)
          declared (declared-name name)
          rargs [(gensym "params") (gensym "pidx") (gensym "vals")
@@ -381,9 +381,9 @@
         (declare ~declared)
         (def ~name
           (let [nav# (reify RichNavigator
-                       (~'rich-select* [this# ~@rargs]
+                       (~'rich_select [this# ~@rargs]
                          (~select-exec ~declared ~@rargs))
-                       (~'rich-transform* [this# ~@rargs]
+                       (~'rich_transform [this# ~@rargs]
                          (~transform-exec ~declared ~@rargs)))]
 
             (if (= ~num-params 0)

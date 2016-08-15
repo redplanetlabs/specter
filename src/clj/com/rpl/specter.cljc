@@ -175,9 +175,9 @@
         needed (i/num-needed-params params-path)]
     (richnav 0
       (select* [this params params-idx vals structure next-fn]
-        (i/exec-rich-select* nav params (- params-idx needed) vals structure next-fn))
+        (i/exec-rich_select nav params (- params-idx needed) vals structure next-fn))
       (transform* [this params params-idx vals structure next-fn]
-        (i/exec-rich-transform* nav params (- params-idx needed) vals structure next-fn)))))
+        (i/exec-rich_transform nav params (- params-idx needed) vals structure next-fn)))))
 
 
 ;; Built-in pathing and context operations
@@ -725,15 +725,15 @@
 
      (richnav (+ comp1-needed (i/num-needed-params comp2))
        (select* [this params params-idx vals structure next-fn]
-         (let [res1 (i/exec-rich-select* nav1 params params-idx vals structure next-fn)
-               res2 (i/exec-rich-select* nav2 params (+ params-idx comp1-needed) vals structure next-fn)]
+         (let [res1 (i/exec-rich_select nav1 params params-idx vals structure next-fn)
+               res2 (i/exec-rich_select nav2 params (+ params-idx comp1-needed) vals structure next-fn)]
            (if (identical? NONE res2)
              res1
              res2)))
 
        (transform* [this params params-idx vals structure next-fn]
-         (let [s1 (i/exec-rich-transform* nav1 params params-idx vals structure next-fn)]
-           (i/exec-rich-transform* nav2 params (+ params-idx comp1-needed) vals s1 next-fn))))))
+         (let [s1 (i/exec-rich_transform nav1 params params-idx vals structure next-fn)]
+           (i/exec-rich_transform nav2 params (+ params-idx comp1-needed) vals s1 next-fn))))))
 
   ([path1 path2 & paths]
    (reduce multi-path (multi-path path1 path2) paths)))

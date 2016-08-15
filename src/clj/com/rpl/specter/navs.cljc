@@ -14,11 +14,14 @@
               [doseqres]]))
 
   (:use #?(:clj [com.rpl.specter macros])
-        #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
+        #?(:clj [com.rpl.specter.util-macros :only [doseqres]])
+        #?(:cljs [com.rpl.specter.impl :only [RichNavigator]]))
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]
             #?(:clj [clojure.core.reducers :as r])
-            [com.rpl.specter.defnavhelpers])) ; so that for cljs it's loaded as macros expand to this
+            ; so that for cljs it's loaded as macros expand to this
+            [com.rpl.specter.defnavhelpers])
+  #?(:clj (:import [com.rpl.specter.impl RichNavigator])))
 
 
 
@@ -293,7 +296,7 @@
               then-nav
               else-nav)
         idx (if test? params-idx (+ params-idx then-params))]
-    (i/exec-rich-select*
+    (i/exec-rich_select
          sel
          params
          idx
@@ -309,7 +312,7 @@
                then-nav
                else-nav)
         idx (if test? params-idx (+ params-idx then-params))]
-    (i/exec-rich-transform*
+    (i/exec-rich_transform
       tran
       params
       idx
@@ -463,8 +466,8 @@
 
 (def DISPENSE*
   (i/no-params-rich-compiled-path
-    (reify i/RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
+    (reify RichNavigator
+      (rich_select [this params params-idx vals structure next-fn]
         (next-fn params params-idx [] structure))
-      (rich-transform* [this params params-idx vals structure next-fn]
+      (rich_transform [this params params-idx vals structure next-fn]
         (next-fn params params-idx [] structure)))))

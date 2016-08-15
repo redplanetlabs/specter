@@ -10,3 +10,12 @@
 
      ~backup-res
      ~aseq))
+
+
+(defmacro definterface+ [name & methods]
+  (let [platform (if (contains? &env :locals) :cljs :clj)]
+    (if (= platform :cljs)
+      `(defprotocol ~name ~@methods)
+      (let [methods (for [[n p & body] methods]
+                      (concat [n (-> p next vec)] body))]
+        `(definterface ~name ~@methods)))))
