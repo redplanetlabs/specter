@@ -9,6 +9,7 @@
 * Removed `variable-pathed-nav`
 * Switched codebase from cljx to cljc
 * Improved performance of ALL and MAP-VALS on PersistentArrayMap by about 2x
+* `defnav` now generates helper functions for every method. For example, `keypath` now has helpers `keypath-select*` and `keypath-transform*`. These functions take parameters `[key structure next-fn]`
 * Bug fix: ALL and MAP-VALS transforms on PersistentArrayMap above the threshold now output PersistentArrayMap instead of PersistentHashMap
 
 
