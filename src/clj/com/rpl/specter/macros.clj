@@ -255,9 +255,19 @@
                   (let [afn# (fn [~structure-sym] ~@impl)]
                     (i/filter-transform afn# structure# next-fn#)))))
 
+(defn- helper-name [name method-name]
+  (symbol (str name "-" method-name)))
 
-(defmacro defnav [name & body]
-  `(def ~name (nav ~@body)))
+(defmacro defnav [name params & impls]
+  ;; remove the "this" param for the helper
+  (let [helpers (for [[mname [_ & mparams] & mbody] impls]
+                  `(defn ~(helper-name name mname) [~@params ~@mparams] ~@mbody))
+        decls (for [[mname & _] impls]
+                `(declare ~(helper-name name mname)))]
+    `(do
+       ~@decls
+       ~@helpers
+       (def ~name (nav ~params ~@impls)))))
 
 (defmacro defcollector [name & body]
   `(def ~name (collector ~@body)))
