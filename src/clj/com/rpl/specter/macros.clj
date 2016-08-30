@@ -1,9 +1,7 @@
 (ns com.rpl.specter.macros
-  (:use [com.rpl.specter.protocols :only [Navigator]]
-        [com.rpl.specter.impl :only [RichNavigator]])
+  (:use [com.rpl.specter.protocols :only [RichNavigator]])
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as cljwalk]
-            [com.rpl.specter.defnavhelpers :as dnh]))
+            [clojure.walk :as cljwalk]))
 
 
 (defn ^:no-doc gensyms [amt]
@@ -17,243 +15,33 @@
     grouped))
 
 
-(defmacro richnav
-  "Defines a navigator with full access to collected vals, the parameters array,
-  and the parameters array index. `next-fn` expects to receive the params array,
-  a params index, the collected vals, and finally the next structure.
-  `next-fn` will automatically skip ahead in params array by `num-params`, so the
-  index passed to it is ignored.
-  This is the lowest level way of making navigators."
-  [num-params & impls]
-  (let [{[s-params & s-body] 'select*
-         [t-params & t-body] 'transform*} (determine-params-impls impls)
-        s-next-fn-sym (last s-params)
-        s-pidx-sym (nth s-params 2)
-        t-next-fn-sym (last t-params)
-        t-pidx-sym (nth t-params 2)]
-
-    `(let [num-params# ~num-params
-           nav# (reify RichNavigator
-                  (~'rich-select* ~s-params
-                    (let [~s-next-fn-sym (i/mk-jump-next-fn ~s-next-fn-sym ~s-pidx-sym num-params#)]
-                      ~@s-body))
-                  (~'rich-transform* ~t-params
-                    (let [~t-next-fn-sym (i/mk-jump-next-fn ~t-next-fn-sym ~t-pidx-sym num-params#)]
-                      ~@t-body)))]
-
-       (if (zero? num-params#)
-         (i/no-params-rich-compiled-path nav#)
-         (i/->ParamsNeededPath nav# num-params#)))))
-
-
-(defmacro ^:no-doc lean-nav* [& impls]
-  `(reify Navigator ~@impls))
-
-(defn ^:no-doc operation-with-bindings [bindings params-sym params-idx-sym op-maker]
-  (let [bindings (partition 2 bindings)
-        binding-fn-syms (gensyms (count bindings))
-        binding-syms (map first bindings)
-        fn-exprs (map second bindings)
-        binding-fn-declarations (vec (mapcat vector binding-fn-syms fn-exprs))
-        binding-declarations (vec (mapcat (fn [s f] [s `(~f ~params-sym ~params-idx-sym)])
-                                          binding-syms
-                                          binding-fn-syms))
-        body (op-maker binding-declarations)]
-    `(let [~@binding-fn-declarations]
-       ~body)))
-
-(defmacro ^:no-doc rich-nav-with-bindings [num-params-code bindings & impls]
-  (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
-         [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*}
-        (determine-params-impls impls)
-        params-sym (gensym "params")
-        params-idx-sym (gensym "params-idx")]
-
-    (operation-with-bindings
-      bindings
-      params-sym
-      params-idx-sym
-      (fn [binding-declarations]
-        `(reify RichNavigator
-          (~'rich-select* [this# ~params-sym ~params-idx-sym vals# ~s-structure-sym next-fn#]
-            (let [~@binding-declarations
-                  next-params-idx# (+ ~params-idx-sym ~num-params-code)
-                  ~s-next-fn-sym (fn [structure#]
-                                   (next-fn# ~params-sym
-                                             next-params-idx#
-                                             vals#
-                                             structure#))]
-              ~@s-body))
-
-          (~'rich-transform* [this# ~params-sym ~params-idx-sym vals# ~t-structure-sym next-fn#]
-            (let [~@binding-declarations
-                  next-params-idx# (+ ~params-idx-sym ~num-params-code)
-                  ~t-next-fn-sym (fn [structure#]
-                                   (next-fn# ~params-sym
-                                             next-params-idx#
-                                             vals#
-                                             structure#))]
-              ~@t-body)))))))
-
-
-
-(defmacro ^:no-doc collector-with-bindings [num-params-code bindings impl]
-  (let [[_ [_ structure-sym] & body] impl
-        params-sym (gensym "params")
-        params-idx-sym (gensym "params")]
-    (operation-with-bindings
-      bindings
-      params-sym
-      params-idx-sym
-      (fn [binding-declarations]
-        `(let [num-params# ~num-params-code
-               cfn# (fn [~params-sym ~params-idx-sym vals# ~structure-sym next-fn#]
-                      (let [~@binding-declarations]
-                        (next-fn# ~params-sym (+ ~params-idx-sym num-params#) (conj vals# (do ~@body)) ~structure-sym)))]
-
-          (reify RichNavigator
-            (~'rich-select* [this# params# params-idx# vals# structure# next-fn#]
-              (cfn# params# params-idx# vals# structure# next-fn#))
-            (~'rich-transform* [this# params# params-idx# vals# structure# next-fn#]
-              (cfn# params# params-idx# vals# structure# next-fn#))))))))
-
-
-(defn- delta-param-bindings [params]
-  (->> params
-       (map-indexed (fn [i p] [p `(dnh/param-delta ~i)]))
-       (apply concat)
-       vec))
-
-
-(defmacro nav
-  "Defines a navigator with late bound parameters. This navigator can be precompiled
-  with other navigators without knowing the parameters. When precompiled with other
-  navigators, the resulting path takes in parameters for all navigators in the path
-  that needed parameters (in the order in which they were declared)."
-  [params & impls]
+(defmacro richnav [params & impls]
   (if (empty? params)
-    `(i/lean-compiled-path (lean-nav* ~@impls))
-    `(vary-meta
-      (fn ~params (i/lean-compiled-path (lean-nav* ~@impls)))
-      assoc
-      :highernav
-      {:type :lean
-       :params-needed-path
-       (i/->ParamsNeededPath
-        (rich-nav-with-bindings ~(count params)
-                               ~(delta-param-bindings params)
-                               ~@impls)
-
-        ~(count params))})))
+    (reify RichNavigator ~@impls)
+    `(fn ~params
+       (reify RichNavigator
+         ~@impls))))
 
 
-(defmacro collector
-  "Defines a Collector with late bound parameters. This collector can be precompiled
-  with other selectors without knowing the parameters. When precompiled with other
-  selectors, the resulting selector takes in parameters for all selectors in the path
-  that needed parameters (in the order in which they were declared).
-  "
-  [params body]
-  `(let [rich-nav# (collector-with-bindings ~(count params)
-                                           ~(delta-param-bindings params)
-                                           ~body)]
+(defmacro nav [params & impls]
+  (let [{[[_ s-structure-sym s-next-fn-sym] & s-body] 'select*
+         [[_ t-structure-sym t-next-fn-sym] & t-body] 'transform*} (determine-params-impls impls)]
+    `(richnav ~params
+       (~'select* [this# vals# ~s-structure-sym next-fn#]
+         (let [~s-next-fn-sym (fn [s#] (next-fn# vals# s#))]
+           ~@s-body))
+       (~'transform* [this# vals# ~t-structure-sym next-fn#]
+         (let [~t-next-fn-sym (fn [s#] (next-fn# vals# s#))]
+           ~@t-body)))))
 
-     (if ~(empty? params)
-       (i/no-params-rich-compiled-path rich-nav#)
-       (vary-meta
-         (fn ~params
-           (i/no-params-rich-compiled-path
-             (collector-with-bindings 0 []
-                ~body)))
-         assoc
-         :highernav
-         {:type :rich
-          :params-needed-path
-          (i/->ParamsNeededPath
-           rich-nav#
-           ~(count params))}))))
-
-
-
-(defn ^:no-doc fixed-pathed-operation [bindings op-maker]
-  (let [bindings (partition 2 bindings)
-        late-path-syms (map first bindings)
-        paths-code (vec (map second bindings))
-        delta-syms (vec (gensyms (count bindings)))
-        compiled-syms (vec (gensyms (count bindings)))
-        runtime-bindings (vec (mapcat
-                               (fn [l c d]
-                                 `[~l (dnh/bound-params ~c ~d)])
-
-                               late-path-syms
-                               compiled-syms
-                               delta-syms))
-        total-params-sym (gensym "total-params")
-        body (op-maker runtime-bindings compiled-syms total-params-sym)]
-    `(let [compiled# (doall (map i/comp-paths* ~paths-code))
-           ~compiled-syms compiled#
-           deltas# (cons 0 (reductions + (map i/num-needed-params compiled#)))
-           ~delta-syms deltas#
-           ~total-params-sym (last deltas#)]
-
-       ~body)))
-
-
-(defmacro fixed-pathed-nav
-  "This helper is used to define navigators that take in a fixed number of other
-  paths as input. Those paths may require late-bound params, so this helper
-  will create a parameterized navigator if that is the case. If no late-bound params
-  are required, then the result is executable."
-  [bindings & impls]
-  (fixed-pathed-operation bindings
-    (fn [runtime-bindings compiled-syms total-params-sym]
-      (let [late-syms (map first (partition 2 bindings))
-            lean-bindings (mapcat vector late-syms compiled-syms)]
-        `(if (zero? ~total-params-sym)
-           (let [~@lean-bindings]
-             (i/lean-compiled-path (lean-nav* ~@impls)))
-
-           (i/->ParamsNeededPath
-            (rich-nav-with-bindings ~total-params-sym
-                                    ~runtime-bindings
-                                    ~@impls)
-
-            ~total-params-sym))))))
-
-
-
-
-(defmacro fixed-pathed-collector
-  "This helper is used to define collectors that take in a fixed number of
-  paths as input. That path may require late-bound params, so this helper
-  will create a parameterized navigator if that is the case. If no late-bound params
-  are required, then the result is executable."
-  [bindings & body]
-  (fixed-pathed-operation bindings
-    (fn [runtime-bindings compiled-syms total-params-sym]
-      (let [late-syms (map first (partition 2 bindings))
-            lean-bindings (mapcat vector late-syms compiled-syms)]
-        `(if (zero? ~total-params-sym)
-           (let [~@lean-bindings]
-             (i/no-params-rich-compiled-path
-               (collector-with-bindings 0 [] ~@body)))
-           (i/->ParamsNeededPath
-            (collector-with-bindings ~total-params-sym
-                                     ~runtime-bindings
-                                     ~@body)
-
-            ~total-params-sym))))))
-
-
-(defmacro paramsfn [params [structure-sym] & impl]
-  `(nav ~params
-    (~'select* [this# structure# next-fn#]
-               (let [afn# (fn [~structure-sym] ~@impl)]
-                 (i/filter-select afn# structure# next-fn#)))
-
-    (~'transform* [this# structure# next-fn#]
-                  (let [afn# (fn [~structure-sym] ~@impl)]
-                    (i/filter-transform afn# structure# next-fn#)))))
+(defmacro collector [params [_ [_ structure-sym] & body] impl]
+  (let [cfn# (fn [vals# ~structure-sym next-fn#]
+                (next-fn# (conj vals# (do ~@body)) ~structure-sym))]
+    `(richnav ~params
+       (~'select* [this# vals# structure# next-fn#]
+         (cfn# vals# structure# next-fn#))
+       (~'transform* [this# vals# structure# next-fn#]
+         (cfn# vals# structure# next-fn#)))))
 
 (defn- helper-name [name method-name]
   (symbol (str name "-" method-name)))
@@ -269,14 +57,76 @@
        ~@helpers
        (def ~name (nav ~params ~@impls)))))
 
+(defrichnav [name params & impls]
+  `(def ~name (richnav ~params ~@impls)))
+
 (defmacro defcollector [name & body]
   `(def ~name (collector ~@body)))
+
+
+(defmacro late-bound-nav [bindings & impl])
+  ;;TODO
+  ;; if bindings are static, then immediately return a navigator
+  ;; otherwise, return a function from params -> navigator (using nav)
+  ;;  function has metadata about what each arg should correspond to
+
+  ;;TODO:
+  ;; during inline caching analysis, defpathedfn can return:
+  ;;   - a path (in a sequence - vector or list from &), which can contain both static and dynamic params
+  ;;   - a navigator implementation
+  ;;   - a late-bound-nav or late-bound-collector
+  ;;     - which can have within the late paths other late-bound paths
+  ;;      - a record containing a function that takes in params, and then a vector of
+  ;;        what those params are (exactly what was put into bindings)
+  ;;      - should explicitly say in late-bound-nav which ones are paths and which aren't
+  ;;         - can use ^:path metadata? or wrap in: (late-path path)
+  ;;   - a non-vector constant (which will have indirect-nav run on it)
+  ;;
+
+  ;; when `path` passes args to a pathedfn:
+  ;;   - needs to wrap all dynamic portions in "dynamicparam"
+  ;;     (VarUse, LocalSym, etc.)
+  ;;    - it should descend into vectors as well
+
+
+  ;; inline caching should do the following:
+  ;;   - escape path as it's doing now (recursing into vectors)
+  ;;   - go through path and for each navigator position:
+  ;;    - if a localsym: then it's a dynamic call to (if (navigator? ...) ... (indirect-nav))
+  ;;    - if a varuse: if dynamic, then it's a dynamic call as above
+  ;;      - if static, then get the value. if a navigator then done, otherwise call indirect-nav
+  ;;    - if specialform: it's a dynamic call to if (navigator? ...) as above
+  ;;    - if fninvocation:
+  ;;        - if not pathedfn:
+  ;;          - if params are constant, then invoke. if return is not navigator, then call indirect-nav
+  ;;          - otherwise, label that point as "dynamic invocation" with the args
+  ;;       - if pathedfn:
+  ;;          - take all arguments that have anything dynamic in them and wrap in dynamicparam
+  ;;              - including inside vectors (just one level
+  ;;         - call the function:
+  ;;             - if return is constant, then do indirect-nav or use the nav
+  ;;             - if return is a sequence, then treat it as path for that point to be merged in
+  ;;               , strip "dynamicparam", and recurse inside the vector
+  ;;                 - should also flatten the vector
+  ;;             - if return is a late-bound record, then:
+  ;;               - label point as dynamic invocation with the args
+  ;;                  - args marked as "latepath" TODO
+  ;;   - if sequence: then flatten and recurse
+  ;;   - if constant, then call indirect-nav
+
+  ;; for all (if (navigator ...)... (indirect-nav)) calls, use metadata to determine whether
+  ;;  return is definitely a navigator in which case that dynamic code can be omitted
+  ;;  annotation could be :tag or :direct-nav
+  ;; defnav needs to annotate return appropriately
+
 
 
 (defn- protpath-sym [name]
   (-> name (str "-prot") symbol))
 
 
+;;TODO: redesign so can still have parameterized protpaths...
+;;TODO: mainly need recursion
 (defmacro defprotocolpath
   "Defines a navigator that chooses the path to take based on the type
   of the value at the current point. May be specified with parameters to
@@ -301,19 +151,19 @@
          m (-> name (str "-retrieve") symbol)
          num-params (count params)
          ssym (gensym "structure")
-         rargs [(gensym "params") (gensym "pidx") (gensym "vals") ssym (gensym "next-fn")]
+         rargs [(gensym "vals") ssym (gensym "next-fn")]
          retrieve `(~m ~ssym)]
 
      `(do
         (defprotocol ~prot-name (~m [structure#]))
         (let [nav# (reify RichNavigator
-                     (~'rich-select* [this# ~@rargs]
+                     (~'select* [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-select* inav# ~@rargs)))
+                         (i/exec-select* inav# ~@rargs)))
 
                      (~'rich-transform* [this# ~@rargs]
                        (let [inav# ~retrieve]
-                         (i/exec-rich-transform* inav# ~@rargs))))]
+                         (i/exec-transform* inav# ~@rargs))))]
 
           (def ~name
             (if (= ~num-params 0)
@@ -328,7 +178,7 @@
   (vary-meta (symbol (str name "-declared"))
              assoc :no-doc true))
 
-
+;;TODO: redesign so can be recursive
 (defmacro declarepath
   ([name]
    `(declarepath ~name []))
@@ -402,42 +252,14 @@
 
 (defmacro defpathedfn
   "Defines a higher order navigator that itself takes in one or more paths
-  as input. This macro is generally used in conjunction with [[fixed-pathed-nav]]
-  or [[variable-pathed-nav]]. When inline factoring is applied to a path containing
-  one of these higher order navigators, it will automatically interepret all
-  arguments as paths, factor them accordingly, and set up the callsite to
-  provide the parameters dynamically. Use ^:notpath metadata on arguments
-  to indicate non-path arguments that should not be factored – note that in order
-  to be inline factorable, these arguments must be statically resolvable (e.g. a
-    top level var). See `transformed` for an example."
+  as input. When inline caching is applied to a path containing
+  one of these higher order navigators, it will apply inline caching and
+  compilation to the subpaths as well. Use ^:notpath metadata on arguments
+  to indicate non-path arguments that should not be compiled"
   [name & args]
   (let [[name args] (name-with-attributes name args)
         name (vary-meta name assoc :pathedfn true)]
     `(defn ~name ~@args)))
-
-(defmacro defnavconstructor [name & args]
-  (let [[name [[csym anav] & body-or-bodies]] (name-with-attributes name args)
-        bodies (if (-> body-or-bodies first vector?) [body-or-bodies] body-or-bodies)
-
-        checked-code
-        (doall
-         (for [[args & body] bodies]
-           `(~args
-             (let [ret# (do ~@body)]
-               (if (i/layered-nav? ret#)
-                 (i/layered-nav-underlying ret#)
-                 (i/throw-illegal "Expected result navigator '" (quote ~anav)
-                                  "' from nav constructor '" (quote ~name) "'"
-                                  " constructed with the provided constructor '" (quote ~csym)
-                                  "'"))))))]
-
-    `(def ~name
-       (vary-meta
-        (let [~csym (i/layered-wrapper ~anav)]
-          (fn ~@checked-code))
-        assoc :layerednav (or (-> ~anav meta :highernav :type) :rich)))))
-
-
 
 
 (defn ^:no-doc ic-prepare-path [locals-set path]
@@ -610,59 +432,45 @@
 
 (defmacro select
   "Navigates to and returns a sequence of all the elements specified by the path.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-select* (path ~apath) ~structure))
 
 (defmacro select-one!
   "Returns exactly one element, throws exception if zero or multiple elements found.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+   This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-select-one!* (path ~apath) ~structure))
 
 (defmacro select-one
   "Like select, but returns either one element or nil. Throws exception if multiple elements found.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+   This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-select-one* (path ~apath) ~structure))
 
 (defmacro select-first
   "Returns first element found.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+   This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-select-first* (path ~apath) ~structure))
 
 (defmacro select-any
   "Returns any element found or [[NONE]] if nothing selected. This is the most
   efficient of the various selection operations.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-select-any* (path ~apath) ~structure))
 
 (defmacro selected-any?
   "Returns true if any element was selected, false otherwise.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-selected-any?* (path ~apath) ~structure))
 
 (defmacro transform
   "Navigates to each value specified by the path and replaces it by the result of running
   the transform-fn on it.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath transform-fn structure]
   `(i/compiled-transform* (path ~apath) ~transform-fn ~structure))
 
@@ -671,27 +479,21 @@
   inline in the path using `terminal`. Error is thrown if navigation finishes
   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is
   the `multi-transform` equivalent of `setval`.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath structure]
   `(i/compiled-multi-transform* (path ~apath) ~structure))
 
 
 (defmacro setval
   "Navigates to each value specified by the path and replaces it by `aval`.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath aval structure]
   `(i/compiled-setval* (path ~apath) ~aval ~structure))
 
 (defmacro traverse
   "Return a reducible object that traverses over `structure` to every element
   specified by the path.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath structure]
   `(i/do-compiled-traverse (path ~apath) ~structure))
 
@@ -701,9 +503,7 @@
   what's used to transform the data structure, while user-ret will be added to the user-ret sequence
   in the final return. replace-in is useful for situations where you need to know the specific values
   of what was transformed in the data structure.
-  This macro will attempt to do inline factoring and caching of the path, falling
-  back to compiling the path on every invocation if it's not possible to
-  factor/cache the path."
+  This macro will do inline caching of the path."
   [apath transform-fn structure & args]
   `(i/compiled-replace-in* (path ~apath) ~transform-fn ~structure ~@args))
 
@@ -713,5 +513,4 @@
   at each collected value as individual arguments, or `(collected? v ...)` syntax
   to capture all the collected values as a single vector."
   [params & body]
-  (let [platform (if (contains? &env :locals) :cljs :clj)]
-    `(i/collected?* (~'fn [~params] ~@body))))
+  `(i/collected?* (~'fn [~params] ~@body)))

@@ -2,13 +2,13 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.macros
               :refer
-              [fixed-pathed-collector
-               fixed-pathed-nav
-               defcollector
+              [late-bound-richnav
+               late-bound-nav
+               late-bound-collector
                defnav
                defpathedfn
                richnav
-               defnavconstructor]]
+               defrichnav]]
 
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
@@ -21,7 +21,7 @@
                defnav
                defpathedfn
                richnav
-               defnavconstructor]])
+               defrichnav]])
     #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
 
   (:require [com.rpl.specter.impl :as i]
@@ -37,18 +37,6 @@
    they were declared."
   [& apath]
   (i/comp-paths* (vec apath)))
-
-(def ^{:doc "Mandate that operations that do inline path factoring and compilation
-             (select/transform/setval/replace-in/path/etc.) must succeed in
-             factoring the path into static and dynamic portions. If not, an
-             error will be thrown and the reasons for not being able to factor
-             will be printed. Defaults to false, and `(must-cache-paths! false)`
-             can be used to turn this feature off.
-
-             Reasons why it may not be able to factor a path include using
-             a local symbol, special form, or regular function invocation
-             where a navigator is expected."}
-  must-cache-paths! i/must-cache-paths!)
 
 ;; Selection functions
 
@@ -162,24 +150,6 @@
   [path transform-fn structure & {:keys [merge-fn] :or {merge-fn concat}}]
   (compiled-replace-in (i/comp-paths* path) transform-fn structure :merge-fn merge-fn))
 
-;; Helpers for defining selectors and collectors with late-bound params
-
-(def ^{:doc "Takes a compiled path that needs late-bound params and supplies it with
-             an array of params and a position in the array from which to begin reading
-             params. The return value is an executable selector."}
-  bind-params* i/bind-params*)
-
-(defn params-reset [params-path]
-  ;; TODO: error if not paramsneededpath
-  (let [nav (i/params-needed-nav params-path)
-        needed (i/num-needed-params params-path)]
-    (richnav 0
-      (select* [this params params-idx vals structure next-fn]
-        (i/exec-rich-select* nav params (- params-idx needed) vals structure next-fn))
-      (transform* [this params params-idx vals structure next-fn]
-        (i/exec-rich-transform* nav params (- params-idx needed) vals structure next-fn)))))
-
-
 ;; Built-in pathing and context operations
 
 (defnav
@@ -209,19 +179,18 @@
           function works just like it does in `transform`, with collected values
           given as the first arguments"}
   terminal
-  (richnav 1
-    (select* [this params params-idx vals structure next-fn]
+  (richnav [afn]
+    (select* [this vals structure next-fn]
       (i/throw-illegal "'terminal' should only be used in multi-transform"))
     (transform* [this params params-idx vals structure next-fn]
-      (n/terminal* params params-idx vals structure))))
+      (n/terminal* afn vals structure))))
 
 
-(defnavconstructor terminal-val
+(defn terminal-val
   "Like `terminal` but specifies a val to set at the location regardless of
    the collected values or the value at the location."
-  [p terminal]
   [v]
-  (p (i/fast-constantly v)))
+  (terminal (i/fast-constantly v)))
 
 (defnav
   ^{:doc "Navigate to every element of the collection. For maps navigates to
@@ -241,7 +210,6 @@
   (select* [this structure next-fn]
     (doseqres NONE [v (vals structure)]
       (next-fn v)))
-
   (transform* [this structure next-fn]
     (n/map-vals-transform structure next-fn)))
 
@@ -292,7 +260,6 @@
   (select* [this structure next-fn]
     (doseqres NONE [[s e] (n/matching-ranges structure pred)]
       (n/srange-select structure s e next-fn)))
-
   (transform* [this structure next-fn]
     (reduce
       (fn [structure [s e]]
@@ -381,7 +348,7 @@
   children in the same order when executed on \"select\" and then
   \"transform\"."
   [& path]
-  (fixed-pathed-nav [late path]
+  (late-bound-nav [late path]
     (select* [this structure next-fn]
              (next-fn (compiled-select late structure)))
     (transform* [this structure next-fn]
@@ -454,15 +421,66 @@
 (defpathedfn selected?
   "Filters the current value based on whether a path finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
-  even number exists for the :vals key.
-
-  The input path may be parameterized, in which case the result of selected?
-  will be parameterized in the order of which the parameterized navigators
-  were declared."
+  even number exists for the :vals key."
   [& path]
+  ;;TODO: how to handle this if the path is being auto-compiled by this point?
+  ;; same for if-path...
+  ;; make selected? and if-path macros?
+  ;; expand to: (if-let [(afn (extract-basic-filter-fn path)) (pred afn) (let [p ...] (nav [] ...))]
+  ;; there needs to be a "compile-time" component here.... which is a macro
+  ;; but it's not "compile-time", it's the first run-through by specter
+  ;; maybe if pathed-fn returns a function when run in first run-through, then it's given
+  ;; a compiled/parameterized version of the path
+  ;; pathedfn basically substitutes for either a navigator or a parameterized navigator (parameterized
+  ;; with a compiled path)
+  ;; TODO: no, the function vs. nav thing doesn't work because a path may or may not
+  ;; be needed by the resulting navigator... (and there could be multiple path arguments, some
+  ;; of which may not be needed)
+  ;; maybe there could be a special marker for inline caching to invoke different codepaths
+  ;; if a path is a series of functions or not...
+  ;; but would much rather have it be internalizable in the operation
+  ;; maybe still have fixed-pathed-nav and inline caching turns path into something that
+  ;; has delayed evaluation
+  ;; what about non-path params? they should be dynamic every single time...
+  ;; maybe defnav indicates what's a path and what's not...
+  ;;   - no, still need intermediate logic to determine what the nav will be...
+  ;; it needs to happen outside the function...
+  ;; or "transformed" needs to work differently... and return a function that takes in the param
+  ;; could tag with metadata about how to statically analyze that argument
+  ;; and then it takes in the actual paths as input
+  ;;   - this would compose with other pathedfns, like how filterer works
+  ;;   - but static analysis needs to ALSO switch the implementation depending on what it finds
+  ;;   - also needs to work if just call it like a regular function...
+  ;; - maybe fixed-pathed-nav recognizes metadata on the path to see if it's inside inline
+  ;;   caching or not... and then decides whether to compile or not
+  ;; - maybe I need a dynamic nav that looks at uncompiled paths and returns function to invoke
+  ;;   with the same arguments... uncompiledpath has parts of it escaped
+  ;;    - if path and all arguments are static then it will be invoked and cached normally...
+  ;;    - no, but still doesn't handle the switching to pred case and making a custom navigator
+  ;;      - unless rely on the fact it will be invoked statically when everything is constant...
+  ;;      - but filterer still doesn't seem to work so well...
+  ;;  - the dynamic nav is told when a ^:notpath argument is dynamic or not
+  ;;    - how does this compose for filterer?
+  ;;   - not quite right... since extraction only happens at "compile time" and then the
+  ;;     pred navigator used like it's static
+  ;;   - maybe instead of "fixed-pathed-nav" have "late-nav" that can also take non-path args that were
+  ;;     marked as ^:notpath
+  ;;  - having fixed-pathed-navs doesn't work because of non-path arguments
+  ;;  - returning functions doesn't work because may want to call down to other higher-order navs...
+  ;; - maybe DO have a paramsneeded type that's a function with the uncompiled paths + dynamic local
+  ;;   information on it (which is what fixed-pathed-nav can do...)
+  ;;   - or can just say "with-args" and then metadata tells specter which are paths and which aren't
+  ;;   - (late-bound-nav [late path c an-arg])
+  ;;   - if they aren't bound yet, then that returns a function... otherwise it returns a proper navigator
+  ;;   - how does this compose with filterer?
+  ;;    (subselect ALL (selected? path))
+  ;;    - selected? returns a function that takes in params (and is annotated with WHAT params)...
+  ;;      - subselect does the same late bound stuff with its path and it sees what IT is composed of
+  ;;     - at end have an AST indicating what the final top-level paths / sub-paths are
+
   (if-let [afn (n/extract-basic-filter-fn path)]
     afn
-    (fixed-pathed-nav [late path]
+    (late-bound-nav [late path]
       (select* [this structure next-fn]
         (i/filter-select
           #(n/selected?* late %)
@@ -477,7 +495,7 @@
 (defpathedfn not-selected? [& path]
   (if-let [afn (n/extract-basic-filter-fn path)]
     (fn [s] (not (afn s)))
-    (fixed-pathed-nav [late path]
+    (late-bound-nav [late path]
       (select* [this structure next-fn]
         (i/filter-select
           #(n/not-selected?* late %)
@@ -508,22 +526,17 @@
    will be parameterized in the order of which the parameterized navigators
    were declared."
   [path ^:notpath update-fn]
-  (fixed-pathed-nav [late path]
+  (late-bound-nav [late path]
     (select* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))
     (transform* [this structure next-fn]
       (next-fn (compiled-transform late update-fn structure)))))
 
-(defnav
+(def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
           late-bound parameterized version of using a function directly in a path."}
   pred
-  [afn]
-  (select* [this structure next-fn]
-    (if (afn structure) (next-fn structure) NONE))
-  (transform* [this structure next-fn]
-    (if (afn structure) (next-fn structure) structure)))
-
+  i/pred*)
 
 (extend-type nil
   ImplicitNav
@@ -532,7 +545,6 @@
 (extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   ImplicitNav
   (implicit-nav [this] (keypath this)))
-
 
 (extend-type #?(:clj clojure.lang.AFn :cljs function)
   ImplicitNav
@@ -584,7 +596,7 @@
           current value to the collected vals."}
   collect
   [& path]
-  (fixed-pathed-collector [late path]
+  (late-bound-collector [late path]
     (collect-val [this structure]
       (compiled-select late structure))))
 
@@ -594,7 +606,7 @@
           current value to the collected vals."}
   collect-one
   [& path]
-  (fixed-pathed-collector [late path]
+  (late-bound-collector [late path]
     (collect-val [this structure]
       (compiled-select-one late structure))))
 
@@ -612,76 +624,58 @@
   (collect-val [this structure]
     val))
 
-(def
+(defrichnav
   ^{:doc "Drops all collected values for subsequent navigation."}
-  DISPENSE n/DISPENSE*)
-
+  DISPENSE
+  []
+  (select* [this vals structure next-fn]
+    (next-fn [] structure))
+  (transform* [this vals structure next-fn]
+    (next-fn [] structure)))
 
 (defpathedfn if-path
   "Like cond-path, but with if semantics."
   ([cond-p then-path]
    (if-path cond-p then-path STOP))
   ([cond-p then-path else-path]
-   (let [then-comp (i/comp-paths-internalized then-path)
-         else-comp (i/comp-paths-internalized else-path)
-         then-needed (i/num-needed-params then-comp)
-         else-needed (i/num-needed-params else-comp)
-         then-nav (i/extract-rich-nav then-comp)
-         else-nav (i/extract-rich-nav else-comp)]
-     (if-let [afn (n/extract-basic-filter-fn cond-p)]
-       (richnav (+ then-needed else-needed)
-         (select* [this params params-idx vals structure next-fn]
-           (n/if-select
-             params
-             params-idx
-             vals
-             structure
-             next-fn
-             afn
-             then-nav
-             then-needed
-             else-nav))
-
-         (transform* [this params params-idx vals structure next-fn]
-           (n/if-transform
-             params
-             params-idx
-             vals
-             structure
-             next-fn
-             afn
-             then-nav
-             then-needed
-             else-nav))))
-
-     (let [cond-comp (i/comp-paths-internalized cond-p)
-           cond-needed (i/num-needed-params cond-comp)]
-       (richnav (+ then-needed else-needed cond-needed)
-         (select* [this params params-idx vals structure next-fn]
-           (let [late-cond (i/parameterize-path cond-comp params params-idx)]
-             (n/if-select
-               params
-               (+ params-idx cond-needed)
-               vals
-               structure
-               next-fn
-               #(n/selected?* late-cond %)
-               then-nav
-               then-needed
-               else-nav)))
-
-         (transform* [this params params-idx vals structure next-fn]
-           (let [late-cond (i/parameterize-path cond-comp params params-idx)]
-             (n/if-transform
-               params
-               (+ params-idx cond-needed)
-               vals
-               structure
-               next-fn
-               #(n/selected?* late-cond %)
-               then-nav
-               then-needed
-               else-nav))))))))
+   (if-let [afn (n/extract-basic-filter-fn cond-p)]
+    (late-bound-nav [late-then then-path
+                     late-else else-path]
+      (select* [this vals structure next-fn]
+        (n/if-select
+          vals
+          structure
+          next-fn
+          afn
+          late-then
+          late-else))
+      (transform* [this vals structure next-fn]
+        (n/if-transform
+          vals
+          structure
+          next-fn
+          afn
+          late-then
+          late-else)))
+    (late-bound-nav [late-cond cond-p
+                     late-then then-path
+                     late-else else-path]
+      (select* [this vals structure next-fn]
+         (n/if-select
+          vals
+          structure
+          next-fn
+          #(n/selected?* late-cond %)
+          late-then
+          late-else))
+      (transform* [this vals structure next-fn]
+         (n/if-transform
+          vals
+          structure
+          next-fn
+          #(n/selected?* late-cond %)
+          late-then
+          late-else))))))
 
 
 (defpathedfn cond-path
@@ -707,26 +701,19 @@
   "A path that branches on multiple paths. For updates,
    applies updates to the paths in order."
   ([] STAY)
-  ([path] (i/comp-paths* path))
+  ([path] path)
   ([path1 path2]
-   (let [comp1 (i/comp-paths-internalized path1)
-         comp2 (i/comp-paths-internalized path2)
-         comp1-needed (i/num-needed-params comp1)
-         nav1 (i/extract-rich-nav comp1)
-         nav2 (i/extract-rich-nav comp2)]
-
-     (richnav (+ comp1-needed (i/num-needed-params comp2))
-       (select* [this params params-idx vals structure next-fn]
-         (let [res1 (i/exec-rich-select* nav1 params params-idx vals structure next-fn)
-               res2 (i/exec-rich-select* nav2 params (+ params-idx comp1-needed) vals structure next-fn)]
-           (if (identical? NONE res2)
-             res1
-             res2)))
-
-       (transform* [this params params-idx vals structure next-fn]
-         (let [s1 (i/exec-rich-transform* nav1 params params-idx vals structure next-fn)]
-           (i/exec-rich-transform* nav2 params (+ params-idx comp1-needed) vals s1 next-fn))))))
-
+   (late-bound-nav [late1 path1
+                    late2 path2]
+     (select* [this vals structure next-fn]
+       (let [res1 (i/exec-select* nav1 vals structure next-fn)
+             res2 (i/exec-select* nav2 vals structure next-fn)]
+         (if (identical? NONE res2)
+           res1
+           res2)))
+     (transform* [this vals structure next-fn]
+       (let [s1 (i/exec-transform* nav1 vals structure next-fn)]
+         (i/exec-transform* nav2 vals s1 next-fn)))))
   ([path1 path2 & paths]
    (reduce multi-path (multi-path path1 path2) paths)))
 

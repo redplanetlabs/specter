@@ -287,42 +287,27 @@
 
 
 
-(defn if-select [params params-idx vals structure next-fn then-tester then-nav then-params else-nav]
-  (let [test? (then-tester structure)
-        sel (if test?
-              then-nav
-              else-nav)
-        idx (if test? params-idx (+ params-idx then-params))]
-    (i/exec-rich-select*
-         sel
-         params
-         idx
-         vals
-         structure
-         next-fn)))
+(defn if-select [vals structure next-fn then-tester then-nav else-nav]
+  (i/exec-select*
+    (if (then-tester structure) then-nav else-nav)
+    vals
+    structure
+    next-fn))
 
 
 
-(defn if-transform [params params-idx vals structure next-fn then-tester then-nav then-params else-nav]
-  (let [test? (then-tester structure)
-        tran (if test?
-               then-nav
-               else-nav)
-        idx (if test? params-idx (+ params-idx then-params))]
-    (i/exec-rich-transform*
-      tran
-      params
-      idx
-      vals
-      structure
-      next-fn)))
+(defn if-transform [vals structure next-fn then-tester then-nav else-nav]
+  (i/exec-transform*
+    (if (then-tester structure) then-nav else-nav)
+    vals
+    structure
+    next-fn))
 
 
-(defn terminal* [params params-idx vals structure]
-  (let [afn (aget ^objects params params-idx)]
-    (if (identical? vals [])
-      (afn structure)
-      (apply afn (conj vals structure)))))
+(defn terminal* [afn vals structure]
+  (if (identical? vals [])
+    (afn structure)
+    (apply afn (conj vals structure))))
 
 
 
@@ -467,12 +452,3 @@
       (if (and (i/fn-invocation? structure) (i/fn-invocation? ret))
         (with-meta ret (meta structure))
         ret))))
-
-
-(def DISPENSE*
-  (i/no-params-rich-compiled-path
-    (reify i/RichNavigator
-      (rich-select* [this params params-idx vals structure next-fn]
-        (next-fn params params-idx [] structure))
-      (rich-transform* [this params params-idx vals structure next-fn]
-        (next-fn params params-idx [] structure)))))
