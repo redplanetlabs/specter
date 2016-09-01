@@ -603,6 +603,9 @@
 (defn dynamic-var? [v]
   (-> v meta :dynamic))
 
+;; original-obj stuff is done to avoid using functions with metadata on them
+;; clojure's implementation of function metadata causes the function to do an
+;; apply for every invocation
 (defn direct-nav-obj [o]
   (vary-meta o merge {:direct-nav true :original-obj o}))
 
