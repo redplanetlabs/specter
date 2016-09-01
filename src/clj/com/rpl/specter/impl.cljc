@@ -91,6 +91,14 @@
    (defn intern* [ns name val]
      (throw-illegal "intern not supported in ClojureScript")))
 
+#?(
+   :clj
+   (defmacro fast-object-array [i]
+     `(com.rpl.specter.Util/makeObjectArray ~i))
+
+   :cljs
+   (defn fast-object-array [i]
+     (object-array i)))
 
 (defn benchmark [iters afn]
   (time
@@ -240,7 +248,14 @@
 
 ;; TODO: this used to be a macro for clj... check if that's still important
 (defn compiled-traverse* [path result-fn structure]
-  (exec-select* path [] structure result-fn))
+  (exec-select*
+   path
+   []
+   structure
+   (fn [vals structure]
+    (if (identical? vals [])
+      (result-fn structure)
+      (result-fn (conj vals structure))))))
 
 
 
@@ -319,15 +334,17 @@
 (defn compiled-selected-any?* [path structure]
   (not= NONE (compiled-select-any* path structure)))
 
+(defn terminal* [afn vals structure]
+  (if (identical? vals [])
+    (afn structure)
+    (apply afn (conj vals structure))))
 
 ;;TODO: could inline cache the transform-fn, or even have a different one
 ;;if know there are no vals at the end
 (defn compiled-transform* [nav transform-fn structure]
   (exec-transform* nav [] structure
     (fn [vals structure]
-      (if (identical? vals [])
-        (transform-fn vals)
-        (apply transform-fn (conj vals structure))))))
+      (terminal* transform-fn vals structure))))
 
 (defn fn-invocation? [f]
   (or #?(:clj  (instance? clojure.lang.Cons f))
@@ -351,20 +368,25 @@
 (defrecord DynamicVal
   [code])
 
-;; path is a vector with elements of:
-;;  - DynamicFunction
-;;  - DynamicVal
-;;  - constant navigators
 (defrecord DynamicPath
   [path])
 
-;; params are either dynamicval, dynamicpath, or constants
-;;TODO: what about path like: [((make-nav-maker a) :a :b) ALL]
-;; should treat it like a special form if it's dynamic
-;; if all static args, then resolve it at "compile" time
-;; can have op be a dynamicfunction as well... or a dynamicval for that matter
 (defrecord DynamicFunction
   [op params])
+
+(defn dynamic-param? [o]
+  (contains? #{DynamicPath DynamicVal DynamicFunction} (class o)))
+
+(defn static-path? [path]
+  (if (sequential? path)
+    (every? (complement dynamic-param?) path)
+    (-> path dynamic-param? not)))
+
+(defn late-path [path]
+  (if (static-path? path)
+    (comp-paths* path)
+    (com.rpl.specter.impl/->DynamicPath path)))
+
 
 
 (defrecord CachedPathInfo
@@ -437,15 +459,25 @@
     (transform* [this vals structure next-fn]
       (next-fn vals structure))))
 
-(defn comp-navs
-  ([] STAY*)
-  ([nav1] nav1)
-  ([nav1 nav2] (combine-two-navs nav1 nav2))
-  ([nav1 nav2 nav3] (comp-navs nav1 (comp-navs nav2 nav3)))
-  ([nav1 nav2 nav3 nav4] (comp-navs nav1 (comp-navs nav2 nav3 nav4))))
-  ;; ...TODO: make a macro for this
+(defn gensyms [amt]
+  (vec (repeatedly amt gensym)))
 
+(defmacro mk-comp-navs []
+  (let [impls (for [i (range 3 20)]
+                (let [[fsym & rsyms :as syms] (gensyms i)]
+                  `([~@syms] (~'comp-navs ~fsym (~'comp-navs ~@rsyms)))))
+        last-syms (gensyms 19)]
+    `(defn comp-navs
+       ([] STAY*)
+       ([nav1#] nav1#)
+       ([nav1# nav2#] (combine-two-navs nav1# nav2#))
+       ~@impls
+       ([~@last-syms ~'& rest#]
+        (~'comp-navs
+          (~'comp-navs ~@last-syms)
+          (reduce comp-navs rest#))))))
 
+(mk-comp-navs)
 
 (defn collected?* [afn]
   (reify RichNavigator
@@ -467,6 +499,33 @@
     (if (vector? structure)
       (vec res)
       res)))
+
+(defn- matching-indices [aseq p]
+  (keep-indexed (fn [i e] (if (p e) i)) aseq))
+
+(defn matching-ranges [aseq p]
+  (first
+    (reduce
+      (fn [[ranges curr-start curr-last :as curr] i]
+        (cond
+          (nil? curr-start)
+          [ranges i i]
+
+          (= i (inc curr-last))
+          [ranges curr-start i]
+
+          :else
+          [(conj ranges [curr-start (inc curr-last)]) i i]))
+
+      [[] nil nil]
+      (concat (matching-indices aseq p) [-1]))))
+
+(defn continuous-subseqs-transform* [pred structure next-fn]
+  (reduce
+    (fn [structure [s e]]
+      (srange-transform* structure s e next-fn))
+    structure
+    (reverse (matching-ranges structure pred))))
 
 (defn codewalk-until [pred on-match-fn structure]
   (if (pred structure)
@@ -520,7 +579,7 @@
 (defn coerce-nav [o]
   (if (instance? com.rpl.specter.protocols.RichNavigator o)
     o
-    (implicit-nav o)))
+    (p/implicit-nav o)))
 
 
 (defn dynamic-var? [v]
@@ -540,7 +599,7 @@
         ;; TODO: check metadata on locals to determine if it's definitely a direct-nav or not
         (->DynamicVal (:sym o))
 
-        (instance? SpecialForm o)
+        (instance? SpecialFormUse o)
         (let [code (:code o)
               v (->DynamicVal code)]
           (if (= 'fn* (first code))
@@ -588,15 +647,18 @@
   (cond
     (instance? DynamicPath o)
     (let [path (:path o)]
-      (if (empty? path)
-        STAY*
-        (if (sequential? path)
-          (let [resolved (map #(resolve-magic-code % true) path)
-                combined (continuous-subseqs-transform path rich-nav? comp-paths)]
+      (if (sequential? path)
+        (if (empty? path)
+          STAY*
+          (let [resolved (vec (map resolve-magic-code path))
+                combined (continuous-subseqs-transform*
+                          rich-nav?
+                          resolved
+                          (fn [s] [(comp-paths* s)]))]
             (if (and (= 1 (count combined)) (rich-nav? (first combined)))
               (first combined)
-              `(comp-navs ~@combined)))
-          (resolve-magic-code path))))
+              `(comp-navs ~@combined))))
+        (resolve-magic-code path)))
 
     (instance? DynamicVal o)
     ;;TODO: check ^:nav hint to see whether this is necessary
@@ -613,7 +675,7 @@
           params (map resolve-dynamic-fn-arg (:params o))]
       (if (all-static? (conj params op))
         (coerce-nav (apply op params))
-        `(coerce-nav ~(resolve-magic-code op) ~@(map resolve-magic-code params))))
+        `(coerce-nav (~(resolve-magic-code op) ~@(map resolve-magic-code params)))))
 
     :else
     (coerce-nav o)))
@@ -621,11 +683,11 @@
 
 (defn magic-precompilation [path ns-str used-locals]
   (let [path (magic-precompilation* path)
-        ns (find-ns ns-str)
+        ns (find-ns (symbol ns-str))
         maker (binding [*ns* ns]
                 (eval+
                  `(fn [~@used-locals]
-                    ~(resolve-magic-code (->DynamicPath path) true))))]
+                    ~(resolve-magic-code (->DynamicPath path)))))]
     (if (static-path? path)
       (->CachedPathInfo false (maker))
       (->CachedPathInfo true maker))))

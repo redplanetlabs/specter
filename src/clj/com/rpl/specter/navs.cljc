@@ -2,23 +2,14 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.macros
               :refer
-              [fixed-pathed-collector
-               fixed-pathed-nav
-               defcollector
-               defnav
-               defpathedfn
-               richnav
-               defnavconstructor]]
-
+              [defnav]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
-
   (:use #?(:clj [com.rpl.specter macros])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]
-            #?(:clj [clojure.core.reducers :as r])
-            [com.rpl.specter.defnavhelpers])) ; so that for cljs it's loaded as macros expand to this
+            #?(:clj [clojure.core.reducers :as r])))
 
 
 
@@ -250,26 +241,6 @@
 
 (def srange-transform i/srange-transform*)
 
-(defn- matching-indices [aseq p]
-  (keep-indexed (fn [i e] (if (p e) i)) aseq))
-
-(defn matching-ranges [aseq p]
-  (first
-    (reduce
-      (fn [[ranges curr-start curr-last :as curr] i]
-        (cond
-          (nil? curr-start)
-          [ranges i i]
-
-          (= i (inc curr-last))
-          [ranges curr-start i]
-
-          :else
-          [(conj ranges [curr-start (inc curr-last)]) i i]))
-
-      [[] nil nil]
-      (concat (matching-indices aseq p) [-1]))))
-
 
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
@@ -303,11 +274,6 @@
     structure
     next-fn))
 
-
-(defn terminal* [afn vals structure]
-  (if (identical? vals [])
-    (afn structure)
-    (apply afn (conj vals structure))))
 
 
 

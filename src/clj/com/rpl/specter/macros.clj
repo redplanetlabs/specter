@@ -3,10 +3,6 @@
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as cljwalk]))
 
-
-(defn ^:no-doc gensyms [amt]
-  (vec (repeatedly amt gensym)))
-
 (defn ^:no-doc determine-params-impls [impls]
   (let [grouped (->> impls (map (fn [[n & body]] [n body])) (into {}))]
     (if-not (= #{'select* 'transform*} (-> grouped keys set))
@@ -17,7 +13,7 @@
 
 (defmacro richnav [params & impls]
   (if (empty? params)
-    (reify RichNavigator ~@impls)
+    `(reify RichNavigator ~@impls)
     `(fn ~params
        (reify RichNavigator
          ~@impls))))
@@ -34,14 +30,12 @@
          (let [~t-next-fn-sym (fn [s#] (next-fn# vals# s#))]
            ~@t-body)))))
 
-(defmacro collector [params [_ [_ structure-sym] & body] impl]
-  (let [cfn# (fn [vals# ~structure-sym next-fn#]
-                (next-fn# (conj vals# (do ~@body)) ~structure-sym))]
-    `(richnav ~params
-       (~'select* [this# vals# structure# next-fn#]
-         (cfn# vals# structure# next-fn#))
-       (~'transform* [this# vals# structure# next-fn#]
-         (cfn# vals# structure# next-fn#)))))
+(defmacro collector [params [_ [_ structure-sym] & body]]
+  `(richnav ~params
+     (~'select* [this# vals# ~structure-sym next-fn#]
+      (next-fn# (conj vals# (do ~@body)) ~structure-sym))
+     (~'transform* [this# vals# ~structure-sym next-fn#]
+       (next-fn# (conj vals# (do ~@body)) ~structure-sym))))
 
 (defn- helper-name [name method-name]
   (symbol (str name "-" method-name)))
@@ -57,37 +51,32 @@
        ~@helpers
        (def ~name (nav ~params ~@impls)))))
 
-(defrichnav [name params & impls]
+(defmacro defrichnav [name params & impls]
   `(def ~name (richnav ~params ~@impls)))
 
 (defmacro defcollector [name & body]
   `(def ~name (collector ~@body)))
 
 
-(defn dynamic-param? [o]
-  (contains? #{DynamicPath DynamicVal DynamicFunction} (class o)))
-
-(defn static-path? [path]
-  (if (sequential? path)
-    (every? (complement dynamic-param?) path)
-    (-> path dynamic-param? not)))
-
-(defn late-path [path]
-  (if (static-path? path)
-    (comp-paths path)
-    (com.rpl.specter.impl/->DynamicPath path)))
-
-(defmacro late-bound-nav [bindings & impl]
+(defn- late-bound-operation [bindings builder-op impls]
   (let [bindings (partition 2 bindings)
         params (map first bindings)
         curr-params (map second bindings)]
-    `(let [builder# (nav [~@params] ~@impl)
+    `(let [builder# (~builder-op [~@params] ~@impls)
            curr-params# [~@curr-params]]
-       (if (every? (complement dynamic-param?) curr-params#)
+       (if (every? (complement i/dynamic-param?) curr-params#)
          (apply builder# curr-params#)
          ;;TODO: should tag with metadata that the return is a direct navigator
          (com.rpl.specter.impl/->DynamicFunction builder# curr-params#)))))
 
+(defmacro late-bound-nav [bindings & impls]
+  (late-bound-operation bindings `nav impls))
+
+(defmacro late-bound-collector [bindings impl]
+  (late-bound-operation bindings `collector [impl]))
+
+(defmacro late-bound-richnav [bindings & impls]
+  (late-bound-operation bindings `richnav impls))
 
 (defn- protpath-sym [name]
   (-> name (str "-prot") symbol))
@@ -236,7 +225,7 @@
   (let [used-locals-cell (i/mutable-cell [])]
     (cljwalk/postwalk
      (fn [e]
-       (if (local-syms e)
+       (if (locals-set e)
          (i/update-cell! used-locals-cell #(conj % e))
          e))
      form)
@@ -257,7 +246,7 @@
     (i/fn-invocation? path)
     (let [[op & params] path]
       ;; need special case for 'fn since macroexpand does NOT
-      ;; expand fn when run on cljs code, but it's also not considered a special symbol      
+      ;; expand fn when run on cljs code, but it's also not considered a special symbol
       (if (or (= 'fn op) (special-symbol? op))
         `(com.rpl.specter.impl/->SpecialFormUse ~path (quote ~path))
         `(com.rpl.specter.impl/->FnInvocation
@@ -333,7 +322,7 @@
                    (cljs-macroexpand-all &env (vec path)))
 
         prepared-path (ic-prepare-path local-syms expanded)
-        possible-params (vec (ic-possible-params expanded))
+        ; possible-params (vec (ic-possible-params expanded))
 
         cache-sym (vary-meta
                    (gensym "pathcache")
@@ -362,11 +351,11 @@
         ;;TODO: redo clojurescript portions
         handle-params-code
         (if (= platform :clj)
-          `(~precompiled-sym ~@used-locals)
-          `(i/handle-params
-            ~precompiled-sym
-            ~params-maker-sym
-            ~(mapv (fn [p] `(fn [] ~p)) possible-params)))]
+          `(~precompiled-sym ~@used-locals))]
+          ; `(i/handle-params
+          ;   ~precompiled-sym
+          ;   ~params-maker-sym
+          ;   ~(mapv (fn [p] `(fn [] ~p)) possible-params)))]
 
 
     (if (= platform :clj)
@@ -378,8 +367,7 @@
              (let [~info-sym (i/magic-precompilation
                               ~prepared-path
                               ~(str *ns*)
-                              (quote ~used-locals)
-                              (quote ~possible-params))]
+                              (quote ~used-locals))]
                ~add-cache-code
                ~info-sym)
              info#)
