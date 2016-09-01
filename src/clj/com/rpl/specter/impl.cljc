@@ -603,13 +603,23 @@
 (defn dynamic-var? [v]
   (-> v meta :dynamic))
 
+(defn direct-nav-obj [o]
+  (vary-meta o merge {:direct-nav true :original-obj o}))
+
 (defn maybe-direct-nav [obj direct-nav?]
   (if direct-nav?
-    (vary-meta obj assoc :direct-nav true)
+    (direct-nav-obj obj)
     obj))
+
+(defn original-obj [o]
+  (let [orig (-> o meta :original-obj)]
+    (if orig
+      (recur orig)
+      o)))
 
 (defn direct-nav? [o]
   (-> o meta :direct-nav))
+
 
 ;; don't do coerce-nav here... save that for resolve-magic-code
 (defn- magic-precompilation* [o]
@@ -680,13 +690,13 @@
   (cond (instance? DynamicFunction o)
         (let [op (resolve-dynamic-fn-arg-code (:op o))
               params (map resolve-dynamic-fn-arg-code (:params o))]
-          `(~op ~@params))
+          `(~(original-obj op) ~@params))
 
         (instance? DynamicVal o)
         (:code o)
 
         :else
-        o))
+        (original-obj o)))
 
 
 (defn resolve-magic-code [o]
@@ -716,7 +726,8 @@
           params (map resolve-dynamic-fn-arg (:params o))]
       (if (all-static? (conj params op))
         (coerce-nav (apply op params))
-        (let [code `(~(resolve-dynamic-fn-arg-code op) ~@(map resolve-dynamic-fn-arg-code params))]
+        (let [code `(~(-> op resolve-dynamic-fn-arg-code original-obj)
+                      ~@(map resolve-dynamic-fn-arg-code params))]
           (if (direct-nav? op) code `(coerce-nav ~code)))))
 
     :else

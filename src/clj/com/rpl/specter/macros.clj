@@ -14,11 +14,10 @@
 (defmacro richnav [params & impls]
   (if (empty? params)
     `(reify RichNavigator ~@impls)
-    `(vary-meta
+    `(i/direct-nav-obj
        (fn ~params
          (reify RichNavigator
-           ~@impls))
-       assoc :direct-nav true)))
+           ~@impls)))))
 
 
 (defmacro nav [params & impls]
