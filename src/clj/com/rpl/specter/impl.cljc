@@ -784,21 +784,3 @@
 
 (defn compiled-multi-transform* [path structure]
   (compiled-transform* path multi-transform-error-fn structure))
-
-;;TODO: need a way to deal with protocol paths...
-;;maybe they get extended with a function and produce a `path`
-;;but could be recursive
-; #?(:clj
-;    (defn extend-protocolpath* [protpath protpath-prot extensions]
-;      (let [extensions (partition 2 extensions)
-;            m (-> protpath-prot :sigs keys first)
-;            expected-params (num-needed-params protpath)]
-;        (doseq [[atype apath] extensions]
-;          (let [p (comp-paths-internalized apath)
-;                needed-params (num-needed-params p)
-;                rich-nav (extract-rich-nav p)]
-;
-;            (if-not (= needed-params expected-params)
-;              (throw-illegal "Invalid number of params in extended protocol path, expected "
-;                  expected-params " but got " needed-params))
-;            (extend atype protpath-prot {m (fn [_] rich-nav)}))))))

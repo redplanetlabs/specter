@@ -79,60 +79,6 @@
 (defmacro late-bound-richnav [bindings & impls]
   (late-bound-operation bindings `richnav impls))
 
-(defn- protpath-sym [name]
-  (-> name (str "-prot") symbol))
-
-
-;;TODO: redesign so can still have parameterized protpaths...
-;;TODO: mainly need recursion
-(defmacro defprotocolpath
-  "Defines a navigator that chooses the path to take based on the type
-  of the value at the current point. May be specified with parameters to
-  specify that all extensions must require that number of parameters.
-
-  Currently not available for ClojureScript.
-
-  Example of usage:
-  (defrecord SingleAccount [funds])
-  (defrecord FamilyAccount [single-accounts])
-
-  (defprotocolpath FundsPath)
-  (extend-protocolpath FundsPath
-    SingleAccount :funds
-    FamilyAccount [ALL FundsPath]
-    )
-"
-  ([name]
-   `(defprotocolpath ~name []))
-  ([name params]
-   (let [prot-name (protpath-sym name)
-         m (-> name (str "-retrieve") symbol)
-         num-params (count params)
-         ssym (gensym "structure")
-         rargs [(gensym "vals") ssym (gensym "next-fn")]
-         retrieve `(~m ~ssym)]
-
-     `(do
-        (defprotocol ~prot-name (~m [structure#]))
-        (let [nav# (reify RichNavigator
-                     (~'select* [this# ~@rargs]
-                       (let [inav# ~retrieve]
-                         (i/exec-select* inav# ~@rargs)))
-
-                     (~'rich-transform* [this# ~@rargs]
-                       (let [inav# ~retrieve]
-                         (i/exec-transform* inav# ~@rargs))))]
-
-          (def ~name
-            (if (= ~num-params 0)
-              (i/no-params-rich-compiled-path nav#)
-              (i/->ParamsNeededPath nav# ~num-params))))))))
-
-(defmacro extend-protocolpath
-  "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
-  [protpath & extensions]
-  `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
-
 
 (defmacro declarepath [name]
   `(def ~name (i/local-declarepath)))
@@ -427,3 +373,63 @@
   to capture all the collected values as a single vector."
   [params & body]
   `(i/collected?* (~'fn [~params] ~@body)))
+
+
+(defn- protpath-sym [name]
+  (-> name (str "-prot") symbol))
+
+(defn- protpath-meth-sym [name]
+  (-> name (str "-retrieve") symbol))
+
+
+(defmacro defprotocolpath
+  "Defines a navigator that chooses the path to take based on the type
+  of the value at the current point. May be specified with parameters to
+  specify that all extensions must require that number of parameters.
+
+  Currently not available for ClojureScript.
+
+  Example of usage:
+  (defrecord SingleAccount [funds])
+  (defrecord FamilyAccount [single-accounts])
+
+  (defprotocolpath FundsPath)
+  (extend-protocolpath FundsPath
+    SingleAccount :funds
+    FamilyAccount [ALL FundsPath]
+    )
+"
+  ([name]
+   `(defprotocolpath ~name []))
+  ([name params]
+   (let [prot-name (protpath-sym name)
+         m (protpath-meth-sym name)
+         num-params (count params)
+         ssym (gensym "structure")
+         rargs [(gensym "vals") ssym (gensym "next-fn")]
+         retrieve `(~m ~ssym ~@params)]
+     `(do
+        (defprotocol ~prot-name (~m [structure# ~@params]))
+        (defrichnav ~name ~params
+           (~'select* [this# ~@rargs]
+             (let [inav# ~retrieve]
+               (i/exec-select* inav# ~@rargs)))
+           (~'transform* [this# ~@rargs]
+             (let [inav# ~retrieve]
+               (i/exec-transform* inav# ~@rargs))))))))
+
+(defn extend-protocolpath* [protpath-prot extensions]
+  (let [m (-> protpath-prot :sigs keys first)
+        params (-> protpath-prot :sigs first last :arglists first)]
+    (doseq [[atype path-code] extensions]
+       (extend atype protpath-prot
+         {m (eval `(fn ~params (path ~path-code)))}))))
+
+(defmacro extend-protocolpath
+  "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
+  [protpath & extensions]
+  (let [extensions (partition 2 extensions)
+        embed (vec (for [[t p] extensions] [t `(quote ~p)]))]
+    `(extend-protocolpath*
+      ~(protpath-sym protpath)
+      ~embed)))
