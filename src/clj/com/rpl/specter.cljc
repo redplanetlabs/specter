@@ -164,14 +164,10 @@
 
 
 
-(defnav
+(def
   ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
   STAY
-  []
-  (select* [this structure next-fn]
-    (next-fn structure))
-  (transform* [this structure next-fn]
-    (next-fn structure)))
+  i/STAY*)
 
 (def
   ^{:doc "For usage with `multi-transform`, defines an endpoint in the navigation

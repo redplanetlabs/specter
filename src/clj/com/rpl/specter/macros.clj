@@ -64,61 +64,29 @@
   `(def ~name (collector ~@body)))
 
 
-(defmacro late-bound-nav [bindings & impl])
-  ;;TODO
-  ;; if bindings are static, then immediately return a navigator
-  ;; otherwise, return a function from params -> navigator (using nav)
-  ;;  function has metadata about what each arg should correspond to
+(defn dynamic-param? [o]
+  (contains? #{DynamicPath DynamicVal DynamicFunction} (class o)))
 
-  ;;TODO:
-  ;; during inline caching analysis, defpathedfn can return:
-  ;;   - a path (in a sequence - vector or list from &), which can contain both static and dynamic params
-  ;;   - a navigator implementation
-  ;;   - a late-bound-nav or late-bound-collector
-  ;;     - which can have within the late paths other late-bound paths
-  ;;      - a record containing a function that takes in params, and then a vector of
-  ;;        what those params are (exactly what was put into bindings)
-  ;;      - should explicitly say in late-bound-nav which ones are paths and which aren't
-  ;;         - can use ^:path metadata? or wrap in: (late-path path)
-  ;;   - a non-vector constant (which will have indirect-nav run on it)
-  ;;
+(defn static-path? [path]
+  (if (sequential? path)
+    (every? (complement dynamic-param?) path)
+    (-> path dynamic-param? not)))
 
-  ;; when `path` passes args to a pathedfn:
-  ;;   - needs to wrap all dynamic portions in "dynamicparam"
-  ;;     (VarUse, LocalSym, etc.)
-  ;;    - it should descend into vectors as well
+(defn late-path [path]
+  (if (static-path? path)
+    (comp-paths path)
+    (com.rpl.specter.impl/->DynamicPath path)))
 
-
-  ;; inline caching should do the following:
-  ;;   - escape path as it's doing now (recursing into vectors)
-  ;;   - go through path and for each navigator position:
-  ;;    - if a localsym: then it's a dynamic call to (if (navigator? ...) ... (indirect-nav))
-  ;;    - if a varuse: if dynamic, then it's a dynamic call as above
-  ;;      - if static, then get the value. if a navigator then done, otherwise call indirect-nav
-  ;;    - if specialform: it's a dynamic call to if (navigator? ...) as above
-  ;;    - if fninvocation:
-  ;;        - if not pathedfn:
-  ;;          - if params are constant, then invoke. if return is not navigator, then call indirect-nav
-  ;;          - otherwise, label that point as "dynamic invocation" with the args
-  ;;       - if pathedfn:
-  ;;          - take all arguments that have anything dynamic in them and wrap in dynamicparam
-  ;;              - including inside vectors (just one level
-  ;;         - call the function:
-  ;;             - if return is constant, then do indirect-nav or use the nav
-  ;;             - if return is a sequence, then treat it as path for that point to be merged in
-  ;;               , strip "dynamicparam", and recurse inside the vector
-  ;;                 - should also flatten the vector
-  ;;             - if return is a late-bound record, then:
-  ;;               - label point as dynamic invocation with the args
-  ;;                  - args marked as "latepath" TODO
-  ;;   - if sequence: then flatten and recurse
-  ;;   - if constant, then call indirect-nav
-
-  ;; for all (if (navigator ...)... (indirect-nav)) calls, use metadata to determine whether
-  ;;  return is definitely a navigator in which case that dynamic code can be omitted
-  ;;  annotation could be :tag or :direct-nav
-  ;; defnav needs to annotate return appropriately
-
+(defmacro late-bound-nav [bindings & impl]
+  (let [bindings (partition 2 bindings)
+        params (map first bindings)
+        curr-params (map second bindings)]
+    `(let [builder# (nav [~@params] ~@impl)
+           curr-params# [~@curr-params]]
+       (if (every? (complement dynamic-param?) curr-params#)
+         (apply builder# curr-params#)
+         ;;TODO: should tag with metadata that the return is a direct navigator
+         (com.rpl.specter.impl/->DynamicFunction builder# curr-params#)))))
 
 
 (defn- protpath-sym [name]
@@ -250,17 +218,29 @@
                                      attr)]
     [(with-meta name attr) macro-args]))
 
-(defmacro defpathedfn
+(defmacro dynamicnav [& args]
+  `(vary-meta (fn ~@args) assoc :dynamicnav true))
+
+(defmacro defdynamicnav
   "Defines a higher order navigator that itself takes in one or more paths
   as input. When inline caching is applied to a path containing
   one of these higher order navigators, it will apply inline caching and
   compilation to the subpaths as well. Use ^:notpath metadata on arguments
   to indicate non-path arguments that should not be compiled"
   [name & args]
-  (let [[name args] (name-with-attributes name args)
-        name (vary-meta name assoc :pathedfn true)]
-    `(defn ~name ~@args)))
+  (let [[name args] (name-with-attributes name args)]
+    `(def ~name (dynamicnav ~@args))))
 
+
+(defn- used-locals [locals-set form]
+  (let [used-locals-cell (i/mutable-cell [])]
+    (cljwalk/postwalk
+     (fn [e]
+       (if (local-syms e)
+         (i/update-cell! used-locals-cell #(conj % e))
+         e))
+     form)
+    (i/get-cell used-locals-cell)))
 
 (defn ^:no-doc ic-prepare-path [locals-set path]
   (cond
@@ -277,7 +257,7 @@
     (i/fn-invocation? path)
     (let [[op & params] path]
       ;; need special case for 'fn since macroexpand does NOT
-      ;; expand fn when run on cljs code, but it's also not considered a special symbol
+      ;; expand fn when run on cljs code, but it's also not considered a special symbol      
       (if (or (= 'fn op) (special-symbol? op))
         `(com.rpl.specter.impl/->SpecialFormUse ~path (quote ~path))
         `(com.rpl.specter.impl/->FnInvocation
@@ -287,7 +267,9 @@
 
 
     :else
-    `(quote ~path)))
+    (if (empty? (used-locals locals-set path))
+      path
+      `(com.rpl.specter.impl/->DynamicVal ~path (quote ~path)))))
 
 
 (defn ^:no-doc ic-possible-params [path]
@@ -329,9 +311,8 @@
     ret))
 
 
-;; still possible to mess this up with alter-var-root
 (defmacro path
-  "Same as calling comp-paths, except it caches the composition of the static part
+  "Same as calling comp-paths, except it caches the composition of the static parts
   of the path for later re-use (when possible). For almost all idiomatic uses
   of Specter provides huge speedup. This macro is automatically used by the
   select/transform/setval/replace-in/etc. macros."
@@ -342,15 +323,7 @@
                      (-> &env :locals keys set) ;cljs
                      (-> &env keys set)) ;clj
 
-        used-locals-cell (i/mutable-cell [])
-        _ (cljwalk/postwalk
-           (fn [e]
-             (if (local-syms e)
-               (i/update-cell! used-locals-cell #(conj % e))
-               e))
-
-           path)
-        used-locals (i/get-cell used-locals-cell)
+        used-locals (used-locals local-syms path)
 
         ;; note: very important to use riddley's macroexpand-all here, so that
         ;; &env is preserved in any potential nested calls to select (like via
@@ -362,9 +335,6 @@
         prepared-path (ic-prepare-path local-syms expanded)
         possible-params (vec (ic-possible-params expanded))
 
-        ;; - with invokedynamic here, could go directly to the code
-        ;; to invoke and/or parameterize the precompiled path without
-        ;; a bunch of checks beforehand
         cache-sym (vary-meta
                    (gensym "pathcache")
                    assoc :cljs.analyzer/no-resolve true)
@@ -381,20 +351,18 @@
                                       (var ~cache-sym)
                                       (fn [_#] (i/mutable-cell)))
                                      nil))))
-
                          cache-sym)
 
         add-cache-code (if (= platform :clj)
                          `(i/set-cell! ~cache-sym ~info-sym)
                          `(def ~cache-sym ~info-sym))
 
-
         precompiled-sym (gensym "precompiled")
-        params-maker-sym (gensym "params-maker")
 
+        ;;TODO: redo clojurescript portions
         handle-params-code
         (if (= platform :clj)
-          `(i/bind-params* ~precompiled-sym (~params-maker-sym ~@used-locals) 0)
+          `(~precompiled-sym ~@used-locals)
           `(i/handle-params
             ~precompiled-sym
             ~params-maker-sym
@@ -412,20 +380,16 @@
                               ~(str *ns*)
                               (quote ~used-locals)
                               (quote ~possible-params))]
-
                ~add-cache-code
                ~info-sym)
-
              info#)
 
 
            ~precompiled-sym (.-precompiled info#)
-           ~params-maker-sym (.-params-maker info#)]
-       (if (nil? ~precompiled-sym)
-         (i/comp-paths* ~(if (= (count path) 1) (first path) (vec path)))
-         (if (nil? ~params-maker-sym)
-           ~precompiled-sym
-           ~handle-params-code)))))
+           dynamic?# (.-dynamic? info#)]
+       (if dynamic?#
+         ~handle-params-code
+         ~precompiled-sym))))
 
 
 

@@ -3,11 +3,12 @@
             [com.rpl.specter.util-macros :refer [doseqres]]))
 
   (:use [com.rpl.specter.protocols :only
-          [select* transform* collect-val Rich Navigator]]
+          [select* transform* collect-val RichNavigator]]
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
 
   (:require [com.rpl.specter.protocols :as p]
             [clojure.string :as s]
+            [clojure.walk :as walk]
             #?(:clj [riddley.walk :as riddley]))
 
   #?(:clj (:import [com.rpl.specter Util MutableCell])))
@@ -99,7 +100,7 @@
 #?(
    :clj
    (defmacro exec-select* [this & args]
-     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
+     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.RichNavigator})]
        `(.select* ~hinted ~@args)))
 
 
@@ -111,7 +112,7 @@
 #?(
    :clj
    (defmacro exec-transform* [this & args]
-     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.Navigator})]
+     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.RichNavigator})]
        `(.transform* ~hinted ~@args)))
 
 
@@ -127,13 +128,6 @@
 
 (defn comp-paths* [p]
   (if (rich-nav? p) p (do-comp-paths p)))
-
-
-(defn- seq-contains? [aseq val]
-  (->> aseq
-       (filter (partial = val))
-       empty?
-       not))
 
 (defn- coerce-object [this]
   (cond (satisfies? p/ImplicitNav this) (p/implicit-nav this)
@@ -173,13 +167,13 @@
 (defn combine-two-navs [nav1 nav2]
   (reify RichNavigator
     (select* [this vals structure next-fn]
-      (exec-select* curr vals structure
+      (exec-select* nav1 vals structure
         (fn [vals-next structure-next]
-          (exec-select* next vals-next structure-next next-fn))))
+          (exec-select* nav2 vals-next structure-next next-fn))))
     (transform* [this vals structure next-fn]
-      (exec-transform* curr vals structure
+      (exec-transform* nav1 vals structure
         (fn [vals-next structure-next]
-          (exec-rich-transform* next vals-next structure-next next-fn))))))
+          (exec-transform* nav2 vals-next structure-next next-fn))))))
 
 (extend-protocol PathComposer
   nil
@@ -191,7 +185,6 @@
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (do-comp-paths [navigators]
     (reduce combine-two-navs navigators)))
-
 
 ;; cell implementation idea taken from prismatic schema library
 #?(:cljs
@@ -329,7 +322,7 @@
 
 ;;TODO: could inline cache the transform-fn, or even have a different one
 ;;if know there are no vals at the end
-(defn compiled-transform* [path transform-fn structure]
+(defn compiled-transform* [nav transform-fn structure]
   (exec-transform* nav [] structure
     (fn [vals structure]
       (if (identical? vals [])
@@ -355,8 +348,27 @@
   ;; op and params elems can be any of the above
   [op params code])
 
+(defrecord DynamicVal
+  [code])
+
+;; path is a vector with elements of:
+;;  - DynamicFunction
+;;  - DynamicVal
+;;  - constant navigators
+(defrecord DynamicPath
+  [path])
+
+;; params are either dynamicval, dynamicpath, or constants
+;;TODO: what about path like: [((make-nav-maker a) :a :b) ALL]
+;; should treat it like a special form if it's dynamic
+;; if all static args, then resolve it at "compile" time
+;; can have op be a dynamicfunction as well... or a dynamicval for that matter
+(defrecord DynamicFunction
+  [op params])
+
+
 (defrecord CachedPathInfo
-  [path-fn])
+  [dynamic? precompiled])
 
 
 (defn constant-node? [node]
@@ -418,6 +430,22 @@
         (next-fn vals structure)
         structure))))
 
+(def STAY*
+  (reify RichNavigator
+    (select* [this vals structure next-fn]
+      (next-fn vals structure))
+    (transform* [this vals structure next-fn]
+      (next-fn vals structure))))
+
+(defn comp-navs
+  ([] STAY*)
+  ([nav1] nav1)
+  ([nav1 nav2] (combine-two-navs nav1 nav2))
+  ([nav1 nav2 nav3] (comp-navs nav1 (comp-navs nav2 nav3)))
+  ([nav1 nav2 nav3 nav4] (comp-navs nav1 (comp-navs nav2 nav3 nav4))))
+  ;; ...TODO: make a macro for this
+
+
 
 (defn collected?* [afn]
   (reify RichNavigator
@@ -440,215 +468,172 @@
       (vec res)
       res)))
 
-
-(defn- variadic-arglist? [al]
-  (contains? (set al) '&))
-
-(defn- arglist-for-params-count [arglists c code]
-  (let [ret (->> arglists
-                 (filter
-                   (fn [al]
-                     (or (= (count al) c)
-                         (variadic-arglist? al))))
-
-                 first)
-        len (count ret)]
-    (when-not ret
-      (throw-illegal "Invalid # arguments at " code))
-    (if (variadic-arglist? ret)
-      (srange-transform* ret (- len 2) len
-        (fn [_] (repeatedly (- c (- len 2)) gensym)))
-      ret)))
-
-;;TODO: all needs to change
-(defn- magic-precompilation* [p params-atom failed-atom]
-  (let [magic-fail! (fn [& reason]
-                      (if (get-cell MUST-CACHE-PATHS)
-                        (println "Failed to cache path:" (apply str reason)))
-                      (reset! failed-atom true)
-                      nil)]
-    (cond
-      (vector? p)
-      (mapv
-        #(magic-precompilation* % params-atom failed-atom)
-        p)
-
-      (instance? LocalSym p)
-      (magic-fail! "Local symbol " (:sym p) " where navigator expected")
-
-      (instance? VarUse p)
-      (let [v (:var p)
-            vv (:val p)]
-        (cond (-> v meta :dynamic)
-              (magic-fail! "Var " (:sym p) " is dynamic")
-
-              (and (fn? vv) (-> v meta :pathedfn))
-              (throw-illegal "Cannot use pathed fn '" (:sym p) "' where navigator expected")
-
-              (valid-navigator? vv)
-              vv
-
-              :else
-              (magic-fail! "Var " (:sym p) " is not a navigator")))
+(defn codewalk-until [pred on-match-fn structure]
+  (if (pred structure)
+    (on-match-fn structure)
+    (let [ret (walk/walk (partial codewalk-until pred on-match-fn) identity structure)]
+      (if (and (fn-invocation? structure) (fn-invocation? ret))
+        (with-meta ret (meta structure))
+        ret))))
 
 
-      (instance? SpecialFormUse p)
-      (if (->> p :code first (contains? #{'fn* 'fn}))
-        (do
-          (swap! params-atom conj (:code p))
-          pred*)
+(def ^:dynamic *tmp-closure*)
+(defn closed-code [closure body]
+  (let [lv (mapcat #(vector % `(*tmp-closure* '~%))
+                   (keys closure))]
+    (binding [*tmp-closure* closure]
+      (eval `(let [~@lv] ~body)))))
 
-        (magic-fail! "Special form " (:code p) " where navigator expected"))
-
-
-      (instance? FnInvocation p)
-      (let [op (:op p)
-            ps (:params p)]
-        (if (instance? VarUse op)
-          (let [v (:var op)
-                vv (:val op)]
-            (if (-> v meta :dynamic)
-              (magic-fail! "Var " (:sym op) " is dynamic")
-              (cond
-                (or (root-params-nav? vv) (instance? ParamsNeededPath vv))
-                (if (every? constant-node? ps)
-                  (apply vv (map extract-constant ps))
-                  (do
-                    (swap! params-atom #(vec (concat % ps)))
-                    (coerce-path vv)))
+(defn any?
+  "Accepts any number of predicates that take in one input and returns a new predicate that returns true if any of them are true"
+  [& preds]
+  (fn [obj]
+    (some #(% obj) preds)))
 
 
-                (and (fn? vv) (-> v meta :pathedfn))
-                ;;TODO: update this to ignore args that aren't symbols or have :nopath
-                ;;metadata on them (in the arglist)
-                (let [arglists (-> v meta :arglists)
-                      al (arglist-for-params-count arglists (count ps) (:code p))
-                      subpath (vec
-                                (map
-                                  (fn [pdecl p]
-                                   (if (and (symbol? pdecl)
-                                            (-> pdecl meta :notpath not))
-                                     (magic-precompilation* p params-atom failed-atom)
+(let [embeddable? (any? number?
+                        symbol?
+                        keyword?
+                        string?
+                        char?
+                        list?
+                        vector?
+                        set?
+                        #(and (map? %) (not (record? %)))
+                        nil?
+                        #(instance? clojure.lang.Cons %)
+                        #(instance? clojure.lang.LazySeq %))]
+  (defn eval+
+    "Automatically extracts non-evalable stuff into a closure and then evals"
+    [form]
+    (let [replacements (mutable-cell {})
+          new-form (codewalk-until
+                     #(-> % embeddable? not)
+                     (fn [o]
+                       (let [s (gensym)]
+                         (update-cell! replacements #(assoc % s o))
+                         s))
+                     form)
+          closure (get-cell replacements)]
+      (closed-code closure new-form))))
 
-                                     (cond (and (instance? VarUse p)
-                                                (-> p :var meta :dynamic not))
-                                           (:val p)
-
-                                           (and (not (instance? LocalSym p))
-                                                (not (instance? VarUse p))
-                                                (not (instance? SpecialFormUse p))
-                                                (not (instance? FnInvocation p))
-                                                (not (coll? p)))
-                                           p
-
-                                           :else
-                                           (magic-fail! "Could not factor static param "
-                                            "of pathedfn because it's not a static var "
-                                            " or non-collection value: "
-                                            (extract-original-code p)))))
-
-                                  al
-                                   ps))]
-                  (if @failed-atom
-                    nil
-                    (apply vv subpath)))
+(defn coerce-nav [o]
+  (if (instance? com.rpl.specter.protocols.RichNavigator o)
+    o
+    (implicit-nav o)))
 
 
-                (and (fn? vv) (-> vv meta :layerednav))
-                (if (every? constant-node? ps)
-                  (apply vv (map extract-constant ps))
-                  (do
-                    (swap! params-atom conj (:code p))
-                    (if (= (-> vv meta :layerednav) :lean)
-                      lean-compiled-path-proxy
-                      rich-compiled-path-proxy)))
+(defn dynamic-var? [v]
+  (-> v meta :dynamic not))
 
+;; don't do coerce-nav here... save that for resolve-magic-code
+(defn- magic-precompilation* [o]
+  (cond (sequential? o)
+        (flatten (map magic-precompilation* o))
 
-                :else
-                (magic-fail! "Var " (:sym op) " must be either a parameterized "
-                  "navigator, a higher order pathed constructor function, "
-                  "or a nav constructor"))))
+        (instance? VarUse o)
+        (if (dynamic-var? (:var o))
+          (->DynamicVal (:sym o))
+          (:val o))
 
-          (magic-fail! "Code at " (extract-original-code p) " is in "
-            "function invocation position and must be either a parameterized "
-            "navigator, a higher order pathed constructor function, or a "
-            "nav constructor.")))
+        (instance? LocalSym o)
+        ;; TODO: check metadata on locals to determine if it's definitely a direct-nav or not
+        (->DynamicVal (:sym o))
+
+        (instance? SpecialForm o)
+        (let [code (:code o)
+              v (->DynamicVal code)]
+          (if (= 'fn* (first code))
+            (->DynamicFunction pred* [v])))
+
+        (instance? FnInvocation o)
+        (let [op (magic-precompilation* (:op o))
+              params (map magic-precompilation* (:params o))]
+          (if (-> op meta :dynamicnav)
+            (apply op params)
+            (->DynamicFunction op params)))
+
+        :else
+        ;; this handles dynamicval as well
+        o))
 
 
 
-      :else
-      (cond (set? p)
-            (if (constant-node? p)
-              (extract-constant p)
-              (do (swap! params-atom conj p)
-                pred*))
+(declare resolve-magic-code)
 
-            (keyword? p)
-            p
+(defn all-static? [params]
+  (every? (complement dynamic-param?) params))
 
-            ;; in case anyone extends String for their own use case
-            (and (string? p) (valid-navigator? p))
-            p
+(defn resolve-dynamic-fn-arg [o]
+  (cond (instance? DynamicFunction o)
+        (let [op (resolve-dynamic-fn-arg (:op o))
+              params (map resolve-dynamic-fn-arg (:params o))]
+          (if (all-static? (conj params op))
+            (apply op params)
+            (->DynamicFunction op params)))
 
-            :else
-            (magic-fail! "Code " p " is not a valid navigator or can't be factored")))))
+        (instance? DynamicVal o)
+        o
 
+        (instance? DynamicPath o)
+        (let [res (resolve-magic-code o)]
+          (if (rich-nav? res)
+            res
+            (->DynamicVal res)))
 
+        :else
+        o))
 
+(defn resolve-magic-code [o]
+  (cond
+    (instance? DynamicPath o)
+    (let [path (:path o)]
+      (if (empty? path)
+        STAY*
+        (if (sequential? path)
+          (let [resolved (map #(resolve-magic-code % true) path)
+                combined (continuous-subseqs-transform path rich-nav? comp-paths)]
+            (if (and (= 1 (count combined)) (rich-nav? (first combined)))
+              (first combined)
+              `(comp-navs ~@combined)))
+          (resolve-magic-code path))))
 
-;; This is needed when aset is used on primitive values in mk-params-maker
-;; to avoid reflection
-#?(:clj
-   (defn aset-object [^objects a i ^Object v]
-     (aset a i v)))
+    (instance? DynamicVal o)
+    ;;TODO: check ^:nav hint to see whether this is necessary
+    ;;this is relevant for localsyms and dynamicvars
+    ;;for localsyms can check metadata in the env as well as metadata on the symbol itself
+    ;;for dynamic vars check the var metadata
+    `(coerce-nav ~(:code o))
 
-#?(
-   :clj
-   (defn mk-params-maker [ns-str params-code possible-params-code used-locals]
-     (let [ns (find-ns (symbol ns-str))
-           array-sym (gensym "array")]
-       (binding [*ns* ns]
-         (eval
-           `(fn [~@used-locals]
-              (let [~array-sym (fast-object-array ~(count params-code))]
-                ~@(map-indexed
-                    (fn [i c]
-                     `(aset-object ~array-sym ~i ~c))
-                    params-code)
+    (instance? DynamicFunction o)
+    ;;TODO: check ^:nav hint on op to see whether coerce-nav is necessary
+    ;; checked when resolving varuse on the function to know if it returns a direct-nav or not
+    ;; ":direct-nav-fn" metadata as opposed to :direct-nav metadata which is used for symbols/values
+    (let [op (resolve-dynamic-fn-arg (:op o))
+          params (map resolve-dynamic-fn-arg (:params o))]
+      (if (all-static? (conj params op))
+        (coerce-nav (apply op params))
+        `(coerce-nav ~(resolve-magic-code op) ~@(map resolve-magic-code params))))
 
-                ~array-sym))))))
-
-
-   :cljs
-   (defn mk-params-maker [ns-str params-code possible-params-code used-locals]
-     (let [indexed (->> possible-params-code
-                        (map-indexed (comp vec reverse vector))
-                        (into {}))]
-    ;;TODO: may be more efficient as an array
-       (mapv (fn [c] (get indexed c)) params-code))))
-
-
-;; possible-params-code is for cljs impl that can't use eval
-(defn magic-precompilation [prepared-path ns-str used-locals possible-params-code]
-  (let [params-atom (atom [])
-        failed-atom (atom false)
-        path (magic-precompilation* prepared-path params-atom failed-atom)]
-
-    (if @failed-atom
-      (if (get-cell MUST-CACHE-PATHS)
-        (throw-illegal "Failed to cache path")
-        (->CachedPathInfo nil nil))
-      (let [precompiled (comp-paths* path)
-            params-code (mapv extract-original-code @params-atom)
-            params-maker (if-not (empty? params-code)
-                           (mk-params-maker ns-str params-code possible-params-code used-locals))]
-
-        ;; TODO: error if precompiled is compiledpath and there are params or
-        ;; precompiled is paramsneededpath and there are no params...
-        (->CachedPathInfo precompiled params-maker)))))
+    :else
+    (coerce-nav o)))
 
 
+(defn magic-precompilation [path ns-str used-locals]
+  (let [path (magic-precompilation* path)
+        ns (find-ns ns-str)
+        maker (binding [*ns* ns]
+                (eval+
+                 `(fn [~@used-locals]
+                    ~(resolve-magic-code (->DynamicPath path) true))))]
+    (if (static-path? path)
+      (->CachedPathInfo false (maker))
+      (->CachedPathInfo true maker))))
 
+
+  ;; TODO: could have a global flag about whether or not to compile and cache static
+  ;; portions, or whether to compile everything together on each invocation (so that
+  ;; it can be redefined in repl
 
 
 (defn compiled-setval* [path val structure]
