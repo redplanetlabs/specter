@@ -583,7 +583,7 @@
 
 
 (defn dynamic-var? [v]
-  (-> v meta :dynamic not))
+  (-> v meta :dynamic))
 
 ;; don't do coerce-nav here... save that for resolve-magic-code
 (defn- magic-precompilation* [o]
@@ -643,6 +643,19 @@
         :else
         o))
 
+(defn resolve-dynamic-fn-arg-code [o]
+  (cond (instance? DynamicFunction o)
+        (let [op (resolve-dynamic-fn-arg-code (:op o))
+              params (map resolve-dynamic-fn-arg-code (:params o))]
+          `(~op ~@params))
+
+        (instance? DynamicVal o)
+        (:code o)
+
+        :else
+        o))
+
+
 (defn resolve-magic-code [o]
   (cond
     (instance? DynamicPath o)
@@ -655,7 +668,7 @@
                           rich-nav?
                           resolved
                           (fn [s] [(comp-paths* s)]))]
-            (if (and (= 1 (count combined)) (rich-nav? (first combined)))
+            (if (= 1 (count combined))
               (first combined)
               `(comp-navs ~@combined))))
         (resolve-magic-code path)))
@@ -675,7 +688,8 @@
           params (map resolve-dynamic-fn-arg (:params o))]
       (if (all-static? (conj params op))
         (coerce-nav (apply op params))
-        `(coerce-nav (~(resolve-magic-code op) ~@(map resolve-magic-code params)))))
+        `(coerce-nav (~(resolve-dynamic-fn-arg-code op)
+                      ~@(map resolve-dynamic-fn-arg-code params)))))
 
     :else
     (coerce-nav o)))
@@ -683,11 +697,13 @@
 
 (defn magic-precompilation [path ns-str used-locals]
   (let [path (magic-precompilation* path)
+;        _ (println "magic-precompilation*" path)
         ns (find-ns (symbol ns-str))
         maker (binding [*ns* ns]
                 (eval+
-                 `(fn [~@used-locals]
-                    ~(resolve-magic-code (->DynamicPath path)))))]
+;                 (spy
+                  `(fn [~@used-locals]
+                     ~(resolve-magic-code (->DynamicPath path)))))]
     (if (static-path? path)
       (->CachedPathInfo false (maker))
       (->CachedPathInfo true maker))))

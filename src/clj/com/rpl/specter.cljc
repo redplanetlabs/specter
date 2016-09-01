@@ -359,38 +359,38 @@
                                       next-val))
                             structure)))))
 
-(defnav
+(defrichnav
   ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
   keypath
   [key]
-  (select* [this structure next-fn]
-    (next-fn (get structure key)))
-  (transform* [this structure next-fn]
-    (assoc structure key (next-fn (get structure key)))))
+  (select* [this vals structure next-fn]
+    (next-fn vals (get structure key)))
+  (transform* [this vals structure next-fn]
+    (assoc structure key (next-fn vals (get structure key)))))
 
 
-(defnav
+(defrichnav
   ^{:doc "Navigates to the key only if it exists in the map."}
   must
   [k]
-  (select* [this structure next-fn]
+  (select* [this vals structure next-fn]
     (if (contains? structure k)
-      (next-fn (get structure k))
+      (next-fn vals (get structure k))
       NONE))
-  (transform* [this structure next-fn]
+  (transform* [this vals structure next-fn]
    (if (contains? structure k)
-     (assoc structure k (next-fn (get structure k)))
+     (assoc structure k (next-fn vals (get structure k)))
      structure)))
 
 
-(defnav
+(defrichnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
   view
   [afn]
-  (select* [this structure next-fn]
-    (next-fn (afn structure)))
-  (transform* [this structure next-fn]
-    (next-fn (afn structure))))
+  (select* [this vals structure next-fn]
+    (next-fn vals (afn structure)))
+  (transform* [this vals structure next-fn]
+    (next-fn vals (afn structure))))
 
 
 (defnav
