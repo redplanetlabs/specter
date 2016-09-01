@@ -139,6 +139,7 @@
 
 (defn- coerce-object [this]
   (cond (satisfies? p/ImplicitNav this) (p/implicit-nav this)
+        (rich-nav? this) this
         :else (throw-illegal "Not a navigator: " this)))
 
 
@@ -192,7 +193,7 @@
     (coerce-path o))
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (do-comp-paths [navigators]
-    (reduce combine-two-navs navigators)))
+    (reduce combine-two-navs (map coerce-path navigators))))
 
 ;; cell implementation idea taken from prismatic schema library
 #?(:cljs
@@ -441,7 +442,7 @@
     (next-fn structure)
     structure))
 
-(defn pred* [afn]
+(defn ^:direct-nav pred* [afn]
   (reify RichNavigator
     (select* [this vals structure next-fn]
       (if (afn structure)
@@ -458,6 +459,34 @@
       (next-fn vals structure))
     (transform* [this vals structure next-fn]
       (next-fn vals structure))))
+
+(defn ^:direct-nav collected?* [afn]
+  (reify RichNavigator
+    (select* [this vals structure next-fn]
+      (if (afn vals)
+        (next-fn vals structure)
+        NONE))
+    (transform* [this vals structure next-fn]
+      (if (afn vals)
+        (next-fn vals structure)
+        structure))))
+
+(defn ^:direct-nav cell-nav [cell]
+  (reify RichNavigator
+    (select* [this vals structure next-fn]
+      (exec-select* (get-cell cell) vals structure next-fn))
+    (transform* [this vals structure next-fn]
+      (exec-transform* (get-cell cell) vals structure next-fn))))
+
+(defn local-declarepath []
+  (let [cell (mutable-cell nil)]
+    (vary-meta (cell-nav cell) assoc ::cell cell)))
+
+(defn providepath* [declared compiled-path]
+  (let [cell (-> declared meta ::cell)]
+    (set-cell! cell compiled-path)))
+
+
 
 (defn gensyms [amt]
   (vec (repeatedly amt gensym)))
@@ -478,17 +507,6 @@
           (reduce comp-navs rest#))))))
 
 (mk-comp-navs)
-
-(defn collected?* [afn]
-  (reify RichNavigator
-    (select* [this vals structure next-fn]
-      (if (afn vals)
-        (next-fn vals structure)
-        NONE))
-    (transform* [this vals structure next-fn]
-      (if (afn vals)
-        (next-fn vals structure)
-        structure))))
 
 (defn srange-transform* [structure start end next-fn]
   (let [structurev (vec structure)

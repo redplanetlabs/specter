@@ -156,6 +156,11 @@
 
 (def late-path i/late-path)
 
+
+;; Helpers for making recursive or mutually recursive navs
+
+(def local-declarepath i/local-declarepath)
+
 ;; Built-in pathing and context operations
 
 (defnav

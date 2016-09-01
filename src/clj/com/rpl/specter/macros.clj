@@ -127,59 +127,17 @@
               (i/no-params-rich-compiled-path nav#)
               (i/->ParamsNeededPath nav# ~num-params))))))))
 
-
-
-
-
-(defn ^:no-doc declared-name [name]
-  (vary-meta (symbol (str name "-declared"))
-             assoc :no-doc true))
-
-;;TODO: redesign so can be recursive
-(defmacro declarepath
-  ([name]
-   `(declarepath ~name []))
-  ([name params]
-   (let [platform (if (contains? &env :locals) :cljs :clj)
-         select-exec (if (= platform :clj)
-                       `i/exec-rich-select*
-                       `i/rich-select*)
-         transform-exec (if (= platform :clj)
-                          `i/exec-rich-transform*
-                          `i/rich-transform*)
-         num-params (count params)
-         declared (declared-name name)
-         rargs [(gensym "params") (gensym "pidx") (gensym "vals")
-                (gensym "structure") (gensym "next-fn")]]
-     `(do
-        (declare ~declared)
-        (def ~name
-          (let [nav# (reify RichNavigator
-                       (~'rich-select* [this# ~@rargs]
-                         (~select-exec ~declared ~@rargs))
-                       (~'rich-transform* [this# ~@rargs]
-                         (~transform-exec ~declared ~@rargs)))]
-
-            (if (= ~num-params 0)
-              (i/no-params-rich-compiled-path nav#)
-              (i/->ParamsNeededPath nav# ~num-params))))))))
-
-
-(defmacro providepath [name apath]
-  `(let [comped# (i/comp-paths-internalized ~apath)
-         expected-params# (i/num-needed-params ~name)
-         needed-params# (i/num-needed-params comped#)]
-     (if-not (= needed-params# expected-params#)
-       (i/throw-illegal "Invalid number of params in provided path, expected "
-                        expected-params# " but got " needed-params#))
-     (def ~(declared-name name)
-       (i/extract-rich-nav (i/coerce-compiled->rich-nav comped#)))))
-
-
 (defmacro extend-protocolpath
   "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
   [protpath & extensions]
   `(i/extend-protocolpath* ~protpath ~(protpath-sym protpath) ~(vec extensions)))
+
+
+(defmacro declarepath [name]
+  `(def ~name (i/local-declarepath)))
+
+(defmacro providepath [name apath]
+  `(i/providepath* ~name (path ~apath)))
 
 ;; copied from tools.macro to avoid the dependency
 (defn ^:no-doc name-with-attributes
@@ -261,23 +219,23 @@
       `(com.rpl.specter.impl/->DynamicVal ~path (quote ~path)))))
 
 
-(defn ^:no-doc ic-possible-params [path]
-  (do
-    (mapcat
-     (fn [e]
-       (cond (or (set? e)
-                 (map? e) ; in case inline maps are ever extended
-                 (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
-             [e]
-
-             (i/fn-invocation? e)
-             ;; the [e] here handles nav constructors
-             (concat [e] (rest e) (ic-possible-params e))
-
-             (vector? e)
-             (ic-possible-params e)))
-
-     path)))
+; (defn ^:no-doc ic-possible-params [path]
+;   (do
+;     (mapcat
+;      (fn [e]
+;        (cond (or (set? e)
+;                  (map? e) ; in case inline maps are ever extended
+;                  (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
+;              [e]
+;
+;              (i/fn-invocation? e)
+;              ;; the [e] here handles nav constructors
+;              (concat [e] (rest e) (ic-possible-params e))
+;
+;              (vector? e)
+;              (ic-possible-params e)))
+;
+;      path)))
 
 
 (defn cljs-macroexpand [env form]
