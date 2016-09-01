@@ -603,6 +603,14 @@
 (defn dynamic-var? [v]
   (-> v meta :dynamic))
 
+(defn maybe-direct-nav [obj direct-nav?]
+  (if direct-nav?
+    (vary-meta obj assoc :direct-nav true)
+    obj))
+
+(defn direct-nav? [o]
+  (-> o meta :direct-nav))
+
 ;; don't do coerce-nav here... save that for resolve-magic-code
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
@@ -610,11 +618,18 @@
 
         (instance? VarUse o)
         (if (dynamic-var? (:var o))
-          (->DynamicVal (:sym o))
-          (:val o))
+          (->DynamicVal (maybe-direct-nav
+                         (:sym o)
+                         (or (-> o :var direct-nav?)
+                             (-> o :sym direct-nav?))))
+
+          (maybe-direct-nav
+           (:val o)
+           (or (-> o :var direct-nav?)
+               (-> o :sym direct-nav?)
+               (-> o :val direct-nav?))))
 
         (instance? LocalSym o)
-        ;; TODO: check metadata on locals to determine if it's definitely a direct-nav or not
         (->DynamicVal (:sym o))
 
         (instance? SpecialFormUse o)
@@ -692,22 +707,17 @@
         (resolve-magic-code path)))
 
     (instance? DynamicVal o)
-    ;;TODO: check ^:nav hint to see whether this is necessary
-    ;;this is relevant for localsyms and dynamicvars
-    ;;for localsyms can check metadata in the env as well as metadata on the symbol itself
-    ;;for dynamic vars check the var metadata
-    `(coerce-nav ~(:code o))
+    (if (-> o :code direct-nav?)
+      (:code o)
+     `(coerce-nav ~(:code o)))
 
     (instance? DynamicFunction o)
-    ;;TODO: check ^:nav hint on op to see whether coerce-nav is necessary
-    ;; checked when resolving varuse on the function to know if it returns a direct-nav or not
-    ;; ":direct-nav-fn" metadata as opposed to :direct-nav metadata which is used for symbols/values
     (let [op (resolve-dynamic-fn-arg (:op o))
           params (map resolve-dynamic-fn-arg (:params o))]
       (if (all-static? (conj params op))
         (coerce-nav (apply op params))
-        `(coerce-nav (~(resolve-dynamic-fn-arg-code op)
-                      ~@(map resolve-dynamic-fn-arg-code params)))))
+        (let [code `(~(resolve-dynamic-fn-arg-code op) ~@(map resolve-dynamic-fn-arg-code params))]
+          (if (direct-nav? op) code `(coerce-nav ~code)))))
 
     :else
     (coerce-nav o)))

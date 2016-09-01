@@ -14,9 +14,11 @@
 (defmacro richnav [params & impls]
   (if (empty? params)
     `(reify RichNavigator ~@impls)
-    `(fn ~params
-       (reify RichNavigator
-         ~@impls))))
+    `(vary-meta
+       (fn ~params
+         (reify RichNavigator
+           ~@impls))
+       assoc :direct-nav true)))
 
 
 (defmacro nav [params & impls]
@@ -196,7 +198,9 @@
 
     (symbol? path)
     (if (contains? locals-set path)
-      `(com.rpl.specter.impl/->LocalSym ~path (quote ~path))
+      (let [s (get locals-set path)
+            embed (i/maybe-direct-nav path (-> s meta :direct-nav))]
+        `(com.rpl.specter.impl/->LocalSym ~path (quote ~embed)))
       ;; var-get doesn't work in cljs, so capture the val in the macro instead
       `(com.rpl.specter.impl/->VarUse ~path (var ~path) (quote ~path)))
 
