@@ -155,6 +155,7 @@
 ;; Helper for making late-bound navs
 
 (def late-path i/late-path)
+(def dynamic-param? i/dynamic-param?)
 
 
 ;; Helpers for making recursive or mutually recursive navs

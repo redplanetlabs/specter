@@ -1,11 +1,27 @@
 ## 0.13.0 (unreleased)
 
-* BREAKING CHANGE: May no longer extend the `Navigator` or `Collector` protocols. All navigators must be defined with `defnav`. Existing types can be turned into navigators with the new `IndirectNav` protocol.
-* Redesigned internals so navigators use interface dispatch rather than storing transform/selection functions as separate fields
-* `defnav` with parameters now produces a function that returns the parameterized nav when invoked (with parameters in the closure rather than being late-bound parameterized). These functions can still be composed without their parameters, falling back to the late-bound parameterized codepath in that case. The end result of this is more optimized execution when parameters are provided immediately.
+* BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
+* BREAKING CHANGE: All navigators must be defined with `defnav`. The core protocols may no longer be extended. Existing types can be turned into navigators with the new `IndirectNav` protocol.
+* BREAKING CHANGE: Removed `fixed-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately.
+* BREAKING CHANGE: Paths can no longer be compiled without their parameters. Instead, use the path macro to handle the parameterization.
+* BREAKING CHANGE: Parameterized protocol paths now work differently since paths cannot be specified without their parameters. Instead, use the parameter names from the declaration in the extension to specify where the parameters should go. For example:
+  ```clojure
+  (defprotocolpath MyProtPath [a])
+  (extend-protocolpath MyProtPath
+    clojure.lang.PersistentArrayMap
+    (must a))
+  ```
+* BREAKING CHANGE: Removed `defpathedfn` and replaced with much more generic `defdynamicnav`. Also added `dynamicnav`. `defdynamicnav` works similar to a macro and takes as input the parameters seen during inline caching. Use `dynamic-param?` to distinguish which parameters are statically specified and which are dynamic. `defdynamicnav` is typically used in conjunction with `late-bound-nav` – see implementation of `selected?` for an example.
+* Inline caching now works with locals, dynamic vars, and special forms used in the nav position. When resolved at runtime, those values will be coerced to a navigator if a vector or an implicit nav (like a keyword). Can hint with ^:direct-nav metadata to remove this coercion if know for sure those values will be implementations of `RichNavigator` interface.
+* Redesigned internals so navigators use interface dispatch rather than storing transform/selection functions as separate fields.
+* Added `local-declarepath` to assist in making local recursive or mutually recursive paths. Use with `providepath`.
+* Added `recursive-path` to assist in making recursive paths, both parameterized and unparameterized. Example:
+  ```clojure
+  (let [tree-walker (recursive-path [] p (if-path vector? [ALL p] STAY))]
+    (select tree-walker [1 [2 [3 4] 5] [[6]]]))
+  ```
 * Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
 * Added `IndirectNav` protocol for turning a value type into a navigator.
-* Higher order navigators (like `selected?`, `subselect`) more intelligently parameterize the nested paths and use the leaner execution mode if none of the nested paths require late-bound parameterization or value collection.
 * Removed `variable-pathed-nav`
 * Switched codebase from cljx to cljc
 * Improved performance of ALL and MAP-VALS on PersistentArrayMap by about 2x
