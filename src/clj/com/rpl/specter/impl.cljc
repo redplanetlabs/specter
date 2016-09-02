@@ -659,10 +659,7 @@
         (->DynamicVal (:sym o))
 
         (instance? SpecialFormUse o)
-        (let [code (:code o)
-              v (->DynamicVal code)]
-          (if (= 'fn* (first code))
-            (->DynamicFunction pred* [v])))
+        (->DynamicVal (:code o))
 
         (instance? FnInvocation o)
         (let [op (magic-precompilation* (:op o))
@@ -733,9 +730,15 @@
         (resolve-magic-code path)))
 
     (instance? DynamicVal o)
-    (if (-> o :code direct-nav?)
-      (:code o)
-     `(coerce-nav ~(:code o)))
+    (let [code (:code o)]
+      (cond (direct-nav? code)
+            code
+
+            (or (set? code) (and (fn-invocation? code) (= 'fn* (first code))))
+            `(pred* ~code)
+
+            :else
+            `(coerce-nav ~code)))
 
     (instance? DynamicFunction o)
     (let [op (resolve-dynamic-fn-arg (:op o))
