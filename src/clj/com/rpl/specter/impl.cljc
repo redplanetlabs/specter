@@ -193,7 +193,15 @@
     (coerce-path o))
   #?(:clj java.util.List :cljs cljs.core/PersistentVector)
   (do-comp-paths [navigators]
-    (reduce combine-two-navs (map coerce-path navigators))))
+    (let [coerced (map coerce-path navigators)]
+      (cond (empty? coerced)
+            (coerce-path nil)
+
+            (= 1 (count coerced))
+            (first coerced)
+
+            :else
+            (reduce combine-two-navs coerced)))))
 
 ;; cell implementation idea taken from prismatic schema library
 #?(:cljs
@@ -380,7 +388,7 @@
 
 (defn static-path? [path]
   (if (sequential? path)
-    (every? (complement dynamic-param?) path)
+    (every? static-path? path)
     (-> path dynamic-param? not)))
 
 (defn late-path [path]
@@ -653,7 +661,7 @@
 
         (instance? FnInvocation o)
         (let [op (magic-precompilation* (:op o))
-              params (map magic-precompilation* (:params o))]
+              params (doall (map magic-precompilation* (:params o)))]
           (if (-> op meta :dynamicnav)
             (apply op params)
             (->DynamicFunction op params)))
@@ -709,7 +717,7 @@
       (if (sequential? path)
         (if (empty? path)
           STAY*
-          (let [resolved (vec (map resolve-magic-code path))
+          (let [resolved (vec (map resolve-magic-code (flatten path)))
                 combined (continuous-subseqs-transform*
                           rich-nav?
                           resolved
@@ -738,6 +746,7 @@
 
 
 (defn magic-precompilation [path ns-str used-locals]
+;  (println "before magic-precompilation*:" path)
   (let [path (magic-precompilation* path)
 ;        _ (println "magic-precompilation*" path)
         ns (find-ns (symbol ns-str))
