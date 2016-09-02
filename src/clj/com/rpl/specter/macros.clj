@@ -67,7 +67,6 @@
            curr-params# [~@curr-params]]
        (if (every? (complement i/dynamic-param?) curr-params#)
          (apply builder# curr-params#)
-         ;;TODO: should tag with metadata that the return is a direct navigator
          (com.rpl.specter.impl/->DynamicFunction builder# curr-params#)))))
 
 (defmacro late-bound-nav [bindings & impls]
