@@ -1,10 +1,10 @@
 (ns com.rpl.specter.impl
   #?(:cljs (:require-macros
-            [com.rpl.specter.util-macros :refer [doseqres]]))
+            [com.rpl.specter.util-macros :refer [doseqres mk-comp-navs]]))
 
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val RichNavigator]]
-        #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
+        #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))
 
   (:require [com.rpl.specter.protocols :as p]
             [clojure.string :as s]
@@ -510,23 +510,8 @@
 
 
 
-(defn gensyms [amt]
+(defn- gensyms [amt]
   (vec (repeatedly amt gensym)))
-
-(defmacro mk-comp-navs []
-  (let [impls (for [i (range 3 20)]
-                (let [[fsym & rsyms :as syms] (gensyms i)]
-                  `([~@syms] (~'comp-navs ~fsym (~'comp-navs ~@rsyms)))))
-        last-syms (gensyms 19)]
-    `(defn comp-navs
-       ([] STAY*)
-       ([nav1#] nav1#)
-       ([nav1# nav2#] (combine-two-navs nav1# nav2#))
-       ~@impls
-       ([~@last-syms ~'& rest#]
-        (~'comp-navs
-          (~'comp-navs ~@last-syms)
-          (reduce comp-navs rest#))))))
 
 (mk-comp-navs)
 
