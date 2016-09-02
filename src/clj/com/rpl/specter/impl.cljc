@@ -257,16 +257,28 @@
     (set-cell! cell ret)
     ret))
 
-;; TODO: this used to be a macro for clj... check if that's still important
-(defn compiled-traverse* [path result-fn structure]
-  (exec-select*
-   path
-   []
-   structure
-   (fn [vals structure]
-    (if (identical? vals [])
-      (result-fn structure)
-      (result-fn (conj vals structure))))))
+#?(
+   :clj
+   (defmacro compiled-traverse* [path result-fn structure]
+     `(exec-select*
+       ~path
+       []
+       ~structure
+       (fn [vals# structure#]
+        (if (identical? vals# [])
+          (~result-fn structure#)
+          (~result-fn (conj vals# structure#))))))
+
+   :cljs
+   (defn compiled-traverse* [path result-fn structure]
+     (exec-select*
+      path
+      []
+      structure
+      (fn [vals structure]
+       (if (identical? vals [])
+         (result-fn structure)
+         (result-fn (conj vals structure)))))))
 
 
 
