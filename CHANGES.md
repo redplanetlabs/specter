@@ -2,7 +2,7 @@
 
 * BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
 * BREAKING CHANGE: All navigators must be defined with `defnav`. The core protocols may no longer be extended. Existing types can be turned into navigators with the new `IndirectNav` protocol.
-* BREAKING CHANGE: Removed `fixed-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately.
+* BREAKING CHANGE: Removed `fixed-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately. See `transformed` and `selected?` for examples.
 * BREAKING CHANGE: Paths can no longer be compiled without their parameters. Instead, use the path macro to handle the parameterization.
 * BREAKING CHANGE: Parameterized protocol paths now work differently since paths cannot be specified without their parameters. Instead, use the parameter names from the declaration in the extension to specify where the parameters should go. For example:
   ```clojure
