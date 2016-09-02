@@ -776,13 +776,15 @@
      form)
     (get-cell used-locals-cell)))
 
+(def ^:dynamic *DEBUG-INLINE-CACHING* false)
+
 (defn magic-precompilation [path ns-str used-locals-list]
 ;  (println "before magic-precompilation*:" path)
   (let [used-locals-set (set used-locals-list)
-        path (magic-precompilation* path)
+        magic-path (magic-precompilation* path)
 ;        _ (println "magic-precompilation*" path)
         ns (find-ns (symbol ns-str))
-        final-code (resolve-magic-code (->DynamicPath path))
+        final-code (resolve-magic-code (->DynamicPath magic-path))
         ;; this handles the case where a dynamicnav ignores a dynamic arg and produces
         ;; something static instead
         static? (empty? (used-locals used-locals-set final-code))
@@ -791,6 +793,12 @@
 ;                 (spy
                   `(fn [~@(if static? [] used-locals-list)]
                      ~final-code)))]
+    (when *DEBUG-INLINE-CACHING*
+      (println "Inline caching debug information")
+      (println "--------------------------------")
+      (println "Input path:" path "\n")
+      (println "Processed path:" magic-path "\n")
+      (println "Produced code:" final-code))
     (if static?
       (->CachedPathInfo false (maker))
       (->CachedPathInfo true maker))))

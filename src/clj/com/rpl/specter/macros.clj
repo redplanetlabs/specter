@@ -79,6 +79,9 @@
 (defmacro late-bound-richnav [bindings & impls]
   (late-bound-operation bindings `richnav impls))
 
+(defmacro with-inline-debug [& body]
+  `(binding [i/*DEBUG-INLINE-CACHING* true]
+     ~@body))
 
 (defmacro declarepath [name]
   `(def ~name (i/local-declarepath)))
@@ -127,11 +130,11 @@
   `(vary-meta (fn ~@args) assoc :dynamicnav true))
 
 (defmacro defdynamicnav
-  "Defines a higher order navigator that itself takes in one or more paths
-  as input. When inline caching is applied to a path containing
-  one of these higher order navigators, it will apply inline caching and
-  compilation to the subpaths as well. Use ^:notpath metadata on arguments
-  to indicate non-path arguments that should not be compiled"
+  "Defines a function that can choose what navigator to use at runtime based on
+   the dynamic context. The arguments will either be static values or
+   objects satisfying `dynamic-param?`. Use `late-bound-nav` to produce a runtime
+   navigator that uses the values of the dynamic params. See `selected?` for
+   an illustrative example of dynamic navs."
   [name & args]
   (let [[name args] (name-with-attributes name args)]
     `(def ~name (dynamicnav ~@args))))
