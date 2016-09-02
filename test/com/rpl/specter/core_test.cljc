@@ -575,11 +575,11 @@
      pred2 (gen/elements [odd? even?])
      updater (gen/elements [inc dec])]
 
-    (let [paths [(path (s/multi-path [(s/keypath k1) pred1 [(s/keypath k2) pred2 k3]]))
-                 (path (s/multi-path [k1 pred1] [(s/keypath k2) pred2 (s/keypath k3)]))
-                 (path (s/multi-path [(s/keypath k1) pred1 [(s/keypath k2) pred2 (s/keypath k3)]]))
+    (let [paths [(path (s/multi-path [(s/keypath k1) pred1] [(s/keypath k2) pred2] k3))
+                 (path (s/multi-path [k1 pred1] [(s/keypath k2) pred2] (s/keypath k3)))
+                 (path (s/multi-path [(s/keypath k1) pred1] [(s/keypath k2) pred2] (s/keypath k3)))
                  (s/multi-path [k1 pred1] [k2 pred2] k3)
-                 (path (s/multi-path [k1 pred1] [(s/keypath k2) pred2 k3]))]]
+                 (path (s/multi-path [k1 pred1] [(s/keypath k2) pred2] k3))]]
 
      (and
        (apply =

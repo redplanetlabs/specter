@@ -474,11 +474,12 @@
    will be parameterized in the order of which the parameterized navigators
    were declared."
   [path update-fn]
-  (late-bound-nav [late (late-path path)]
+  (late-bound-nav [late (late-path path)
+                   late-fn update-fn]
     (select* [this structure next-fn]
-      (next-fn (compiled-transform late update-fn structure)))
+      (next-fn (compiled-transform late late-fn structure)))
     (transform* [this structure next-fn]
-      (next-fn (compiled-transform late update-fn structure)))))
+      (next-fn (compiled-transform late late-fn structure)))))
 
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
