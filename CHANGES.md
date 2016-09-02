@@ -2,7 +2,7 @@
 
 * BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
 * BREAKING CHANGE: All navigators must be defined with `defnav`. The core protocols may no longer be extended. Existing types can be turned into navigators with the new `IndirectNav` protocol.
-* BREAKING CHANGE: Removed `fixed-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately. See `transformed` and `selected?` for examples.
+* BREAKING CHANGE: Removed `fixed-pathed-nav` and `variable-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately. See `transformed` and `selected?` for examples.
 * BREAKING CHANGE: Paths can no longer be compiled without their parameters. Instead, use the `path` macro to handle the parameterization.
 * BREAKING CHANGE: Parameterized protocol paths now work differently since paths cannot be specified without their parameters. Instead, use the parameter names from the declaration in the extension to specify where the parameters should go. For example:
   ```clojure
@@ -23,9 +23,8 @@
 * Significantly improved performance of paths that use dynamic parameters.
 * Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
 * Added `IndirectNav` protocol for turning a value type into a navigator.
-* Removed `variable-pathed-nav`
 * Removed `must-cache-paths!`. No longer relevant since all paths can now be compiled and cached.
-* Added `with-inline-debug` macro that prints information about the code being analyzed and produced by the inline compiler / cacher. 
+* Added `with-inline-debug` macro that prints information about the code being analyzed and produced by the inline compiler / cacher.
 * Switched codebase from cljx to cljc
 * Improved performance of ALL and MAP-VALS on PersistentArrayMap by about 2x
 * `defnav` now generates helper functions for every method. For example, `keypath` now has helpers `keypath-select*` and `keypath-transform*`. These functions take parameters `[key structure next-fn]`
