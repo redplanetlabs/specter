@@ -9,7 +9,8 @@
                       nav declarepath providepath select select-one select-one!
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
-                      multi-transform path dynamicnav recursive-path]]))
+                      multi-transform path dynamicnav recursive-path
+                      defdynamicnav]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -19,7 +20,8 @@
                     nav declarepath providepath select select-one select-one!
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
-                    multi-transform path dynamicnav recursive-path]]))
+                    multi-transform path dynamicnav recursive-path
+                    defdynamicnav]]))
 
 
 
@@ -1273,3 +1275,12 @@
             [#(= 100 %) (s/terminal inc)]
             [#(= 101 %) (s/terminal inc)])
            1))))
+
+
+(defdynamicnav ignorer [a]
+  s/STAY)
+
+(deftest dynamic-nav-ignores-dynamic-arg
+  (let [a 1]
+    (is (= 1 (select-any (ignorer a) 1)))
+    (is (= 1 (select-any (ignorer :a) 1)))))

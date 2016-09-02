@@ -766,18 +766,32 @@
     :else
     (coerce-nav o)))
 
+(defn used-locals [locals-set form]
+  (let [used-locals-cell (mutable-cell [])]
+    (walk/postwalk
+     (fn [e]
+       (if (contains? locals-set e)
+         (update-cell! used-locals-cell #(conj % e))
+         e))
+     form)
+    (get-cell used-locals-cell)))
 
-(defn magic-precompilation [path ns-str used-locals]
+(defn magic-precompilation [path ns-str used-locals-list]
 ;  (println "before magic-precompilation*:" path)
-  (let [path (magic-precompilation* path)
+  (let [used-locals-set (set used-locals-list)
+        path (magic-precompilation* path)
 ;        _ (println "magic-precompilation*" path)
         ns (find-ns (symbol ns-str))
+        final-code (resolve-magic-code (->DynamicPath path))
+        ;; this handles the case where a dynamicnav ignores a dynamic arg and produces
+        ;; something static instead
+        static? (empty? (used-locals used-locals-set final-code))
         maker (binding [*ns* ns]
                 (eval+
 ;                 (spy
-                  `(fn [~@used-locals]
-                     ~(resolve-magic-code (->DynamicPath path)))))]
-    (if (static-path? path)
+                  `(fn [~@(if static? [] used-locals-list)]
+                     ~final-code)))]
+    (if static?
       (->CachedPathInfo false (maker))
       (->CachedPathInfo true maker))))
 

@@ -137,16 +137,6 @@
     `(def ~name (dynamicnav ~@args))))
 
 
-(defn- used-locals [locals-set form]
-  (let [used-locals-cell (i/mutable-cell [])]
-    (cljwalk/postwalk
-     (fn [e]
-       (if (locals-set e)
-         (i/update-cell! used-locals-cell #(conj % e))
-         e))
-     form)
-    (i/get-cell used-locals-cell)))
-
 (defn ^:no-doc ic-prepare-path [locals-set path]
   (cond
     (vector? path)
@@ -174,7 +164,7 @@
 
 
     :else
-    (if (empty? (used-locals locals-set path))
+    (if (empty? (i/used-locals locals-set path))
       path
       `(com.rpl.specter.impl/->DynamicVal (quote ~path)))))
 
@@ -230,7 +220,7 @@
                      (-> &env :locals keys set) ;cljs
                      (-> &env keys set)) ;clj
 
-        used-locals (used-locals local-syms path)
+        used-locals (i/used-locals local-syms path)
 
         ;; note: very important to use riddley's macroexpand-all here, so that
         ;; &env is preserved in any potential nested calls to select (like via
