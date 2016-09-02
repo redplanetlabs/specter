@@ -1284,3 +1284,16 @@
   (let [a 1]
     (is (= 1 (select-any (ignorer a) 1)))
     (is (= 1 (select-any (ignorer :a) 1)))))
+
+
+(deftest nested-dynamic-nav
+  (let [data {:a {:a 1 :b 2} :b {:a 3 :b 4}}
+        afn (fn [a b] (select-any (s/selected? (s/must a)
+                                               (s/selected? (s/must b)))
+                                  data))]
+    (is (= data (afn :a :a)))
+    (is (= s/NONE (afn :a :c)))
+    (is (= data (afn :a :b)))
+    (is (= s/NONE (afn :c :a)))
+    (is (= data (afn :b :a)))
+    (is (= data (afn :b :b)))))
