@@ -108,8 +108,9 @@
 #?(
    :clj
    (defmacro exec-select* [this & args]
-     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.RichNavigator})]
-       `(.select* ~hinted ~@args)))
+     (let [hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
+       `(let [~hinted ~this]
+          (.select* ~hinted ~@args))))
 
 
    :cljs
@@ -120,8 +121,9 @@
 #?(
    :clj
    (defmacro exec-transform* [this & args]
-     (let [hinted (with-meta this {:tag 'com.rpl.specter.protocols.RichNavigator})]
-       `(.transform* ~hinted ~@args)))
+     (let [hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
+       `(let [~hinted ~this]
+          (.transform* ~hinted ~@args))))
 
 
    :cljs
