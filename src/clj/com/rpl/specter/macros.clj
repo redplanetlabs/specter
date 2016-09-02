@@ -86,6 +86,17 @@
 (defmacro providepath [name apath]
   `(i/providepath* ~name (path ~apath)))
 
+(defmacro recursive-path [params self-sym path]
+  (if (empty? params)
+    `(let [~self-sym (i/local-declarepath)]
+       (providepath ~self-sym ~path)
+       ~self-sym)
+    `(i/direct-nav-obj
+       (fn ~params
+         (let [~self-sym (i/local-declarepath)]
+           (providepath ~self-sym ~path)
+           ~self-sym)))))
+
 ;; copied from tools.macro to avoid the dependency
 (defn ^:no-doc name-with-attributes
   "To be used in macro definitions.

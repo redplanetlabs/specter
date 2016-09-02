@@ -2,12 +2,10 @@
   #?(:cljs
      (:require-macros [com.rpl.specter.macros
                        :refer
-                       [defnav
-                        defpathedfn]]))
+                       [defnav]]))
   (:use #?(:clj
            [com.rpl.specter.macros :only
-            [defnav
-             defpathedfn]]))
+            [defnav]]))
   (:require [com.rpl.specter.navs :as n]
             [com.rpl.specter :refer [subselect selected?]]))
 

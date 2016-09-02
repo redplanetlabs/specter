@@ -1,10 +1,11 @@
 (ns com.rpl.specter.zipper
   #?(:cljs (:require-macros
             [com.rpl.specter.macros
-              :refer [defnav nav declarepath providepath]]))
+              :refer [defnav nav declarepath providepath recursive-path]]))
   #?(:clj
      (:use
-       [com.rpl.specter.macros :only [defnav nav declarepath providepath]]))
+       [com.rpl.specter.macros :only [defnav nav declarepath providepath
+                                      recursive-path]]))
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))
 
@@ -116,15 +117,15 @@
       (zip/remove inserted))))
 
 
-(declarepath ^{:doc "Navigate the zipper to the first element
+(def ^{:doc "Navigate the zipper to the first element
                      in the structure matching predfn. A linear scan
                      is done using NEXT to find the element."}
-  find-first [predfn])
+  find-first
+  (recursive-path [predfn] p
+    (s/if-path [NODE (s/pred predfn)]
+      s/STAY
+      [NEXT p])))
 
-(providepath find-first
-  (s/if-path [NODE s/pred]
-    s/STAY
-    [NEXT (s/params-reset find-first)]))
 
 
 (declarepath ^{:doc "Navigate to every element reachable using calls
