@@ -176,7 +176,7 @@
     :else
     (if (empty? (used-locals locals-set path))
       path
-      `(com.rpl.specter.impl/->DynamicVal ~path (quote ~path)))))
+      `(com.rpl.specter.impl/->DynamicVal (quote ~path)))))
 
 
 ; (defn ^:no-doc ic-possible-params [path]

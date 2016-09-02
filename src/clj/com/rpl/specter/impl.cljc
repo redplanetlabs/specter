@@ -603,9 +603,14 @@
       (closed-code closure new-form))))
 
 (defn coerce-nav [o]
-  (if (instance? com.rpl.specter.protocols.RichNavigator o)
-    o
-    (p/implicit-nav o)))
+  (cond (instance? com.rpl.specter.protocols.RichNavigator o)
+        o
+
+        (vector? o)
+        (comp-paths* o)
+
+        :else
+        (p/implicit-nav o)))
 
 
 (defn dynamic-var? [v]
