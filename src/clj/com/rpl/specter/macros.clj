@@ -176,9 +176,11 @@
     (mapcat
      (fn [e]
        (cond (or (set? e)
-                 (map? e) ; in case inline maps are ever extended
+                 (map? e)
                  (symbol? e)
-                 (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
+                 (and (i/fn-invocation? e)
+                      (or (contains? #{'fn* 'fn} (first e))
+                          (special-symbol? (first e)))))
              [e]
 
              (sequential? e)

@@ -180,6 +180,12 @@
   (coerce-path [this]
     (coerce-object this)))
 
+(def STAY*
+  (reify RichNavigator
+    (select* [this vals structure next-fn]
+      (next-fn vals structure))
+    (transform* [this vals structure next-fn]
+      (next-fn vals structure))))
 
 (defn combine-two-navs [nav1 nav2]
   (reify RichNavigator
@@ -203,7 +209,7 @@
   (do-comp-paths [navigators]
     (let [coerced (map coerce-path navigators)]
       (cond (empty? coerced)
-            (coerce-path nil)
+            STAY*
 
             (= 1 (count coerced))
             (first coerced)
@@ -442,13 +448,6 @@
       (if (afn structure)
         (next-fn vals structure)
         structure))))
-
-(def STAY*
-  (reify RichNavigator
-    (select* [this vals structure next-fn]
-      (next-fn vals structure))
-    (transform* [this vals structure next-fn]
-      (next-fn vals structure))))
 
 (defn ^:direct-nav collected?* [afn]
   (reify RichNavigator
@@ -794,6 +793,12 @@
 
 (def ^:dynamic *DEBUG-INLINE-CACHING* false)
 
+#?(:cljs
+   (defn mk-fn-name-strs [o]
+     (walk/postwalk
+      (fn [e]
+        (if (fn? e) (re-find #" .*" (pr-str e)) e))
+      o)))
 
 #?(:clj
    (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-param]
@@ -806,10 +811,12 @@
       (binding [*ns* ns] (eval+ code))))
 
    :cljs
-   (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-param]
+   (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-params]
      (when *DEBUG-INLINE-CACHING*
-       (println "Produced dynamic object:")
-       (println resolved-code)
+       (println "Possible params:")
+       (println possible-params)
+       (println "\nProduced dynamic object:")
+       (pp/pprint (mk-fn-name-strs resolved-code))
        (println))
      (fn [dynamic-params]
        (late-resolve resolved-code dynamic-params))))

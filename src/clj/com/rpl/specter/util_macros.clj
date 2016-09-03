@@ -39,7 +39,7 @@
   (symbol (str "->LateFn" i)))
 
 (defn- mk-late-fn-record [i]
-  (let [fields (gensyms (inc i))
+  (let [fields (concat ['fn] (for [j (range i)] (symbol (str "arg" j))))
         dparams (gensym "dynamic-params")
         resolvers (for [f fields]
                     `(~'late-resolve ~f ~dparams))]
