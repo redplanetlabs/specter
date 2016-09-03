@@ -635,8 +635,9 @@
 (defn direct-nav? [o]
   (-> o meta :direct-nav))
 
+(defn all-static? [params]
+  (every? (complement dynamic-param?) params))
 
-;; don't do coerce-nav here... save that for resolve-magic-code
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
         (flatten (map magic-precompilation* o))
@@ -648,11 +649,7 @@
                          (or (-> o :var direct-nav?)
                              (-> o :sym direct-nav?))))
 
-          (maybe-direct-nav
-           (:val o)
-           (or (-> o :var direct-nav?)
-               (-> o :sym direct-nav?)
-               (-> o :val direct-nav?))))
+          (:val o))
 
         (instance? LocalSym o)
         (->DynamicVal (:sym o))
@@ -663,7 +660,8 @@
         (instance? FnInvocation o)
         (let [op (magic-precompilation* (:op o))
               params (doall (map magic-precompilation* (:params o)))]
-          (if (-> op meta :dynamicnav)
+          (if (or (-> op meta :dynamicnav)
+                  (all-static? (conj params op)))
             (apply op params)
             (->DynamicFunction op params)))
 
@@ -671,61 +669,66 @@
         ;; this handles dynamicval as well
         o))
 
+(defn static-combine
+  ([o] (static-combine o true))
+  ([o nav-pos?]
+   (cond (sequential? o)
+         (do
+           (if-not nav-pos?
+             ;; should never happen...
+             (throw-illegal "Cannot statically combine sequential when not in nav pos"))
+           (continuous-subseqs-transform*
+             rich-nav?
+             (doall (map static-combine (flatten o)))
+             (fn [s] [(comp-paths* s)])))
 
-(defn all-static? [params]
-  (every? (complement dynamic-param?) params))
+         (instance? DynamicFunction o)
+         (->DynamicFunction
+          (static-combine (:op o) false)
+          (doall (map #(static-combine % false) (:params o))))
 
-(declare resolve-magic-code)
+         (instance? DynamicPath o)
+         (->DynamicPath (static-combine (:path o)))
 
-(defn resolve-dynamic-fn-arg [o]
+         (instance? DynamicVal o)
+         o
+
+         :else
+         (if nav-pos?
+          (coerce-nav o)
+          o))))
+
+
+(declare resolve-nav-code)
+
+(defn resolve-arg-code [o]
   (cond (instance? DynamicFunction o)
-        (let [op (resolve-dynamic-fn-arg (:op o))
-              params (map resolve-dynamic-fn-arg (:params o))]
-          (if (all-static? (conj params op))
-            (apply op params)
-            (->DynamicFunction op params)))
-
-        (instance? DynamicVal o)
-        o
-
-        (instance? DynamicPath o)
-        (let [res (resolve-magic-code o)]
-          (if (rich-nav? res)
-            res
-            (->DynamicVal res)))
-
-        :else
-        o))
-
-(defn resolve-dynamic-fn-arg-code [o]
-  (cond (instance? DynamicFunction o)
-        (let [op (resolve-dynamic-fn-arg-code (:op o))
-              params (map resolve-dynamic-fn-arg-code (:params o))]
-          `(~(original-obj op) ~@params))
+        (let [op (resolve-arg-code (:op o))
+              params (map resolve-arg-code (:params o))]
+          (maybe-direct-nav
+            `(~(original-obj op) ~@params)
+            (direct-nav? (:op o))))
 
         (instance? DynamicVal o)
         (:code o)
 
+        (instance? DynamicPath o)
+        (resolve-nav-code o)
+
         :else
-        (original-obj o)))
+        o))
 
 
-(defn resolve-magic-code [o]
+(defn resolve-nav-code [o]
   (cond
     (instance? DynamicPath o)
     (let [path (:path o)]
       (if (sequential? path)
-        (if (empty? path)
-          STAY*
-          (let [resolved (vec (map resolve-magic-code (flatten path)))
-                combined (continuous-subseqs-transform*
-                          rich-nav?
-                          resolved
-                          (fn [s] [(comp-paths* s)]))]
-            (if (= 1 (count combined))
-              (first combined)
-              `(comp-navs ~@combined))))
-        (resolve-magic-code path)))
+        (let [resolved (vec (map resolve-nav-code path))]
+          (cond (empty? resolved) STAY*
+                (= 1 (count resolved)) (first resolved)
+                :else `(comp-navs ~@resolved)))
+        (resolve-nav-code path)))
 
     (instance? DynamicVal o)
     (let [code (:code o)]
@@ -739,13 +742,8 @@
             `(coerce-nav ~code)))
 
     (instance? DynamicFunction o)
-    (let [op (resolve-dynamic-fn-arg (:op o))
-          params (map resolve-dynamic-fn-arg (:params o))]
-      (if (all-static? (conj params op))
-        (coerce-nav (apply op params))
-        (let [code `(~(-> op resolve-dynamic-fn-arg-code original-obj)
-                      ~@(map resolve-dynamic-fn-arg-code params))]
-          (if (direct-nav? op) code `(coerce-nav ~code)))))
+    (let [res (resolve-arg-code o)]
+      (if (direct-nav? res) res `(coerce-nav ~res)))
 
     :else
     (coerce-nav o)))
@@ -762,35 +760,51 @@
 
 (def ^:dynamic *DEBUG-INLINE-CACHING* false)
 
+
+;; TODO: could have a global flag about whether or not to compile and cache static
+;; portions, or whether to compile everything together on each invocation (so that
+;; it can be redefined in repl
 (defn magic-precompilation [path ns-str used-locals-list]
-;  (println "before magic-precompilation*:" path)
   (let [used-locals-set (set used-locals-list)
-        magic-path (magic-precompilation* path)
-;        _ (println "magic-precompilation*" path)
-        ns (find-ns (symbol ns-str))
-        final-code (resolve-magic-code (->DynamicPath magic-path))
-        ;; this handles the case where a dynamicnav ignores a dynamic arg and produces
-        ;; something static instead
-        static? (empty? (used-locals used-locals-set final-code))
-        maker (binding [*ns* ns]
-                (eval+
-;                 (spy
-                  `(fn [~@(if static? [] used-locals-list)]
-                     ~final-code)))]
+        magic-path (-> path magic-precompilation* static-combine)]
     (when *DEBUG-INLINE-CACHING*
       (println "Inline caching debug information")
       (println "--------------------------------")
       (println "Input path:" path "\n")
-      (println "Processed path:" magic-path "\n")
-      (println "Produced code:" final-code))
-    (if static?
-      (->CachedPathInfo false (maker))
-      (->CachedPathInfo true maker))))
+      (println "Processed path:" magic-path "\n"))
+    (if (rich-nav? magic-path)
+      (do
+        (when *DEBUG-INLINE-CACHING*
+          (println "Static result:" magic-path))
+        (->CachedPathInfo false magic-path))
+      (let [code `(fn [~@used-locals-list]
+                    ~(resolve-nav-code (->DynamicPath magic-path)))
+            ns (find-ns (symbol ns-str))
+            maker (binding [*ns* ns] (eval+ code))]
+
+        (when *DEBUG-INLINE-CACHING*
+          (println "Produced code:" code))
+        (->CachedPathInfo true maker)))))
 
 
-  ;; TODO: could have a global flag about whether or not to compile and cache static
-  ;; portions, or whether to compile everything together on each invocation (so that
-  ;; it can be redefined in repl
+; ;; one of the "possible params"
+; (defrecord LocalParam [idx])
+;
+; ;; statically precomputed
+; (defrecord StaticParam [val])
+;
+; ;; what if instead of doing dynamic binding for the params, it generates code
+; ;; to construct the path
+; ;; TODO: how to parameterize the static/local params?... that could be dynamic binding
+; ;; or this makes a function that takes in static + local params, and it executes all arguments with those...
+; ;; (fn-3 comp-navs (static-param 2) (static-param 3) (local-param 0))
+;
+; ;; TODO: redo code to:
+; ;;   - do magic-precompilation* for initial resolve
+; ;;   - compile static parameters together as much as possible
+;
+; (defn magic-precompilation-cljs [path ns-str used-locals-list possible-params])
+
 
 
 (defn compiled-setval* [path val structure]
