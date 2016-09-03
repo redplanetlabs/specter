@@ -7,6 +7,7 @@
         #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))
 
   (:require [com.rpl.specter.protocols :as p]
+            [clojure.pprint]
             [clojure.string :as s]
             [clojure.walk :as walk]
             #?(:clj [riddley.walk :as riddley]))
@@ -699,54 +700,111 @@
           o))))
 
 
+#?(:cljs
+   (do
+     (defprotocol LateResolve
+       (late-resolve [this dynamic-params]))
+
+     ;; one of the "possible params"
+     (defrecord LocalParam [idx]
+       LateResolve
+       (late-resolve [this dynamic-params]
+         (nth dynamic-params idx)))
+
+     ;; statically precomputed
+     (defrecord StaticParam [val]
+       LateResolve
+       (late-resolve [this dynamic-params]
+         val))
+
+     (mk-late-fn-records)
+     (mk-late-fn)))
+
+#?(:clj
+   (defn static-fn-code [afn args]
+     `(~afn ~@args))
+
+   :cljs
+   (defn static-fn-code [afn args]
+     (late-fn (->StaticParam afn) args)))
+
+#?(:clj
+   (defn dynamic-fn-code [afn args]
+     `(~afn ~@args))
+
+   :cljs
+   (defn dynamic-fn-code [afn args]
+     (late-fn afn args)))
+
+#?(:clj
+   (defn dynamic-val-code [code possible-params]
+     code)
+
+   :cljs
+   (defn dynamic-val-code [code possible-params]
+     ;;TODO: need to compute index from possible-params
+     (maybe-direct-nav
+      (local-param possible-params code)
+      (direct-nav? code))))
+
+#?(:clj
+   (defn static-val-code [o]
+     o)
+
+   :cljs
+   (defn static-val-code [o]
+     (maybe-direct-nav
+      (->StaticParam o)
+      (direct-nav? o))))
+
+
 (declare resolve-nav-code)
 
-(defn resolve-arg-code [o]
+(defn resolve-arg-code [o possible-params]
   (cond (instance? DynamicFunction o)
-        (let [op (resolve-arg-code (:op o))
-              params (map resolve-arg-code (:params o))]
+        (let [op (resolve-arg-code (:op o) possible-params)
+              params (map #(resolve-arg-code % possible-params) (:params o))]
           (maybe-direct-nav
-            `(~(original-obj op) ~@params)
+            (dynamic-fn-code (original-obj op) params)
             (direct-nav? (:op o))))
 
         (instance? DynamicVal o)
-        (:code o)
+        (dynamic-val-code (:code o) possible-params)
 
         (instance? DynamicPath o)
-        (resolve-nav-code o)
+        (resolve-nav-code o possible-params)
 
         :else
-        o))
+        (static-val-code o)))
 
-
-(defn resolve-nav-code [o]
+(defn resolve-nav-code [o possible-params]
   (cond
     (instance? DynamicPath o)
     (let [path (:path o)]
       (if (sequential? path)
-        (let [resolved (vec (map resolve-nav-code path))]
-          (cond (empty? resolved) STAY*
+        (let [resolved (vec (map #(resolve-nav-code % possible-params) path))]
+          (cond (empty? resolved) (static-val-code STAY*)
                 (= 1 (count resolved)) (first resolved)
-                :else `(comp-navs ~@resolved)))
-        (resolve-nav-code path)))
+                :else (static-fn-code comp-navs resolved)))
+        (resolve-nav-code path possible-params)))
 
     (instance? DynamicVal o)
     (let [code (:code o)]
       (cond (direct-nav? code)
-            code
+            (dynamic-val-code code possible-params)
 
             (or (set? code) (and (fn-invocation? code) (= 'fn* (first code))))
-            `(pred* ~code)
+            (static-fn-code pred* [code])
 
             :else
-            `(coerce-nav ~code)))
+            (static-fn-code coerce-nav [code])))
 
     (instance? DynamicFunction o)
-    (let [res (resolve-arg-code o)]
-      (if (direct-nav? res) res `(coerce-nav ~res)))
+    (let [res (resolve-arg-code o possible-params)]
+      (if (direct-nav? res) res (static-fn-code coerce-nav [res])))
 
     :else
-    (coerce-nav o)))
+    (static-val-code (coerce-nav o))))
 
 (defn used-locals [locals-set form]
   (let [used-locals-cell (mutable-cell [])]
@@ -764,9 +822,8 @@
 ;; TODO: could have a global flag about whether or not to compile and cache static
 ;; portions, or whether to compile everything together on each invocation (so that
 ;; it can be redefined in repl
-(defn magic-precompilation [path ns-str used-locals-list]
-  (let [used-locals-set (set used-locals-list)
-        magic-path (-> path magic-precompilation* static-combine)]
+(defn magic-precompilation [path ns-str used-locals-list possible-params]
+  (let [magic-path (-> path magic-precompilation* static-combine)]
     (when *DEBUG-INLINE-CACHING*
       (println "Inline caching debug information")
       (println "--------------------------------")
@@ -778,32 +835,15 @@
           (println "Static result:" magic-path))
         (->CachedPathInfo false magic-path))
       (let [code `(fn [~@used-locals-list]
-                    ~(resolve-nav-code (->DynamicPath magic-path)))
+                    ~(resolve-nav-code (->DynamicPath magic-path) possible-params))
             ns (find-ns (symbol ns-str))
             maker (binding [*ns* ns] (eval+ code))]
 
         (when *DEBUG-INLINE-CACHING*
-          (println "Produced code:" code))
+          (println "Produced code:")
+          (clojure.pprint/pprint code)
+          (println))
         (->CachedPathInfo true maker)))))
-
-
-; ;; one of the "possible params"
-; (defrecord LocalParam [idx])
-;
-; ;; statically precomputed
-; (defrecord StaticParam [val])
-;
-; ;; what if instead of doing dynamic binding for the params, it generates code
-; ;; to construct the path
-; ;; TODO: how to parameterize the static/local params?... that could be dynamic binding
-; ;; or this makes a function that takes in static + local params, and it executes all arguments with those...
-; ;; (fn-3 comp-navs (static-param 2) (static-param 3) (local-param 0))
-;
-; ;; TODO: redo code to:
-; ;;   - do magic-precompilation* for initial resolve
-; ;;   - compile static parameters together as much as possible
-;
-; (defn magic-precompilation-cljs [path ns-str used-locals-list possible-params])
 
 
 

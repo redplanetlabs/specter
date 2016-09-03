@@ -28,3 +28,40 @@
         (~'comp-navs
           (~'comp-navs ~@last-syms)
           (reduce ~'comp-navs rest#))))))
+
+
+
+ ;;TODO: move these definitions somewhere else
+(defn late-fn-record-name [i]
+  (symbol (str "LateFn" i)))
+
+(defn late-fn-record-constructor-name [i]
+  (symbol (str "->LateFn" i)))
+
+(defn- mk-late-fn-record [i]
+  (let [fields (gensyms (inc i))
+        dparams (gensym "dynamic-params")
+        resolvers (for [f fields]
+                    `(late-resolve ~f ~dparams))]
+   `(defrecord ~(late-fn-record-name i) [~@fields]
+      ~'LateResolve
+      (~'late-resolve [this# ~dparams]
+        (~@resolvers)))))
+
+
+(defmacro mk-late-fn-records []
+  (let [impls (for [i (range 20)] (mk-late-fn-record i))]
+    `(do ~@impls)))
+
+(defmacro mk-late-fn []
+  (let [f (gensym "afn")
+        args (gensym "args")
+        cases (for [i (range 19)]
+                (let [gets (for [j i] `(nth ~args ~j))]
+                  `(~(late-fn-record-constructor-name i)
+                    ~f
+                    ~@gets)))]
+    `(defn ~'late-fn [~f ~args]
+       (case (count ~args)
+         ~@cases
+         (com.rpl.specter.impl/throw-illegal "Cannot have late function with more than 18 args")))))

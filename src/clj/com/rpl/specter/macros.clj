@@ -277,7 +277,8 @@
              (let [~info-sym (i/magic-precompilation
                               ~prepared-path
                               ~(str *ns*)
-                              (quote ~used-locals))]
+                              (quote ~used-locals)
+                              nil)]
                ~add-cache-code
                ~info-sym)
              info#)
