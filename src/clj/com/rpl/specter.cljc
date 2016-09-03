@@ -194,7 +194,7 @@
       (i/terminal* afn vals structure))))
 
 
-(defn terminal-val
+(defn ^:direct-nav terminal-val
   "Like `terminal` but specifies a val to set at the location regardless of
    the collected values or the value at the location."
   [v]

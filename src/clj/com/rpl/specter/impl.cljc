@@ -672,11 +672,10 @@
         o))
 
 
-
-(declare resolve-magic-code)
-
 (defn all-static? [params]
   (every? (complement dynamic-param?) params))
+
+(declare resolve-magic-code)
 
 (defn resolve-dynamic-fn-arg [o]
   (cond (instance? DynamicFunction o)

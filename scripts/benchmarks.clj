@@ -69,6 +69,7 @@
     (compiled-select-any p data)
     (specter-dynamic-nested-get data :a :b :c)
     (get-in data [:a :b :c])
+    (-> data (get :a) (get :b) (get :c))
     (-> data :a :b :c)
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
 
