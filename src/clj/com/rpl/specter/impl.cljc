@@ -1,13 +1,14 @@
 (ns com.rpl.specter.impl
   #?(:cljs (:require-macros
-            [com.rpl.specter.util-macros :refer [doseqres mk-comp-navs]]))
+            [com.rpl.specter.util-macros
+             :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]))
 
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val RichNavigator]]
         #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))
 
   (:require [com.rpl.specter.protocols :as p]
-            [clojure.pprint]
+            #?(:clj [clojure.pprint :as pp] :cljs [cljs.pprint :as pp])
             [clojure.string :as s]
             [clojure.walk :as walk]
             #?(:clj [riddley.walk :as riddley]))
@@ -135,7 +136,8 @@
   (do-comp-paths [paths]))
 
 (defn rich-nav? [n]
-  (instance? com.rpl.specter.protocols.RichNavigator n))
+  #?(:clj (instance? com.rpl.specter.protocols.RichNavigator n)
+     :cljs (satisfies? RichNavigator n)))
 
 (defn comp-paths* [p]
   (if (rich-nav? p) p (do-comp-paths p)))
@@ -143,7 +145,7 @@
 (defn- coerce-object [this]
   (cond (satisfies? p/ImplicitNav this) (p/implicit-nav this)
         (rich-nav? this) this
-        :else (throw-illegal "Not a navigator: " this)))
+        :else (throw-illegal "Not a navigator: " this " " (pr-str (type this)))))
 
 
 (defprotocol CoercePath
@@ -168,6 +170,9 @@
   #?(:cljs (coerce-path [this]
             (coerce-path (vec this))))
   #?(:cljs cljs.core/LazySeq)
+  #?(:cljs (coerce-path [this]
+            (coerce-path (vec this))))
+  #?(:cljs cljs.core/Subvec)
   #?(:cljs (coerce-path [this]
             (coerce-path (vec this))))
 
@@ -399,7 +404,7 @@
   [op params])
 
 (defn dynamic-param? [o]
-  (contains? #{DynamicPath DynamicVal DynamicFunction} (class o)))
+  (contains? #{DynamicPath DynamicVal DynamicFunction} (type o)))
 
 (defn static-path? [path]
   (if (sequential? path)
@@ -415,44 +420,6 @@
 
 (defrecord CachedPathInfo
   [dynamic? precompiled])
-
-
-(defn constant-node? [node]
-  (cond (and (instance? VarUse node)
-             (-> node :var meta :dynamic not)) true
-        (record? node) false
-        (number? node) true
-        (keyword? node) true
-        (string? node) true
-        (vector? node) (every? constant-node? node)
-        (set? node) (every? constant-node? node)
-        (map? node) (and (every? constant-node? (vals node))
-                         (every? constant-node? (keys node)))
-        :else false))
-
-(defn extract-constant [node]
-  (cond (some #(% node) [number? keyword? string?]) node
-        (instance? VarUse node) (:val node)
-        (vector? node) (vec (map extract-constant node))
-        (set? node) (set (map extract-constant node))
-        (map? node) (->> node
-                         (map (fn [[k v]] [(extract-constant k) (extract-constant v)]))
-                         (into {}))
-        :else (throw-illegal "Unknown node " node)))
-
-
-(defn- extract-original-code [p]
-  (cond
-    (instance? LocalSym p) (:sym p)
-    (instance? VarUse p) (:sym p)
-    (instance? SpecialFormUse p) (:code p)
-    (instance? FnInvocation p) (:code p)
-    :else p))
-
-
-(defn- valid-navigator? [v]
-  (or (satisfies? p/ImplicitNav v)
-      (rich-nav? v)))
 
 
 (defn filter-select [afn structure next-fn]
@@ -561,14 +528,6 @@
         (with-meta ret (meta structure))
         ret))))
 
-
-(def ^:dynamic *tmp-closure*)
-(defn closed-code [closure body]
-  (let [lv (mapcat #(vector % `(*tmp-closure* '~%))
-                   (keys closure))]
-    (binding [*tmp-closure* closure]
-      (eval `(let [~@lv] ~body)))))
-
 (defn any?
   "Accepts any number of predicates that take in one input and returns a new predicate that returns true if any of them are true"
   [& preds]
@@ -576,34 +535,45 @@
     (some #(% obj) preds)))
 
 
-(let [embeddable? (any? number?
-                        symbol?
-                        keyword?
-                        string?
-                        char?
-                        list?
-                        vector?
-                        set?
-                        #(and (map? %) (not (record? %)))
-                        nil?
-                        #(instance? clojure.lang.Cons %)
-                        #(instance? clojure.lang.LazySeq %))]
-  (defn eval+
-    "Automatically extracts non-evalable stuff into a closure and then evals"
-    [form]
-    (let [replacements (mutable-cell {})
-          new-form (codewalk-until
-                     #(-> % embeddable? not)
-                     (fn [o]
-                       (let [s (gensym)]
-                         (update-cell! replacements #(assoc % s o))
-                         s))
-                     form)
-          closure (get-cell replacements)]
-      (closed-code closure new-form))))
+#?(:clj
+   (do
+    (def ^:dynamic *tmp-closure*)
+    (defn closed-code [closure body]
+      (let [lv (mapcat #(vector % `(*tmp-closure* '~%))
+                       (keys closure))]
+        (binding [*tmp-closure* closure]
+          (eval `(let [~@lv] ~body)))))
+
+
+    (let [embeddable? (any? number?
+                            symbol?
+                            keyword?
+                            string?
+                            char?
+                            list?
+                            vector?
+                            set?
+                            #(and (map? %) (not (record? %)))
+                            nil?
+                            #(instance? clojure.lang.Cons %)
+                            #(instance? clojure.lang.LazySeq %))]
+      (defn eval+
+        "Automatically extracts non-evalable stuff into a closure and then evals"
+        [form]
+        (let [replacements (mutable-cell {})
+              new-form (codewalk-until
+                         #(-> % embeddable? not)
+                         (fn [o]
+                           (let [s (gensym)]
+                             (update-cell! replacements #(assoc % s o))
+                             s))
+                         form)
+              closure (get-cell replacements)]
+          (closed-code closure new-form))))))
 
 (defn coerce-nav [o]
-  (cond (instance? com.rpl.specter.protocols.RichNavigator o)
+  (cond #?(:clj (instance? com.rpl.specter.protocols.RichNavigator o)
+           :cljs (satisfies? RichNavigator o))
         o
 
         (vector? o)
@@ -678,10 +648,13 @@
            (if-not nav-pos?
              ;; should never happen...
              (throw-illegal "Cannot statically combine sequential when not in nav pos"))
-           (continuous-subseqs-transform*
-             rich-nav?
-             (doall (map static-combine (flatten o)))
-             (fn [s] [(comp-paths* s)])))
+           (let [res (continuous-subseqs-transform*
+                       rich-nav?
+                       (doall (map static-combine (flatten o)))
+                       (fn [s] [(comp-paths* s)]))]
+             (if (= 1 (count res))
+               (first res)
+               res)))
 
          (instance? DynamicFunction o)
          (->DynamicFunction
@@ -742,10 +715,12 @@
 
    :cljs
    (defn dynamic-val-code [code possible-params]
-     ;;TODO: need to compute index from possible-params
-     (maybe-direct-nav
-      (local-param possible-params code)
-      (direct-nav? code))))
+     (let [[i] (keep-indexed (fn [i v] (if (= v code) i)) possible-params)]
+       (if (nil? i)
+         (throw-illegal "Could not find " code " in possible params " possible-params))
+       (maybe-direct-nav
+        (->LocalParam i)
+        (direct-nav? code)))))
 
 #?(:clj
    (defn static-val-code [o]
@@ -789,15 +764,16 @@
         (resolve-nav-code path possible-params)))
 
     (instance? DynamicVal o)
-    (let [code (:code o)]
+    (let [code (:code o)
+          d (dynamic-val-code code possible-params)]
       (cond (direct-nav? code)
-            (dynamic-val-code code possible-params)
+            d
 
             (or (set? code) (and (fn-invocation? code) (= 'fn* (first code))))
-            (static-fn-code pred* [code])
+            (static-fn-code pred* [d])
 
             :else
-            (static-fn-code coerce-nav [code])))
+            (static-fn-code coerce-nav [d])))
 
     (instance? DynamicFunction o)
     (let [res (resolve-arg-code o possible-params)]
@@ -819,9 +795,33 @@
 (def ^:dynamic *DEBUG-INLINE-CACHING* false)
 
 
+#?(:clj
+   (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-param]
+     (let [code `(fn [~@used-locals-list] ~resolved-code)
+           ns (find-ns (symbol ns-str))]
+      (when *DEBUG-INLINE-CACHING*
+        (println "Produced code:")
+        (pp/pprint code)
+        (println))
+      (binding [*ns* ns] (eval+ code))))
+
+   :cljs
+   (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-param]
+     (when *DEBUG-INLINE-CACHING*
+       (println "Produced dynamic object:")
+       (println resolved-code)
+       (println))
+     (fn [dynamic-params]
+       (late-resolve resolved-code dynamic-params))))
+
+
 ;; TODO: could have a global flag about whether or not to compile and cache static
 ;; portions, or whether to compile everything together on each invocation (so that
 ;; it can be redefined in repl
+;; could have three levels:
+;; 1. NO-COERCION (never allow coerce-nav at runtime)
+;; 2. REGULAR (allow coerce-nav at runtime, cache static parts together)
+;; 3. REDEFINABLE-VARS (don't cache static parts together)
 (defn magic-precompilation [path ns-str used-locals-list possible-params]
   (let [magic-path (-> path magic-precompilation* static-combine)]
     (when *DEBUG-INLINE-CACHING*
@@ -834,15 +834,11 @@
         (when *DEBUG-INLINE-CACHING*
           (println "Static result:" magic-path))
         (->CachedPathInfo false magic-path))
-      (let [code `(fn [~@used-locals-list]
-                    ~(resolve-nav-code (->DynamicPath magic-path) possible-params))
-            ns (find-ns (symbol ns-str))
-            maker (binding [*ns* ns] (eval+ code))]
-
-        (when *DEBUG-INLINE-CACHING*
-          (println "Produced code:")
-          (clojure.pprint/pprint code)
-          (println))
+      (let [maker (mk-dynamic-path-maker
+                   (resolve-nav-code (->DynamicPath magic-path) possible-params)
+                   ns-str
+                   used-locals-list
+                   possible-params)]
         (->CachedPathInfo true maker)))))
 
 
@@ -863,7 +859,6 @@
                           (set-cell! state))
                      ret)
                    (last args))))
-
              structure)
      (get-cell state)]))
 

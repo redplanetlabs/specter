@@ -42,7 +42,7 @@
   (let [fields (gensyms (inc i))
         dparams (gensym "dynamic-params")
         resolvers (for [f fields]
-                    `(late-resolve ~f ~dparams))]
+                    `(~'late-resolve ~f ~dparams))]
    `(defrecord ~(late-fn-record-name i) [~@fields]
       ~'LateResolve
       (~'late-resolve [this# ~dparams]
@@ -57,11 +57,12 @@
   (let [f (gensym "afn")
         args (gensym "args")
         cases (for [i (range 19)]
-                (let [gets (for [j i] `(nth ~args ~j))]
+                [i
+                 (let [gets (for [j (range i)] `(nth ~args ~j))]
                   `(~(late-fn-record-constructor-name i)
                     ~f
-                    ~@gets)))]
+                    ~@gets))])]
     `(defn ~'late-fn [~f ~args]
        (case (count ~args)
-         ~@cases
+         ~@(apply concat cases)
          (com.rpl.specter.impl/throw-illegal "Cannot have late function with more than 18 args")))))

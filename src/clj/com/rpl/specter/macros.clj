@@ -171,23 +171,21 @@
       `(com.rpl.specter.impl/->DynamicVal (quote ~path)))))
 
 
-; (defn ^:no-doc ic-possible-params [path]
-;   (do
-;     (mapcat
-;      (fn [e]
-;        (cond (or (set? e)
-;                  (map? e) ; in case inline maps are ever extended
-;                  (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
-;              [e]
-;
-;              (i/fn-invocation? e)
-;              ;; the [e] here handles nav constructors
-;              (concat [e] (rest e) (ic-possible-params e))
-;
-;              (vector? e)
-;              (ic-possible-params e)))
-;
-;      path)))
+(defn ^:no-doc ic-possible-params [path]
+  (do
+    (mapcat
+     (fn [e]
+       (cond (or (set? e)
+                 (map? e) ; in case inline maps are ever extended
+                 (symbol? e)
+                 (and (i/fn-invocation? e) (contains? #{'fn* 'fn} (first e))))
+             [e]
+
+             (sequential? e)
+             (ic-possible-params e)))
+
+
+     path)))
 
 
 (defn cljs-macroexpand [env form]
@@ -232,7 +230,7 @@
                    (cljs-macroexpand-all &env (vec path)))
 
         prepared-path (ic-prepare-path local-syms expanded)
-        ; possible-params (vec (ic-possible-params expanded))
+        possible-params (vec (ic-possible-params expanded))
 
         cache-sym (vary-meta
                    (gensym "pathcache")
@@ -258,16 +256,10 @@
 
         precompiled-sym (gensym "precompiled")
 
-        ;;TODO: redo clojurescript portions
         handle-params-code
         (if (= platform :clj)
-          `(~precompiled-sym ~@used-locals))]
-          ; `(i/handle-params
-          ;   ~precompiled-sym
-          ;   ~params-maker-sym
-          ;   ~(mapv (fn [p] `(fn [] ~p)) possible-params)))]
-
-
+          `(~precompiled-sym ~@used-locals)
+          `(~precompiled-sym ~possible-params))]
     (if (= platform :clj)
       (i/intern* *ns* cache-sym (i/mutable-cell)))
     `(let [info# ~get-cache-code
@@ -278,19 +270,16 @@
                               ~prepared-path
                               ~(str *ns*)
                               (quote ~used-locals)
-                              nil)]
+                              (quote ~possible-params))]
                ~add-cache-code
                ~info-sym)
              info#)
-
 
            ~precompiled-sym (.-precompiled info#)
            dynamic?# (.-dynamic? info#)]
        (if dynamic?#
          ~handle-params-code
          ~precompiled-sym))))
-
-
 
 
 (defmacro select
