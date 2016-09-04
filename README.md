@@ -283,7 +283,7 @@ user> (select [ALL AccountPath :funds]
 [50 51 1 2]
 ```
 
-The next examples demonstrate recursive navigation. Here's how to double all the even numbers in a tree:
+The next examples demonstrate recursive navigation. Here's one way to double all the even numbers in a tree:
 
 ```clojure
 (defprotocolpath TreeWalker [])
@@ -296,23 +296,21 @@ The next examples demonstrate recursive navigation. Here's how to double all the
 ;; => [:a 1 [4 [[[3]]] :e] [8 5 [12 7]]]
 ```
 
-Here's how to reverse the positions of all even numbers in a tree (with order based on a depth first search). This example uses conditional navigation instead of protocol paths to do the walk and is much more efficient than using `walker`:
+Here's how to reverse the positions of all even numbers in a tree (with order based on a depth first search). This example uses conditional navigation instead of protocol paths to do the walk:
 
 ```clojure
-(declarepath TreeValues)
-
-(providepath TreeValues
-  (if-path vector?
-    [ALL TreeValues]
-    STAY
-    ))
+(def TreeValues
+  (recursive-path [] p
+    (if-path vector?
+      [ALL p]
+      STAY
+      )))
 
 
 (transform (subselect TreeValues even?)
   reverse
   [1 2 [3 [[4]] 5] [6 [7 8] 9 [[10]]]]
   )
-
 ;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
 ```
 
