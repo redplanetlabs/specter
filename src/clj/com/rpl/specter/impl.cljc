@@ -618,8 +618,11 @@
                          (:sym o)
                          (or (-> o :var direct-nav?)
                              (-> o :sym direct-nav?))))
-
-          (:val o))
+          (maybe-direct-nav
+            (:val o)
+            (or (-> o :var direct-nav?)
+                (-> o :sym direct-nav?)
+                (-> o :val direct-nav?))))
 
         (instance? LocalSym o)
         (->DynamicVal (:sym o))
