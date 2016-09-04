@@ -96,7 +96,7 @@ Example 2: Replace every continuous sequence of odd numbers with its sum:
 
 This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/protocols.cljc).
 
-Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
+Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
 
 
 # Latest Version
@@ -112,7 +112,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 - List of navigators with examples: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
 - Core operations and defining new navigators: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Macros) provides a more comprehensive overview than the API docs of the core select/transform/etc. operations and the operations for defining new navigators.
 - [API docs](http://nathanmarz.github.io/specter/)
-- Performance guide: The [Specter 0.11.0 announcement post](https://github.com/nathanmarz/specter/wiki/Specter-0.11.0:-Performance-without-the-tradeoffs) provides a comprehensive overview of how Specter achieves its performance and what you need to know as a user to enable Specter to perform its optimizations.
+- Performance guide: [This post](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) provides an overview of how Specter achieves its performance.
 
 Specter's API is contained in these files:
 
