@@ -1,6 +1,6 @@
 # Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that, because of its far-ranging applicability, is hard to describe in just a few sentences. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way.
+Specter is a Clojure and ClojureScript library that supercharges your ability to manipulate and query regular data structures. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way.
 
 Here are three areas where Specter greatly improves Clojure programming:
 
@@ -96,9 +96,9 @@ Example 2: Replace every continuous sequence of odd numbers with its sum:
 ;; => [4 6 8 35 16]
 ```
 
-This is just the tip of the iceberg. Because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/protocols.cljc).
+This is just the tip of the iceberg. The most important aspect of Specter is its composability. Specter navigators can be composed with any other Specter navigators, so the use cases is supports grows combinatorially. And because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/protocols.cljc).
 
-Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, `reduce-kv` on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
+Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, the `IMapIterable` interface on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
 
 
 # Latest Version
