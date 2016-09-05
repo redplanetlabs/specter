@@ -72,7 +72,7 @@ Example 2: Specter's `transform` is 6x faster than `update-in`:
 "Elapsed time: 1616.762 msecs"
 ```
 
-Here's [a benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83) showing Specter's amazing performance for a veriety of queries and transformations.
+Here's [a benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83) showing Specter's amazing performance for a variety of queries and transformations.
 
 **Specter makes sophisticated tasks – that are difficult to program manually – easy**
 
