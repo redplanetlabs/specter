@@ -1,11 +1,11 @@
 (ns com.rpl.specter.navs
   #?(:cljs (:require-macros
-            [com.rpl.specter.macros
+            [com.rpl.specter
               :refer
               [defnav]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
-  (:use #?(:clj [com.rpl.specter macros])
+  (:use #?(:clj [com.rpl.specter.macros :only [defnav]])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]

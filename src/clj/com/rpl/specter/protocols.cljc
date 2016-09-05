@@ -1,8 +1,8 @@
 (ns com.rpl.specter.protocols)
 
 (defprotocol RichNavigator
-  "Do not use this protocol directly. All navigators must be created using
-  com.rpl.specter.macros namespace."
+  "Do not use this protocol directly. All navigators must be created using macros
+  in com.rpl.specter namespace."
   (select* [this vals structure next-fn]
     "An implementation of `select*` must call `next-fn` on each
      subvalue of `structure`. The result of `select*` is specified
@@ -20,7 +20,7 @@
 
 (defprotocol Collector
   "Do not use this protocol directly. All navigators must be created using
-  com.rpl.specter.macros namespace."
+  macros in com.rpl.specter namespace."
   (collect-val [this structure]))
 
 (defprotocol ImplicitNav

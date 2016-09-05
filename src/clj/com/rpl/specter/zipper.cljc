@@ -1,10 +1,10 @@
 (ns com.rpl.specter.zipper
   #?(:cljs (:require-macros
-            [com.rpl.specter.macros
+            [com.rpl.specter
               :refer [defnav nav declarepath providepath recursive-path]]))
   #?(:clj
      (:use
-       [com.rpl.specter.macros :only [defnav nav declarepath providepath
+       [com.rpl.specter :only [defnav nav declarepath providepath
                                       recursive-path]]))
   (:require [com.rpl.specter :as s]
             [clojure.zip :as zip]))

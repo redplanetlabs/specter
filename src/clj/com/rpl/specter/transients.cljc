@@ -1,10 +1,10 @@
 (ns com.rpl.specter.transients
   #?(:cljs
-     (:require-macros [com.rpl.specter.macros
+     (:require-macros [com.rpl.specter
                        :refer
                        [defnav]]))
   (:use #?(:clj
-           [com.rpl.specter.macros :only
+           [com.rpl.specter :only
             [defnav]]))
   (:require [com.rpl.specter.navs :as n]
             [com.rpl.specter :refer [subselect selected?]]))

@@ -134,7 +134,6 @@ You can also find help in the #specter channel on [Clojurians](http://clojurians
 Increment all the values in maps of maps:
 ```clojure
 user> (use 'com.rpl.specter)
-user> (use 'com.rpl.specter.macros)
 user> (transform [MAP-VALS MAP-VALS]
               inc
               {:a {:aa 1} :b {:ba -1 :bb 2}})
@@ -266,7 +265,6 @@ You can make an "AccountPath" that dynamically chooses its path based on the typ
 
 
 ```clojure
-(use 'com.rpl.specter.macros)
 (defprotocolpath AccountPath [])
 (extend-protocolpath AccountPath
   User :account

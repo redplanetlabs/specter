@@ -4,7 +4,7 @@
             [cljs.test.check.cljs-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter.test-helpers :refer [ic-test]]
-            [com.rpl.specter.macros
+            [com.rpl.specter
               :refer [defprotocolpath defnav extend-protocolpath
                       nav declarepath providepath select select-one select-one!
                       select-first transform setval replace-in
@@ -15,7 +15,7 @@
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
     #?(:clj [com.rpl.specter.test-helpers :only [for-all+ ic-test]])
-    #?(:clj [com.rpl.specter.macros
+    #?(:clj [com.rpl.specter
              :only [defprotocolpath defnav extend-protocolpath
                     nav declarepath providepath select select-one select-one!
                     select-first transform setval replace-in

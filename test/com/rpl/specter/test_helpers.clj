@@ -4,7 +4,7 @@
              [properties :as prop]]
             [clojure.test])
 
-  (:use [com.rpl.specter.macros :only [select transform]]
+  (:use [com.rpl.specter :only [select transform]]
         [com.rpl.specter :only [select* transform*]]))
 
 

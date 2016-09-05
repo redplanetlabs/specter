@@ -12,7 +12,6 @@
   :plugins [[lein-codox "0.9.5"]]
   :codox {:source-paths ["target/classes" "src/clj"]
           :namespaces [com.rpl.specter
-                       com.rpl.specter.macros
                        com.rpl.specter.zipper
                        com.rpl.specter.protocols
                        com.rpl.specter.transients]
