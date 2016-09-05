@@ -6,21 +6,21 @@
 * BREAKING CHANGE: Removed `fixed-pathed-nav` and `variable-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately. See `transformed` and `selected?` for examples.
 * BREAKING CHANGE: Paths can no longer be compiled without their parameters. Instead, use the `path` macro to handle the parameterization.
 * BREAKING CHANGE: Parameterized protocol paths now work differently since paths cannot be specified without their parameters. Instead, use the parameter names from the declaration in the extension to specify where the parameters should go. For example:
-  ```clojure
-  (defprotocolpath MyProtPath [a])
-  (extend-protocolpath MyProtPath
-    clojure.lang.PersistentArrayMap
-    (must a))
-  ```
+```clojure
+(defprotocolpath MyProtPath [a])
+(extend-protocolpath MyProtPath
+  clojure.lang.PersistentArrayMap
+  (must a))
+```
 * BREAKING CHANGE: Removed `defpathedfn` and replaced with much more generic `defdynamicnav`. `defdynamicnav` works similar to a macro and takes as input the parameters seen during inline caching. Use `dynamic-param?` to distinguish which parameters are statically specified and which are dynamic. `defdynamicnav` is typically used in conjunction with `late-bound-nav` – see implementation of `selected?` for an example.
 * Inline caching now works with locals, dynamic vars, and special forms used in the nav position. When resolved at runtime, those values will be coerced to a navigator if a vector or implicit nav (e.g. keyword). Can hint with ^:direct-nav metadata to remove this coercion if know for sure those values will be implementations of `RichNavigator` interface.
 * Redesigned internals so navigators use interface dispatch rather than storing transform/selection functions as separate fields.
 * Added `local-declarepath` to assist in making local recursive or mutually recursive paths. Use with `providepath`.
 * Added `recursive-path` to assist in making recursive paths, both parameterized and unparameterized. Example:
-  ```clojure
-  (let [tree-walker (recursive-path [] p (if-path vector? [ALL p] STAY))]
-    (select tree-walker [1 [2 [3 4] 5] [[6]]]))
-  ```
+```clojure
+(let [tree-walker (recursive-path [] p (if-path vector? [ALL p] STAY))]
+  (select tree-walker [1 [2 [3 4] 5] [[6]]]))
+```
 * Significantly improved performance of paths that use dynamic parameters.
 * Inline factoring now parameterizes navigators immediately when all parameters are constants (rather than factoring it to use late-bound parameterization). This creates leaner, faster code.
 * Added `IndirectNav` protocol for turning a value type into a navigator.
