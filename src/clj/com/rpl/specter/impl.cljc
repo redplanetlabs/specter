@@ -143,8 +143,8 @@
   (if (rich-nav? p) p (do-comp-paths p)))
 
 (defn- coerce-object [this]
-  (cond (satisfies? p/ImplicitNav this) (p/implicit-nav this)
-        (rich-nav? this) this
+  (cond (rich-nav? this) this
+        (satisfies? p/ImplicitNav this) (p/implicit-nav this)
         :else (throw-illegal "Not a navigator: " this " " (pr-str (type this)))))
 
 
