@@ -1,4 +1,4 @@
-## 0.13.0 (unreleased)
+## 0.13.0
 
 * BREAKING CHANGE: com.rpl.specter.macros namespace removed and all macros moved into core com.rpl.specter namespace
 * BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
