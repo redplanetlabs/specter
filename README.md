@@ -1,6 +1,6 @@
 # Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Clojure has fantastic facilities for doing immutable programming, with a rich library of persistent data structures and efficient mechanisms for manipulating and traversing them. However, Clojure's story is incomplete. Once you nest data structures – which is extremely common – Clojure becomes cumbersome and complex. Clojure even lacks a facility for a basic task like transforming every value in a sequence without changing the type or order of that sequence.
+Clojure has fantastic facilities for doing immutable programming, with a rich library of persistent data structures and efficient mechanisms for manipulating and traversing them. However, Clojure's story is incomplete. Once you nest data structures – which is extremely common – Clojure becomes cumbersome and complex. Clojure even lacks a facility for a basic task like transforming every value in a generic sequence without changing the type or order of that sequence.
 
 Specter, available for both Clojure and ClojureScript, provides a high performance abstraction called navigators which complete the story around immutable programming and make it easy to transform and query nested data structures. It allows you to concisely specify what you want to query or transform within a data structure, and get a new data structure back with only your changes applied – everything else is reconstructed and the types of data structures throughout don't unexpectedly change.
 
