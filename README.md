@@ -1,24 +1,12 @@
 # Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Specter is a Clojure and ClojureScript library that supercharges your ability to manipulate and query regular data structures. At its core, Specter is a library for "composable navigation". Most commonly it is used for querying and transforming nested data structures, but the concept generalizes far beyond that. Its effect is to enable you to write programs much more rapidly in a much more maintainable way.
+Clojure has fantastic facilities for doing immutable programming, with a rich library of persistent data structures and efficient mechanisms for manipulating and traversing them. However, Clojure's story is incomplete. Once you nest data structures – which is extremely common – Clojure becomes cumbersome and complex. Clojure even lacks a facility for a basic task like transforming every value in a sequence without changing the type or order of that sequence.
 
-Here are three areas where Specter greatly improves Clojure programming:
+Specter, available for both Clojure and ClojureScript, provides a high performance abstraction called navigators which complete the story around immutable programming and make it easy to transform and query nested data structures. It allows you to concisely specify what you want to query or transform within a data structure, and get a new data structure back with only your changes applied – everything else is reconstructed and the types of data structures throughout don't unexpectedly change.
 
-**Specter makes common tasks concise instead of cumbersome and simple instead of complex**
+Consider these examples:
 
-Example 1: Append a sequence of elements to a nested vector
-
-```clojure
-(def data {:a [1 2 3]})
-
-;; Manual Clojure
-(update data :a (fn [v] (into (if v v []) [4 5])))
-
-;; Specter
-(setval [:a END] [4 5] data)
-```
-
-Example 2: Increment every even number nested within map of vector of maps
+**Example 1: Increment every even number nested within map of vector of maps**
 
 ```clojure
 (def data {:a [{:aa 1 :bb 2}
@@ -42,63 +30,46 @@ Example 2: Increment every even number nested within map of vector of maps
 (transform [MAP-VALS ALL MAP-VALS even?] inc data)
 ```
 
-**Specter is much faster than Clojure's limited built-in alternatives**
-
-Example 1: Specter's `select-any` is 30% faster than `get-in`:
+**Example 2: Append a sequence of elements to a nested vector**
 
 ```clojure
-(time
-  (dotimes [_ 10000000]
-    (get-in {:a {:b {:c 1}}} [:a :b :c])))
-"Elapsed time: 604.618 msecs"
+(def data {:a [1 2 3]})
 
-(time
-  (dotimes [_ 10000000]
-    (select-any [:a :b :c] {:a {:b {:c 1}}})))
-"Elapsed time: 427.528 msecs"
+;; Manual Clojure
+(update data :a (fn [v] (into (if v v []) [4 5])))
+
+;; Specter
+(setval [:a END] [4 5] data)
 ```
 
-Example 2: Specter's `transform` is 6x faster than `update-in`:
+**Example 3: Increment the last odd number in a sequence**
 
 ```clojure
-(time
-  (dotimes [_ 10000000]
-    (update-in {:a {:b {:c 1}}} [:a :b :c] inc)))
-"Elapsed time: 10662.014 msecs"
+(def data [1 2 3 4 5 6 7 8])
 
-(time
-  (dotimes [_ 10000000]
-    (transform [:a :b :c] inc {:a {:b {:c 1}}})))
-"Elapsed time: 1616.762 msecs"
+;; Manual Clojure
+(let [idx (reduce-kv (fn [res i v] (if (odd? v) i res)) nil data)]
+  (if idx (update data idx inc) data))
+
+;; Specter
+(transform [(filterer odd?) LAST] inc data)
 ```
 
-Here's [a benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83) showing Specter's amazing performance for a variety of queries and transformations.
-
-**Specter makes sophisticated tasks – that are difficult to program manually – easy**
-
-Example 1: Reverse the order of even numbers in a tree (with order based on depth first search):
+**Example 4: Map a function over a sequence without changing the type or order of the sequence**
 
 ```clojure
-(transform (subselect (walker number?) even?)
-  reverse
-  [1 [[[2]] 3] 5 [6 [7 8]] 10])
-;; => [1 [[[10]] 3] 5 [8 [7 6]] 2]
+;; Manual Clojure
+(map inc data) ;; doesn't work, becomes a lazy sequence
+(into (empty data) (map inc data)) ;; doesn't work, reverses the order of lists
+
+;; Specter
+(transform ALL inc data) ;; works for all Clojure datatypes with near-optimial efficiency
 ```
 
 
-Example 2: Replace every continuous sequence of odd numbers with its sum:
+Specter has performance rivaling hand-optimized code  (see [this benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83)). Clojure's only comparable built-in operations are `get-in` and `update-in`, and the Specter equivalents are 30% and 85% faster respectively (while being just as concise). Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, the `IMapIterable` interface on small maps, and `reduce-kv` in conjunction with transients on larger maps.
 
-```clojure
-(transform (continuous-subseqs odd?)
-  (fn [aseq] [(reduce + aseq)])
-  [1 3 6 8 9 11 15 16]
-  )
-;; => [4 6 8 35 16]
-```
-
-This is just the tip of the iceberg. The most important aspect of Specter is its composability. Specter navigators can be composed with any other Specter navigators, so the use cases is supports grows combinatorially. And because Specter is completely extensible, it can be used to navigate any data structure or object you have. All the navigators that come with Specter are built upon [very simple abstractions](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/protocols.cljc).
-
-Even though Specter is so generic and flexible, its performance rivals hand-optimized code. Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, the `IMapIterable` interface on small maps, and `reduce-kv` in conjunction with transients on larger maps. You get the best of both worlds of elegance and performance.
+The most important aspect of Specter is its composability. Specter navigators can be composed with any other navigators, so the supported use cases grow combinatorially. And because Specter is completely extensible, it can be used to navigate any data structure or object you have.
 
 
 # Latest Version
