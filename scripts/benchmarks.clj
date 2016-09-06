@@ -1,6 +1,5 @@
 (ns com.rpl.specter.benchmarks
   (:use [com.rpl.specter]
-        [com.rpl.specter macros]
         [com.rpl.specter.transients]
         [com.rpl.specter.impl :only [benchmark]])
   (:require [clojure.walk :as walk]))
