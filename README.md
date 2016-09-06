@@ -63,7 +63,7 @@ Consider these examples:
 (into (empty data) (map inc data)) ;; doesn't work, reverses the order of lists
 
 ;; Specter
-(transform ALL inc data) ;; works for all Clojure datatypes with near-optimial efficiency
+(transform ALL inc data) ;; works for all Clojure datatypes with near-optimal efficiency
 ```
 
 
