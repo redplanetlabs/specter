@@ -54,7 +54,6 @@
        (compare-benchmark ~amt-per-iter ~afn-map)
        (println "\n********************************\n"))))
 
-
 (defn specter-dynamic-nested-get [data a b c]
   (select-any [(keypath a) (keypath b) (keypath c)] data))
 
@@ -150,7 +149,8 @@
   (run-benchmark "map a function over a vector" 1000000
     (vec (map inc data))
     (mapv inc data)
-    (transform ALL inc data)))
+    (transform ALL inc data)
+    (into [] (map inc) data)))
 
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
@@ -158,7 +158,8 @@
     (doall (filter even? data))
     (filterv even? data)
     (select [ALL even?] data)
-    (select-any (filterer even?) data)))
+    (select-any (filterer even?) data)
+    (into [] (filter even?) data)))
 
 
 (let [data [{:a 2 :b 2} {:a 1} {:a 4} {:a 6}]
