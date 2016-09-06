@@ -1,6 +1,6 @@
 ## 0.13.0
 
-* BREAKING CHANGE: com.rpl.specter.macros namespace removed and all macros moved into core com.rpl.specter namespace
+* BREAKING CHANGE: `com.rpl.specter.macros` namespace removed and all macros moved into core `com.rpl.specter` namespace
 * BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
 * BREAKING CHANGE: All navigators must be defined with `defnav` and its variations from `com.rpl.specter`. The core protocols may no longer be extended. Existing types can be turned into navigators with the new `IndirectNav` protocol.
 * BREAKING CHANGE: Removed `fixed-pathed-nav` and `variable-pathed-nav` and replaced with much more generic `late-bound-nav`. `late-bound-nav` can have normal values be late-bound parameterized (not just paths). Use `late-path` function to indicate which parameters are paths. If all bindings given to `late-bound-nav` are static, the navigator will be resolved and cached immediately. See `transformed` and `selected?` for examples.
