@@ -32,7 +32,7 @@
           ~@t-body)))))
 
 (defn- helper-name [name method-name]
- (symbol (str name "-" method-name)))
+ (with-meta (symbol (str name "-" method-name)) {:no-doc true}))
 
 (defmacro defnav [name params & impls]
  ;; remove the "this" param for the helper
