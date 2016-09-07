@@ -57,6 +57,17 @@
 (defn specter-dynamic-nested-get [data a b c]
   (select-any [(keypath a) (keypath b) (keypath c)] data))
 
+
+(defn get-k [k] (fn [m next] (next (get m k))))
+
+(def get-a-b-c
+  (reduce
+    (fn [curr afn]
+      (fn [structure]
+        (afn structure curr)))
+    [identity (get-k :c) (get-k :b) (get-k :a)]))
+
+
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 2500000
@@ -67,6 +78,8 @@
     (compiled-select-any p data)
     (specter-dynamic-nested-get data :a :b :c)
     (get-in data [:a :b :c])
+    (get-a-b-c data)
+    (-> data :a :b :c identity)
     (-> data (get :a) (get :b) (get :c))
     (-> data :a :b :c)
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
