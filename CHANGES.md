@@ -1,3 +1,7 @@
+## 0.13.1-SNAPSHOT
+
+* Rename any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
+
 ## 0.13.0
 
 * BREAKING CHANGE: `com.rpl.specter.macros` namespace removed and all macros moved into core `com.rpl.specter` namespace
