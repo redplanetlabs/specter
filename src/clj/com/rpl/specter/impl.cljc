@@ -527,7 +527,7 @@
         (with-meta ret (meta structure))
         ret))))
 
-(defn any?
+(defn any-pred?
   "Accepts any number of predicates that take in one input and returns a new predicate that returns true if any of them are true"
   [& preds]
   (fn [obj]
@@ -544,18 +544,18 @@
           (eval `(let [~@lv] ~body)))))
 
 
-    (let [embeddable? (any? number?
-                            symbol?
-                            keyword?
-                            string?
-                            char?
-                            list?
-                            vector?
-                            set?
-                            #(and (map? %) (not (record? %)))
-                            nil?
-                            #(instance? clojure.lang.Cons %)
-                            #(instance? clojure.lang.LazySeq %))]
+    (let [embeddable? (any-pred? number?
+                                 symbol?
+                                 keyword?
+                                 string?
+                                 char?
+                                 list?
+                                 vector?
+                                 set?
+                                 #(and (map? %) (not (record? %)))
+                                 nil?
+                                 #(instance? clojure.lang.Cons %)
+                                 #(instance? clojure.lang.LazySeq %))]
       (defn eval+
         "Automatically extracts non-evalable stuff into a closure and then evals"
         [form]
