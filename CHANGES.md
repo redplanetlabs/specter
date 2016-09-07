@@ -1,6 +1,6 @@
 ## 0.13.1-SNAPSHOT
 
-* Rename any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
+* Remove any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
 
 ## 0.13.0
 
