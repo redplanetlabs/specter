@@ -423,10 +423,7 @@
 
 (defn comp-paths
   "Returns a compiled version of the given path for use with
-   compiled-{select/transform/setval/etc.} functions. This can compile navigators
-   (defined with `defnav`) without their parameters, and the resulting compiled
-   path will require parameters for all such navigators in the order in which
-   they were declared."
+   compiled-{select/transform/setval/etc.} functions."
   [& apath]
   (i/comp-paths* (vec apath)))
 
