@@ -1297,3 +1297,8 @@
     (is (= s/NONE (afn :c :a)))
     (is (= data (afn :b :a)))
     (is (= data (afn :b :b)))))
+
+(deftest duplicate-map-keys-test
+  (let [res (setval [s/ALL s/FIRST] "a" {:a 1 :b 2})]
+    (is (= {"a" 2} res))
+    (is (= 1 (count res)))))

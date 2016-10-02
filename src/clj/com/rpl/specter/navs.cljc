@@ -108,7 +108,7 @@
                (aset array i newk)
                (aset array (inc i) newv)
                (recur (+ i 2)))))
-         (clojure.lang.PersistentArrayMap. array))))
+         (clojure.lang.PersistentArrayMap/createAsIfByAssoc array))))
 
 
   #?(:cljs cljs.core/PersistentArrayMap)

@@ -1,6 +1,7 @@
 ## 0.13.1-SNAPSHOT
 
 * Remove any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
+* Bug fix: Fix regression from 0.13.0 where [ALL FIRST] on a PersistentArrayMap that created duplicate keys would create an invalid PersistentArrayMap
 
 ## 0.13.0
 
