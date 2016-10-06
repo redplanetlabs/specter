@@ -1,4 +1,5 @@
-# Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
+# Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter) [![Dependencies Status](https://jarkeeper.com/nathanmarz/specter/status.svg)](https://jarkeeper.com/nathanmarz/specter)
+
 
 Clojure has fantastic facilities for doing immutable programming, with a rich library of persistent data structures and efficient mechanisms for manipulating and traversing them. However, Clojure's story is incomplete. Once you nest data structures – which is extremely common – Clojure becomes cumbersome and complex. Clojure even lacks a facility for a basic task like transforming every value in a generic sequence without changing the type or order of that sequence.
 
