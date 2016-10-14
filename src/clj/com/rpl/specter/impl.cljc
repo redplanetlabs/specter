@@ -96,11 +96,8 @@
 #?(
    :clj
    (defmacro fast-object-array [i]
-     `(com.rpl.specter.Util/makeObjectArray ~i))
+     `(com.rpl.specter.Util/makeObjectArray ~i)))
 
-   :cljs
-   (defn fast-object-array [i]
-     (object-array i)))
 
 (defn benchmark [iters afn]
   (time
@@ -110,11 +107,12 @@
 #?(
    :clj
    (defmacro exec-select* [this & args]
-     (let [hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
-       `(let [~hinted ~this]
-          (.select* ~hinted ~@args))))
-
-
+     (let [platform (if (contains? &env :locals) :cljs :clj)
+           hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
+       (if (= platform :cljs)
+         `(p/select* ~this ~@args)
+         `(let [~hinted ~this]
+            (.select* ~hinted ~@args)))))
    :cljs
    (defn exec-select* [this vals structure next-fn]
      (p/select* ^not-native this vals structure next-fn)))
@@ -123,10 +121,12 @@
 #?(
    :clj
    (defmacro exec-transform* [this & args]
-     (let [hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
-       `(let [~hinted ~this]
-          (.transform* ~hinted ~@args))))
-
+     (let [platform (if (contains? &env :locals) :cljs :clj)
+           hinted (with-meta (gensym) {:tag 'com.rpl.specter.protocols.RichNavigator})]
+       (if (= platform :cljs)
+         `(p/transform* ~this ~@args)
+         `(let [~hinted ~this]
+            (.transform* ~hinted ~@args)))))
 
    :cljs
    (defn exec-transform* [this vals structure next-fn]
