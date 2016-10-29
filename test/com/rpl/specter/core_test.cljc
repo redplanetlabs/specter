@@ -1302,3 +1302,6 @@
   (let [res (setval [s/ALL s/FIRST] "a" {:a 1 :b 2})]
     (is (= {"a" 2} res))
     (is (= 1 (count res)))))
+
+(deftest inline-caching-vector-params-test
+  (is (= [10 [11]] (multi-transform (s/terminal-val [10 [11]]) :a))))

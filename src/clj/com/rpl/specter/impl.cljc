@@ -604,7 +604,9 @@
 
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
-        (flatten (map magic-precompilation* o))
+        (if (list? o)
+          (map magic-precompilation* o)
+          (into (empty o) (map magic-precompilation* o)))
 
         (instance? VarUse o)
         (if (dynamic-var? (:var o))
