@@ -1305,3 +1305,12 @@
 
 (deftest inline-caching-vector-params-test
   (is (= [10 [11]] (multi-transform (s/terminal-val [10 [11]]) :a))))
+
+(defn eachnav-fn-test [akey data]
+  (select-any (s/keypath "a" akey) data))
+
+(deftest eachnav-test
+  (let [data {"a" {"b" 1 "c" 2}}]
+    (is (= 1 (eachnav-fn-test "b" data)))
+    (is (= 2 (eachnav-fn-test "c" data)))
+    ))

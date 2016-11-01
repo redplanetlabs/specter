@@ -569,7 +569,7 @@
            :cljs (satisfies? RichNavigator o))
         o
 
-        (vector? o)
+        (sequential? o)
         (comp-paths* o)
 
         :else
@@ -602,9 +602,16 @@
 (defn all-static? [params]
   (every? (complement dynamic-param?) params))
 
+(defn late-resolved-fn [afn]
+  (fn [& args]
+    (if (all-static? args)
+      (apply afn args)
+      (->DynamicFunction afn args)
+      )))
+
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
-        (if (list? o)
+        (if (or (list? o) (seq? o))
           (map magic-precompilation* o)
           (into (empty o) (map magic-precompilation* o)))
 
@@ -631,7 +638,7 @@
               params (doall (map magic-precompilation* (:params o)))]
           (if (or (-> op meta :dynamicnav)
                   (all-static? (conj params op)))
-            (apply op params)
+            (magic-precompilation* (apply op params))
             (->DynamicFunction op params)))
 
         :else

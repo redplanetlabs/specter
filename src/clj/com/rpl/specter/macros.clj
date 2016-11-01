@@ -44,3 +44,6 @@
       ~@decls
       ~@helpers
       (def ~name (nav ~params ~@impls)))))
+
+(defmacro defrichnav [name params & impls]
+  `(def ~name (richnav ~params ~@impls)))

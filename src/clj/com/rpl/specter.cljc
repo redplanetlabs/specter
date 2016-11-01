@@ -34,6 +34,7 @@
      (defmacroalias richnav macros/richnav)
      (defmacroalias nav macros/nav)
      (defmacroalias defnav macros/defnav)
+     (defmacroalias defrichnav macros/defrichnav)
 
      (defmacro collector [params [_ [_ structure-sym] & body]]
        `(richnav ~params
@@ -41,9 +42,6 @@
            (next-fn# (conj vals# (do ~@body)) ~structure-sym))
           (~'transform* [this# vals# ~structure-sym next-fn#]
             (next-fn# (conj vals# (do ~@body)) ~structure-sym))))
-
-     (defmacro defrichnav [name params & impls]
-       `(def ~name (richnav ~params ~@impls)))
 
      (defmacro defcollector [name & body]
        `(def ~name (collector ~@body)))
@@ -543,6 +541,24 @@
 
 (def late-path i/late-path)
 (def dynamic-param? i/dynamic-param?)
+(def late-resolved-fn i/late-resolved-fn)
+
+
+(defdynamicnav
+  ^{:doc "Turns a navigator that takes one argument into a navigator that takes
+          many arguments and uses the same navigator with each argument. There
+          is no performance cost to using this. See implementation of `keypath`"}
+  eachnav
+  [navfn]
+  (let [latenavfn (late-resolved-fn navfn)]
+    (dynamicnav [& args]
+      (if (= 1 (count args))
+        ;; optimization if dynamicnav is used in a runtime situation (like
+        ;; via a dynamic var)
+        ;; also makes the resulting nav function semantically identical to original
+        ;; nav by returning a RichNavigator instead of a sequence
+        (latenavfn (first args))
+        (map latenavfn args)))))
 
 
 ;; Helpers for making recursive or mutually recursive navs
@@ -752,28 +768,8 @@
                                       next-val))
                             structure)))))
 
-(defrichnav
-  ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
-  keypath
-  [key]
-  (select* [this vals structure next-fn]
-    (next-fn vals (get structure key)))
-  (transform* [this vals structure next-fn]
-    (assoc structure key (next-fn vals (get structure key)))))
-
-
-(defrichnav
-  ^{:doc "Navigates to the key only if it exists in the map."}
-  must
-  [k]
-  (select* [this vals structure next-fn]
-    (if (contains? structure k)
-      (next-fn vals (get structure k))
-      NONE))
-  (transform* [this vals structure next-fn]
-   (if (contains? structure k)
-     (assoc structure k (next-fn vals (get structure k)))
-     structure)))
+(def keypath (eachnav n/keypath*))
+(def must (eachnav n/must*))
 
 
 (defrichnav
@@ -881,7 +877,7 @@
 
 (extend-type #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)
   ImplicitNav
-  (implicit-nav [this] (keypath this)))
+  (implicit-nav [this] (n/keypath* this)))
 
 (extend-type #?(:clj clojure.lang.AFn :cljs function)
   ImplicitNav

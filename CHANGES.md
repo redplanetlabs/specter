@@ -1,6 +1,9 @@
 ## 0.13.1-SNAPSHOT
 
 * Remove any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
+* Enhanced dynamic navigators to continue expanding if any other dynamic navs are returned
+* Added `eachnav` to turn any 1-argument navigator into a navigator that accepts any number of arguments, navigating by each argument in order
+* `keypath` and `must` enhanced to take in multiple arguments for concisely specifying multiple steps
 * Bug fix: Fix regression from 0.13.0 where [ALL FIRST] on a PersistentArrayMap that created duplicate keys would create an invalid PersistentArrayMap
 * Bug fix: Fix problems with multi-path and if-path in latest versions of ClojureScript
 * Bug fix: Inline compiler no longer flattens and changes the type of sequential params

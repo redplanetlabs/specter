@@ -5,7 +5,7 @@
               [defnav]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
-  (:use #?(:clj [com.rpl.specter.macros :only [defnav]])
+  (:use #?(:clj [com.rpl.specter.macros :only [defnav defrichnav]])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [clojure.walk :as walk]
@@ -409,3 +409,27 @@
   (if (pred structure)
     (on-match-fn structure)
     (walk/walk (partial walk-until pred on-match-fn) identity structure)))
+
+
+(defrichnav
+  ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
+  keypath*
+  [key]
+  (select* [this vals structure next-fn]
+    (next-fn vals (get structure key)))
+  (transform* [this vals structure next-fn]
+    (assoc structure key (next-fn vals (get structure key)))))
+
+
+(defrichnav
+  ^{:doc "Navigates to the key only if it exists in the map."}
+  must*
+  [k]
+  (select* [this vals structure next-fn]
+    (if (contains? structure k)
+      (next-fn vals (get structure k))
+      i/NONE))
+  (transform* [this vals structure next-fn]
+   (if (contains? structure k)
+     (assoc structure k (next-fn vals (get structure k)))
+     structure)))
