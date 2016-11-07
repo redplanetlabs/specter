@@ -1,3 +1,5 @@
+## 0.13.2-SNAPSHOT
+
 ## 0.13.1
 
 * Remove any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
