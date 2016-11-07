@@ -8,6 +8,7 @@
                defcollector
                defnav
                defdynamicnav
+               dynamicnav
                richnav
                defrichnav]]
 

@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros
             [com.rpl.specter
               :refer
-              [defnav]]
+              [defnav defrichnav]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
   (:use #?(:clj [com.rpl.specter.macros :only [defnav defrichnav]])
