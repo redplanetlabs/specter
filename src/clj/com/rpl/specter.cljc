@@ -842,21 +842,13 @@
 (defdynamicnav filterer
   "Navigates to a view of the current sequence that only contains elements that
   match the given path. An element matches the selector path if calling select
-  on that element with the path yields anything other than an empty sequence.
-
-   The input path may be parameterized, in which case the result of filterer
-   will be parameterized in the order of which the parameterized selectors
-   were declared."
+  on that element with the path yields anything other than an empty sequence."
   [& path]
   (subselect ALL (selected? path)))
 
 (defdynamicnav transformed
   "Navigates to a view of the current value by transforming it with the
-   specified path and update-fn.
-
-   The input path may be parameterized, in which case the result of transformed
-   will be parameterized in the order of which the parameterized navigators
-   were declared."
+   specified path and update-fn."
   [path update-fn]
   (late-bound-nav [late (late-path path)
                    late-fn update-fn]
@@ -864,6 +856,18 @@
       (next-fn (compiled-transform late late-fn structure)))
     (transform* [this structure next-fn]
       (next-fn (compiled-transform late late-fn structure)))))
+
+(defdynamicnav traversed
+  "Navigates to a view of the current value by transforming with a reduction over
+   the specified traversal."
+  [path reduce-fn]
+  (late-bound-nav [late (late-path path)
+                   late-fn reduce-fn]
+    (select* [this structure next-fn]
+      (next-fn (reduce late-fn (compiled-traverse late structure))))
+    (transform* [this structure next-fn]
+      (next-fn (reduce late-fn (compiled-traverse late structure)))
+      )))
 
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
