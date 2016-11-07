@@ -1314,3 +1314,6 @@
     (is (= 1 (eachnav-fn-test "b" data)))
     (is (= 2 (eachnav-fn-test "c" data)))
     ))
+
+(deftest traversed-test
+  (is (= 10 (select-any (s/traversed s/ALL +) [1 2 3 4]))))
