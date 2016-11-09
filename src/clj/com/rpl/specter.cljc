@@ -232,8 +232,13 @@
              get-cache-code (if (= platform :clj)
                               `(try (i/get-cell ~cache-sym)
                                     (catch ClassCastException e#
+                                      ;; With AOT compilation it's possible for:
+                                      ;; Thread 1: unbound, so throw exception
+                                      ;; Thread 2: unbound, so throw exception
+                                      ;; Thread 1: do alter-var-root
+                                      ;; Thread 2: it's bound, so retrieve the current value
                                       (if (bound? (var ~cache-sym))
-                                        (throw e#)
+                                        (i/get-cell ~cache-sym)
                                         (do
                                           (alter-var-root
                                            (var ~cache-sym)
