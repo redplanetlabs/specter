@@ -12,10 +12,6 @@
             #?(:clj [clojure.core.reducers :as r])))
 
 
-
-(defn- append [coll elem]
-  (-> coll vec (conj elem)))
-
 (defn not-selected?*
   [compiled-path structure]
   (->> structure
@@ -332,7 +328,7 @@
   (cons (afn (first l)) (rest l)))
 
 (defn- update-last-list [l afn]
-  (append (butlast l) (afn (last l))))
+  (concat (butlast l) [(afn (last l))]))
 
 #?(
    :clj
