@@ -260,7 +260,7 @@
            (i/intern* *ns* cache-sym (i/mutable-cell)))
          `(let [info# ~get-cache-code
 
-                ^com.rpl.specter.impl.CachedPathInfo info#
+                info#
                 (if (nil? info#)
                   (let [~info-sym (i/magic-precompilation
                                    ~prepared-path
