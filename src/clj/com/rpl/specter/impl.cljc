@@ -424,10 +424,6 @@
 
 
 
-(defrecord CachedPathInfo
-  [dynamic? precompiled])
-
-
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)
@@ -846,13 +842,13 @@
       (do
         (when *DEBUG-INLINE-CACHING*
           (println "Static result:" magic-path))
-        (->CachedPathInfo false magic-path))
+        [false magic-path])
       (let [maker (mk-dynamic-path-maker
                    (resolve-nav-code (->DynamicPath magic-path) possible-params)
                    ns-str
                    used-locals-list
                    possible-params)]
-        (->CachedPathInfo true maker)))))
+        [true maker]))))
 
 
 
