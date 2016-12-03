@@ -428,6 +428,16 @@
   [dynamic? precompiled])
 
 
+;; these are defined to avoid having to type-hint the CachedPathInfo
+;; in com.rpl.specter/path, which causes problems during aot/uberjar
+;; (clojure seems to be defining CachedPathInfo multiple times)
+(defn cached-path-info-precompiled [^CachedPathInfo c]
+  (.-precompiled c))
+
+(defn cached-path-info-dynamic? [^CachedPathInfo c]
+  (.-dynamic? c))
+
+
 (defn filter-select [afn structure next-fn]
   (if (afn structure)
     (next-fn structure)

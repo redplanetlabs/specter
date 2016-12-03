@@ -2,6 +2,7 @@
 
 * Bug fix: Fix race condition relating to retrieving path from cache and AOT compilation
 * Bug fix: LAST no longer converts lists to vectors
+* Bug fix: Workaround issue with aot + uberjar
 
 ## 0.13.1
 
