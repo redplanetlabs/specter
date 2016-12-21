@@ -1,4 +1,4 @@
-## 0.13.2-SNAPSHOT
+## 0.13.2
 
 * Bug fix: Fix race condition relating to retrieving path from cache and AOT compilation
 * Bug fix: LAST no longer converts lists to vectors
