@@ -114,8 +114,22 @@
                                           attr)]
          [(with-meta name attr) macro-args]))
 
+     (defn- static-path? [path]
+       (if (sequential? path)
+        (every? static-path? path)
+        (-> path i/dynamic-param? not)
+        ))
+
+     (defn- wrap-dynamic-nav [f]
+       (fn [& args]
+         (let [ret (apply f args)]
+           (if (and (sequential? ret) (static-path? ret))
+             (i/comp-paths* ret)
+             ret
+             ))))
+
      (defmacro dynamicnav [& args]
-       `(vary-meta (fn ~@args) assoc :dynamicnav true))
+       `(vary-meta (wrap-dynamic-nav (fn ~@args)) assoc :dynamicnav true))
 
      (defmacro defdynamicnav
        "Defines a function that can choose what navigator to use at runtime based on
@@ -558,13 +572,7 @@
   [navfn]
   (let [latenavfn (late-resolved-fn navfn)]
     (dynamicnav [& args]
-      (if (= 1 (count args))
-        ;; optimization if dynamicnav is used in a runtime situation (like
-        ;; via a dynamic var)
-        ;; also makes the resulting nav function semantically identical to original
-        ;; nav by returning a RichNavigator instead of a sequence
-        (latenavfn (first args))
-        (map latenavfn args)))))
+      (map latenavfn args))))
 
 
 ;; Helpers for making recursive or mutually recursive navs
