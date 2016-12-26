@@ -120,7 +120,7 @@
         (-> path i/dynamic-param? not)
         ))
 
-     (defn- wrap-dynamic-nav [f]
+     (defn wrap-dynamic-nav [f]
        (fn [& args]
          (let [ret (apply f args)]
            (if (and (sequential? ret) (static-path? ret))
