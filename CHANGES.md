@@ -1,3 +1,7 @@
+## 0.13.3-SNAPSHOT
+
+* Dynamic navs automatically compile sequence returns if completely static
+
 ## 0.13.2
 
 * Bug fix: Fix race condition relating to retrieving path from cache and AOT compilation
