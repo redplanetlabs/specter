@@ -1325,5 +1325,13 @@
 (deftest remove-with-NONE-test
   (is (predand= vector? [1 2 3] (setval [s/ALL nil?] s/NONE [1 2 nil 3 nil])))
   (is (predand= list? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))
-
-  )
+  (is (= {:b 2} (setval :a s/NONE {:a 1 :b 2})))
+  (is (= {:b 2} (setval (s/must :a) s/NONE {:a 1 :b 2})))
+  ;; test with PersistentArrayMap
+  (is (= {:a 1 :c 3} (setval [s/MAP-VALS even?] s/NONE {:a 1 :b 2 :c 3 :d 4})))
+  (is (= {:a 1 :c 3} (setval [s/ALL (s/selected? s/LAST even?)] s/NONE {:a 1 :b 2 :c 3 :d 4})))
+  ;; test with PersistentHashMap
+  (let [m (into {} (for [i (range 500)] [i i]))]
+    (is (= (dissoc m 31) (setval [s/MAP-VALS #(= 31 %)] s/NONE m)))
+    (is (= (dissoc m 31) (setval [s/ALL (s/selected? s/LAST #(= 31 %))] s/NONE m)))
+    ))
