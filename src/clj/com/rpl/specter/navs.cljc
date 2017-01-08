@@ -149,24 +149,27 @@
        (let [empty-structure (empty structure)]
          (cond (and (list? empty-structure) (not (queue? empty-structure)))
             ;; this is done to maintain order, otherwise lists get reversed
-              ;;TODO: need to handle NONE here
+               ;;TODO: need to handle NONE here
                (doall (map next-fn structure))
 
                (map? structure)
-            ;; reduce-kv is much faster than doing r/map through call to (into ...)
+               ;; reduce-kv is much faster than doing r/map through call to (into ...)
                (reduce-kv
                  (fn [m k v]
-                   ;;TODO: need to handle NONE here
-                   (let [[newk newv] (next-fn [k v])]
-                     (assoc m newk newv)))
+                   (let [newkv (next-fn [k v])]
+                     (if (identical? newkv i/NONE)
+                      m
+                      (assoc m (nth newkv 0) (nth newkv 1)))))
 
                  empty-structure
                  structure)
 
 
                :else
-               ;;TODO: need to handle NONE here
-               (->> structure (r/map next-fn) (into empty-structure))))))
+               (->> structure
+                    (r/map next-fn)
+                    (r/filter #(-> % (identical? i/NONE) not))
+                    (into empty-structure))))))
 
 
   #?(:cljs default)
