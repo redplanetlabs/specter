@@ -493,5 +493,5 @@
       i/NONE))
   (transform* [this vals structure next-fn]
    (if (contains? structure k)
-     (do-keypath-transform vals structure key next-fn)
+     (do-keypath-transform vals structure k next-fn)
      structure)))
