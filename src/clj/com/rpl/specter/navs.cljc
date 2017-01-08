@@ -64,8 +64,10 @@
 (defn- non-transient-map-all-transform [structure next-fn empty-map]
   (reduce-kv
     (fn [m k v]
-      (let [[newk newv] (next-fn [k v])]
-        (assoc m newk newv)))
+      (let [newkv (next-fn [k v])]
+        (if (identical? newkv i/NONE)
+          m
+          (assoc m (nth newkv 0) (nth newkv 1)))))
 
     empty-map
     structure))
@@ -88,7 +90,10 @@
 
   #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (all-transform [structure next-fn]
-    (mapv next-fn structure))
+    (into []
+      (comp (map next-fn)
+            (filter #(-> % (identical? i/NONE) not)))
+      structure))
 
   #?(:clj clojure.lang.PersistentArrayMap)
   #?(:clj
@@ -96,6 +101,9 @@
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
              array (i/fast-object-array (* 2 (.count structure)))]
+         ;;TODO: how to handle NONE here...?
+         ;;needs to size the array appropriately...
+         ;;need to use the same strategy for MAP-VALS
          (loop [i 0]
            (if (.hasNext k-it)
              (let [k (.next k-it)
@@ -123,8 +131,10 @@
     (persistent!
       (reduce-kv
         (fn [m k v]
-          (let [[newk newv] (next-fn [k v])]
-            (assoc! m newk newv)))
+          (let [newkv (next-fn [k v])]
+            (if (identical? newkv i/NONE)
+              m
+              (assoc! m (nth newkv 0) (nth newkv 1)))))
 
         (transient
           #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
@@ -139,12 +149,14 @@
        (let [empty-structure (empty structure)]
          (cond (and (list? empty-structure) (not (queue? empty-structure)))
             ;; this is done to maintain order, otherwise lists get reversed
+              ;;TODO: need to handle NONE here
                (doall (map next-fn structure))
 
                (map? structure)
             ;; reduce-kv is much faster than doing r/map through call to (into ...)
                (reduce-kv
                  (fn [m k v]
+                   ;;TODO: need to handle NONE here
                    (let [[newk newv] (next-fn [k v])]
                      (assoc m newk newv)))
 
@@ -153,12 +165,14 @@
 
 
                :else
+               ;;TODO: need to handle NONE here
                (->> structure (r/map next-fn) (into empty-structure))))))
 
 
   #?(:cljs default)
   #?(:cljs
      (all-transform [structure next-fn]
+       ;;TODO: need to handle NONE here
        (let [empty-structure (empty structure)]
          (if (and (list? empty-structure) (not (queue? empty-structure)))
         ;; this is done to maintain order, otherwise lists get reversed
@@ -173,7 +187,10 @@
 (defn map-vals-non-transient-transform [structure empty-map next-fn]
   (reduce-kv
     (fn [m k v]
-      (assoc m k (next-fn v)))
+      (let [newv (next-fn v)]
+        (if (identical? newv i/NONE)
+          m
+          (assoc m k newv))))
     empty-map
     structure))
 
@@ -189,6 +206,7 @@
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
              array (i/fast-object-array (* 2 (.count structure)))]
+        ;;TODO: Need to handle NONE here just like it's handled in all-transform
          (loop [i 0]
            (if (.hasNext k-it)
              (let [k (.next k-it)
@@ -216,7 +234,10 @@
     (persistent!
       (reduce-kv
         (fn [m k v]
-          (assoc! m k (next-fn v)))
+          (let [newv (next-fn v)]
+            (if (identical? newv i/NONE)
+              m
+              (assoc! m k newv))))
         (transient
           #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
 
@@ -227,7 +248,10 @@
   (map-vals-transform [structure next-fn]
     (reduce-kv
       (fn [m k v]
-        (assoc m k (next-fn v)))
+        (let [newv (next-fn v)]
+          (if (identical? newv i/NONE)
+            m
+            (assoc m k newv))))
       (empty structure)
       structure)))
 
@@ -407,6 +431,13 @@
     (walk/walk (partial walk-until pred on-match-fn) identity structure)))
 
 
+(defn- do-keypath-transform [vals structure key next-fn]
+  ;;TODO: not right, this doesn't handle sequences
+  (let [newv (next-fn vals (get structure key))]
+    (if (identical? newv i/NONE)
+      (dissoc structure key)
+      (assoc structure key newv))))
+
 (defrichnav
   ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
   keypath*
@@ -414,7 +445,8 @@
   (select* [this vals structure next-fn]
     (next-fn vals (get structure key)))
   (transform* [this vals structure next-fn]
-    (assoc structure key (next-fn vals (get structure key)))))
+    (do-keypath-transform vals structure key next-fn)
+    ))
 
 
 (defrichnav
@@ -427,5 +459,5 @@
       i/NONE))
   (transform* [this vals structure next-fn]
    (if (contains? structure k)
-     (assoc structure k (next-fn vals (get structure k)))
+     (do-keypath-transform vals structure key next-fn)
      structure)))
