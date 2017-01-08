@@ -1317,3 +1317,13 @@
 
 (deftest traversed-test
   (is (= 10 (select-any (s/traversed s/ALL +) [1 2 3 4]))))
+
+(defn- predand= [pred ret v]
+  (and (pred ret)
+       (= ret v)))
+
+(deftest remove-with-NONE-test
+  (is (predand= vector? [1 2 3] (setval [s/ALL nil?] s/NONE [1 2 nil 3 nil])))
+  (is (predand= list? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))
+
+  )
