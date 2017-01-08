@@ -1,5 +1,6 @@
 ## 0.13.3-SNAPSHOT
 
+* Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (on maps only), `must` (on maps only), `ALL`, and `MAP-VALS`
 * Dynamic navs automatically compile sequence returns if completely static
 
 ## 0.13.2
