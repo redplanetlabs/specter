@@ -72,6 +72,17 @@
     empty-map
     structure))
 
+(defn not-NONE? [v]
+  (-> v (identical? i/NONE) not))
+
+
+(defn- all-transform-list [structure next-fn]
+  ;; this is done to maintain order, otherwise lists get reversed
+  (->> structure
+       (into '()
+             (comp (map next-fn) (filter not-NONE?)))
+       reverse
+       ))
 
 (extend-protocol AllTransformProtocol
   nil
@@ -92,7 +103,7 @@
   (all-transform [structure next-fn]
     (into []
       (comp (map next-fn)
-            (filter #(-> % (identical? i/NONE) not)))
+            (filter not-NONE?))
       structure))
 
   #?(:clj clojure.lang.PersistentArrayMap)
@@ -158,9 +169,7 @@
      (all-transform [structure next-fn]
        (let [empty-structure (empty structure)]
          (cond (and (list? empty-structure) (not (queue? empty-structure)))
-            ;; this is done to maintain order, otherwise lists get reversed
-               ;;TODO: need to handle NONE here
-               (doall (map next-fn structure))
+               (all-transform-list structure next-fn)
 
                (map? structure)
                ;; reduce-kv is much faster than doing r/map through call to (into ...)
@@ -178,19 +187,19 @@
                :else
                (->> structure
                     (r/map next-fn)
-                    (r/filter #(-> % (identical? i/NONE) not))
+                    (r/filter not-NONE?)
                     (into empty-structure))))))
 
 
   #?(:cljs default)
   #?(:cljs
      (all-transform [structure next-fn]
-       ;;TODO: need to handle NONE here
        (let [empty-structure (empty structure)]
          (if (and (list? empty-structure) (not (queue? empty-structure)))
-        ;; this is done to maintain order, otherwise lists get reversed
-           (doall (map next-fn structure))
-           (into empty-structure (map #(next-fn %)) structure))))))
+           (all-transform-list structure next-fn)
+           (into empty-structure
+                 (comp (map next-fn) (filter not-NONE?))
+                 structure))))))
 
 
 
