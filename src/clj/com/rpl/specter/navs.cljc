@@ -100,19 +100,29 @@
      (all-transform [structure next-fn]
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
-             array (i/fast-object-array (* 2 (.count structure)))]
-         ;;TODO: how to handle NONE here...?
-         ;;needs to size the array appropriately...
-         ;;need to use the same strategy for MAP-VALS
-         (loop [i 0]
+             none-cell (i/mutable-cell 0)
+             len (.count structure)
+             array (i/fast-object-array (* 2 len))]
+         (loop [i 0
+                j 0]
            (if (.hasNext k-it)
              (let [k (.next k-it)
                    v (.next v-it)
-                   [newk newv] (next-fn [k v])]
-               (aset array i newk)
-               (aset array (inc i) newv)
-               (recur (+ i 2)))))
-         (clojure.lang.PersistentArrayMap/createAsIfByAssoc array))))
+                   newkv (next-fn [k v])]
+               (if (identical? newkv i/NONE)
+                (do
+                  (i/update-cell! none-cell inc)
+                  (recur (+ i 2) j))
+                (do
+                  (aset array j (nth newkv 0))
+                  (aset array (inc j) (nth newkv 1))
+                  (recur (+ i 2) (+ j 2)))))))
+         (let [none-count (i/get-cell none-cell)
+               array (if (not= 0 none-count)
+                        (java.util.Arrays/copyOf array (* 2 (- len none-count)))
+                        array
+                        )]
+          (clojure.lang.PersistentArrayMap/createAsIfByAssoc array)))))
 
 
   #?(:cljs cljs.core/PersistentArrayMap)
@@ -208,17 +218,29 @@
      (map-vals-transform [structure next-fn]
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
-             array (i/fast-object-array (* 2 (.count structure)))]
-        ;;TODO: Need to handle NONE here just like it's handled in all-transform
-         (loop [i 0]
+             none-cell (i/mutable-cell 0)
+             len (.count structure)
+             array (i/fast-object-array (* 2 len))]
+         (loop [i 0
+                j 0]
            (if (.hasNext k-it)
              (let [k (.next k-it)
                    v (.next v-it)
                    newv (next-fn v)]
-               (aset array i k)
-               (aset array (inc i) newv)
-               (recur (+ i 2)))))
-         (clojure.lang.PersistentArrayMap. array))))
+               (if (identical? newv i/NONE)
+                (do
+                  (i/update-cell! none-cell inc)
+                  (recur (+ i 2) j))
+                (do
+                  (aset array j k)
+                  (aset array (inc j) newv)
+                  (recur (+ i 2) (+ j 2)))))))
+         (let [none-count (i/get-cell none-cell)
+               array (if (not= 0 none-count)
+                        (java.util.Arrays/copyOf array (* 2 (- len none-count)))
+                        array
+                        )]
+          (clojure.lang.PersistentArrayMap. array)))))
 
 
   #?(:cljs cljs.core/PersistentArrayMap)
