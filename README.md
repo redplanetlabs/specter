@@ -136,6 +136,13 @@ user> (transform [(filterer odd?) LAST]
 [2 1 3 6 10 4 8]
 ```
 
+Remove nils from a nested sequence:
+
+```clojure
+user> (setval [:a ALL nil?] NONE {:a [1 2 nil 3 nil]})
+{:a [1 2 3]}
+```
+
 Increment all the odd numbers between indices 1 (inclusive) and 4 (exclusive):
 
 ```clojure
