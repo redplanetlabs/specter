@@ -466,10 +466,11 @@
 
 
 (defn- do-keypath-transform [vals structure key next-fn]
-  ;;TODO: not right, this doesn't handle sequences
   (let [newv (next-fn vals (get structure key))]
     (if (identical? newv i/NONE)
-      (dissoc structure key)
+      (if (sequential? structure)
+        (i/srange-transform* structure key (inc key) (fn [_] []))
+        (dissoc structure key))
       (assoc structure key newv))))
 
 (defrichnav

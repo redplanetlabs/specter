@@ -1327,6 +1327,7 @@
   (is (predand= list? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))
   (is (= {:b 2} (setval :a s/NONE {:a 1 :b 2})))
   (is (= {:b 2} (setval (s/must :a) s/NONE {:a 1 :b 2})))
+  (is (predand= vector? [1 3] (setval (s/keypath 1) s/NONE [1 2 3])))
   ;; test with PersistentArrayMap
   (is (= {:a 1 :c 3} (setval [s/MAP-VALS even?] s/NONE {:a 1 :b 2 :c 3 :d 4})))
   (is (= {:a 1 :c 3} (setval [s/ALL (s/selected? s/LAST even?)] s/NONE {:a 1 :b 2 :c 3 :d 4})))
