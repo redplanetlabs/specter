@@ -2,6 +2,7 @@
 
 * Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `ALL`, and `MAP-VALS`
 * Dynamic navs automatically compile sequence returns if completely static
+* Eliminate reflection warnings for clj (thanks @mpenet)
 
 ## 0.13.2
 
