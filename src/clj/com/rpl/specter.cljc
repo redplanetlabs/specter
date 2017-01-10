@@ -23,6 +23,19 @@
             #?(:clj [com.rpl.specter.macros :as macros])
             [clojure.set :as set]))
 
+(defn- static-path? [path]
+  (if (sequential? path)
+   (every? static-path? path)
+   (-> path i/dynamic-param? not)
+   ))
+
+(defn wrap-dynamic-nav [f]
+  (fn [& args]
+    (let [ret (apply f args)]
+      (if (and (sequential? ret) (static-path? ret))
+        (i/comp-paths* ret)
+        ret
+        ))))
 
 #?(:clj
    (do
@@ -113,20 +126,6 @@
                                           (conj (meta name) attr)
                                           attr)]
          [(with-meta name attr) macro-args]))
-
-     (defn- static-path? [path]
-       (if (sequential? path)
-        (every? static-path? path)
-        (-> path i/dynamic-param? not)
-        ))
-
-     (defn wrap-dynamic-nav [f]
-       (fn [& args]
-         (let [ret (apply f args)]
-           (if (and (sequential? ret) (static-path? ret))
-             (i/comp-paths* ret)
-             ret
-             ))))
 
      (defmacro dynamicnav [& args]
        `(vary-meta (wrap-dynamic-nav (fn ~@args)) assoc :dynamicnav true))
