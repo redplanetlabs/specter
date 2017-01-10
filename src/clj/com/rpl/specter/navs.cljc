@@ -130,9 +130,9 @@
                   (recur (+ i 2) (+ j 2)))))))
          (let [none-count (i/get-cell none-cell)
                array (if (not= 0 none-count)
-                        (java.util.Arrays/copyOf array (* 2 (- len none-count)))
-                        array
-                        )]
+                       (java.util.Arrays/copyOf array (int (* 2 (- len none-count))))
+                       array
+                       )]
           (clojure.lang.PersistentArrayMap/createAsIfByAssoc array)))))
 
 
@@ -246,7 +246,7 @@
                   (recur (+ i 2) (+ j 2)))))))
          (let [none-count (i/get-cell none-cell)
                array (if (not= 0 none-count)
-                        (java.util.Arrays/copyOf array (* 2 (- len none-count)))
+                        (java.util.Arrays/copyOf array (int (* 2 (- len none-count))))
                         array
                         )]
           (clojure.lang.PersistentArrayMap. array)))))

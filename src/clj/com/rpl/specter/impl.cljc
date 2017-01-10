@@ -28,7 +28,7 @@
     (pr-str o)
     (str o)))
 
-(defn smart-str [& elems]
+(defn ^String smart-str [& elems]
   (apply str (map smart-str* elems)))
 
 (defn fast-constantly [v]
