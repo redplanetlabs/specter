@@ -299,4 +299,4 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 
 # License
 
-Copyright 2015-2016 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
+Copyright 2015-2017 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
