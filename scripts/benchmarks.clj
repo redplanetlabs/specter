@@ -86,6 +86,11 @@
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
 
 
+(let [data {:a {:b {:c 1}}}]
+  (run-benchmark "set value in nested map" 2500000
+    (assoc-in data [:a :b :c] 1)
+    (setval [:a :b :c] 1 data)))
+
 
 ;; because below 1.7 there is no update function
 (defn- my-update [m k afn]
