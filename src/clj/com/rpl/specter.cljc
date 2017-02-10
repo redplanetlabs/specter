@@ -1056,6 +1056,8 @@
    (late-bound-richnav [late1 (late-path path1)
                         late2 (late-path path2)]
      (select* [this vals structure next-fn]
+       ;; on a select-any would be better to avoid doing late2 if late1 selects
+       ;; something
        (let [res1 (i/exec-select* late1 vals structure next-fn)
              res2 (i/exec-select* late2 vals structure next-fn)]
          (if (identical? NONE res2)
