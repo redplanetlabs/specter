@@ -1336,3 +1336,25 @@
     (is (= (dissoc m 31) (setval [s/MAP-VALS #(= 31 %)] s/NONE m)))
     (is (= (dissoc m 31) (setval [s/ALL (s/selected? s/LAST #(= 31 %))] s/NONE m)))
     ))
+
+(deftest fresh-collected-test
+  (let [data [{:a 1 :b 2} {:a 3 :b 3}]]
+    (is (= [[{:a 1 :b 2} 2]]
+           (select [s/ALL
+                    s/VAL
+                    (s/with-fresh-collected
+                      (s/collect-one :a)
+                      (s/collected? [a] (= a 1)))
+                    :b]
+                   data)))
+    (is (= [{:a 1 :b 3} {:a 3 :b 3}]
+          (transform [s/ALL
+                      s/VAL
+                      (s/with-fresh-collected
+                       (s/collect-one :a)
+                       (s/collected? [a] (= a 1)))
+                      :b]
+            (fn [m v] (+ (:a m) v))
+            data
+            )))
+    ))

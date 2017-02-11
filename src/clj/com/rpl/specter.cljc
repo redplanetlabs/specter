@@ -974,6 +974,16 @@
   (collect-val [this structure]
     val))
 
+(defdynamicnav with-fresh-collected
+  [& path]
+  (late-bound-richnav [late (late-path path)]
+    (select* [this vals structure next-fn]
+      (i/exec-select* late [] structure (fn [_ structure] (next-fn vals structure)))
+      )
+    (transform* [this vals structure next-fn]
+      (i/exec-transform* late [] structure (fn [_ structure] (next-fn vals structure))))
+      ))
+
 (defrichnav
   ^{:doc "Drops all collected values for subsequent navigation."}
   DISPENSE
