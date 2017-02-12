@@ -164,6 +164,14 @@
     (map-vals-map-iterable-transient data inc)))
 
 
+(let [data [1 2 3 4 5 6 7 8 9 10]]
+  (run-benchmark "first value of a vector" 10000000
+    (first data)
+    (select-any ALL data)
+    (select-any FIRST data)
+    (select-first ALL data)
+    ))
+
 (let [data [1 2 3 4 5]]
   (run-benchmark "map a function over a vector" 1000000
     (vec (map inc data))
