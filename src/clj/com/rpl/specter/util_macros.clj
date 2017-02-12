@@ -6,7 +6,7 @@
        (let [ret# (do ~@body)]
          (if (identical? ret# ~backup-res)
            curr#
-           ret#)))
+           (if (reduced? ret#) (reduced ret#) ret#))))
 
      ~backup-res
      ~aseq))

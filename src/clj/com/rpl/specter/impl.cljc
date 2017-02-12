@@ -306,10 +306,14 @@
         (compiled-traverse*
           apath
           (fn [elem]
-            (let [curr (get-cell cell)]
-              (set-cell! cell (afn curr elem))))
+            (let [curr (get-cell cell)
+                  newv (afn curr elem)]
+              (set-cell! cell newv)
+              newv ; to support reduced handling during traverse
+              ))
           structure)
-        (get-cell cell)))))
+        (unreduced (get-cell cell))
+        ))))
 
 
 (defn compiled-select* [path structure]
@@ -350,24 +354,19 @@
       ret)))
 
 
-(defn compiled-select-first* [path structure]
-  (let [res (mutable-cell NONE)
-        result-fn (fn [structure]
-                    (let [curr (get-cell res)]
-                      (if (identical? curr NONE)
-                        (set-cell! res structure))))]
-    (compiled-traverse* path result-fn structure)
-    (let [ret (get-cell res)]
-      (if (identical? ret NONE)
-        nil
-        ret))))
-
 
 (defn compiled-select-any* [path structure]
-  (compiled-traverse* path identity structure))
+  (unreduced (compiled-traverse* path reduced structure)))
+
+(defn compiled-select-first* [path structure]
+  (let [ret (compiled-select-any* path structure)]
+    (if (identical? ret NONE)
+      nil
+      ret
+      )))
 
 (defn compiled-selected-any?* [path structure]
-  (not= NONE (compiled-select-any* path structure)))
+  (not (identical? NONE (compiled-select-any* path structure))))
 
 (defn terminal* [afn vals structure]
   (if (identical? vals [])
