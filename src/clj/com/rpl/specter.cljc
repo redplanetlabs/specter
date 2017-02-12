@@ -517,9 +517,13 @@
   [apath structure]
   (compiled-traverse (i/comp-paths* apath) structure))
 
-(def compiled-traverse-all i/compiled-traverse-all*)
+(def ^{:doc "Version of traverse-all that takes in a path precompiled with comp-paths"}
+  compiled-traverse-all i/compiled-traverse-all*)
 
-(defn traverse-all* [apath] (compiled-traverse-all (i/comp-paths* apath)))
+(defn traverse-all*
+  "Returns a transducer that traverses over each element with the given path."
+  [apath]
+  (compiled-traverse-all (i/comp-paths* apath)))
 
 ;; Transformation functions
 
