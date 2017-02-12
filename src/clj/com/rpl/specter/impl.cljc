@@ -316,6 +316,20 @@
         ))))
 
 
+(defn compiled-traverse-all* [path]
+  (fn [xf]
+    (fn
+      ([] (xf))
+      ([result] (xf result))
+      ([result input]
+        (reduce
+          (fn [r i]
+            (xf r i))
+          result
+          (do-compiled-traverse path input)
+          )
+        ))))
+
 (defn compiled-select* [path structure]
   (let [res (mutable-cell (transient []))
         result-fn (fn [structure]

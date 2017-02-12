@@ -358,6 +358,11 @@
        [apath structure]
        `(i/do-compiled-traverse (path ~apath) ~structure))
 
+     (defmacro traverse-all
+       "Returns a transducer that traverses over each element with the given path."
+       [apath]
+       `(i/compiled-traverse-all* (path ~apath)))
+
      (defmacro replace-in
        "Similar to transform, except returns a pair of [transformed-structure sequence-of-user-ret].
        The transform-fn in this case is expected to return [ret user-ret]. ret is
@@ -511,6 +516,10 @@
    specified by the path"
   [apath structure]
   (compiled-traverse (i/comp-paths* apath) structure))
+
+(def compiled-traverse-all i/compiled-traverse-all*)
+
+(defn traverse-all* [apath] (compiled-traverse-all (i/comp-paths* apath)))
 
 ;; Transformation functions
 
