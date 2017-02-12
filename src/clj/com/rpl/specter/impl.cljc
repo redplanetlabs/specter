@@ -314,8 +314,16 @@
         ))))
 
 (defn do-compiled-traverse [apath structure]
-  (unreduced (do-compiled-traverse* apath structure)))
-
+  (let [traverser (do-compiled-traverse* apath structure)]
+    (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
+      (#?(:clj reduce :cljs -reduce)
+        [this afn]
+        (#?(:clj .reduce :cljs -reduce) this afn (afn)))
+      (#?(:clj reduce :cljs -reduce)
+        [this afn start]
+        (let [res (#?(:clj .reduce :cljs -reduce) traverser afn start)]
+          (unreduced res)
+          )))))
 
 (defn compiled-traverse-all* [path]
   (fn [xf]

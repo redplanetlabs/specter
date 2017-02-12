@@ -1375,3 +1375,11 @@
   (is (= [1 2]
          (into [] (traverse-all :a) [{:a 1} {:a 2}])))
   )
+
+(deftest early-terminate-traverse-test
+  (is (= 6
+         (reduce
+          (completing (fn [r i] (if (> r 5) (reduced r) (+ r i))))
+          0
+          (traverse [s/ALL s/ALL]
+            [[1 2] [3 4] [5]])))))
