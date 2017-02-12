@@ -295,7 +295,6 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
 - Make it possible to parallelize selects/transforms
-- Any connection to transducers?
 
 # License
 
