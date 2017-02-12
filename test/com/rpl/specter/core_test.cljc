@@ -10,7 +10,7 @@
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
-                      defdynamicnav]]))
+                      defdynamicnav traverse-all]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -21,7 +21,7 @@
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
-                    defdynamicnav]]))
+                    defdynamicnav traverse-all]]))
 
 
 
@@ -1358,3 +1358,20 @@
             data
             )))
     ))
+
+(deftest traverse-all-test
+  (is (= 3
+         (transduce (comp (mapcat identity)
+                          (traverse-all :a))
+            (completing (fn [r i] (if (= i 4) (reduced r) (+ r i))))
+            0
+            [[{:a 1}] [{:a 2}] [{:a 4}] [{:a 5}]])))
+  (is (= 6
+         (transduce (traverse-all [s/ALL :a])
+           +
+           0
+           [[{:a 1} {:a 2}] [{:a 3}]]
+           )))
+  (is (= [1 2]
+         (into [] (traverse-all :a) [{:a 1} {:a 2}])))
+  )

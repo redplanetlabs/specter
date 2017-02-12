@@ -293,9 +293,7 @@
          (result-fn (conj vals structure)))))))
 
 
-
-
-(defn do-compiled-traverse [apath structure]
+(defn do-compiled-traverse* [apath structure]
   (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
     (#?(:clj reduce :cljs -reduce)
       [this afn]
@@ -312,8 +310,11 @@
               newv ; to support reduced handling during traverse
               ))
           structure)
-        (unreduced (get-cell cell))
+        (get-cell cell)
         ))))
+
+(defn do-compiled-traverse [apath structure]
+  (unreduced (do-compiled-traverse* apath structure)))
 
 
 (defn compiled-traverse-all* [path]
@@ -326,7 +327,8 @@
           (fn [r i]
             (xf r i))
           result
-          (do-compiled-traverse path input)
+          ;; use this one to make sure reduced vals are propagated back
+          (do-compiled-traverse* path input)
           )
         ))))
 
