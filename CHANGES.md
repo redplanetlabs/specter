@@ -4,6 +4,7 @@
 * Dynamic navs automatically compile sequence returns if completely static
 * Eliminate reflection warnings for clj (thanks @mpenet)
 * Add `with-fresh-collected` higher order navigator
+* Added `traverse-all` which returns a transducer that traverses over all elements matching the given path.
 
 ## 0.13.2
 
