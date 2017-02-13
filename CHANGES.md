@@ -6,6 +6,7 @@
 * Add `with-fresh-collected` higher order navigator
 * Added `traverse-all` which returns a transducer that traverses over all elements matching the given path.
 * `select-first` and `select-any` now avoid traversal beyond the first value matched by the path (like when using `ALL`), so they are faster now for those use cases.
+* Improved `ALL` performance for PersistentHashSet
 
 ## 0.13.2
 
