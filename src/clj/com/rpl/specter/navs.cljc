@@ -106,6 +106,13 @@
             (filter not-NONE?))
       structure))
 
+  #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
+  (all-transform [structure next-fn]
+    (into #{}
+      (comp (map next-fn)
+            (filter not-NONE?))
+      structure))
+
   #?(:clj clojure.lang.PersistentArrayMap)
   #?(:clj
      (all-transform [structure next-fn]
