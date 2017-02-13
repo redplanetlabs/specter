@@ -1322,6 +1322,14 @@
   (and (pred ret)
        (= ret v)))
 
+(deftest nthpath-test
+  (is (predand= vector? [1 2 -3 4] (transform (s/nthpath 2) - [1 2 3 4])))
+  (is (predand= vector? [1 2 4] (setval (s/nthpath 2) s/NONE [1 2 3 4])))
+  (is (predand= (complement vector?) '(1 -2 3 4) (transform (s/nthpath 1) - '(1 2 3 4))))
+  (is (predand= (complement vector?) '(1 2 4) (setval (s/nthpath 2) s/NONE '(1 2 3 4))))
+  (is (= [0 1 [2 4 4]] (transform (s/nthpath 2 1) inc [0 1 [2 3 4]])))
+  )
+
 (deftest remove-with-NONE-test
   (is (predand= vector? [1 2 3] (setval [s/ALL nil?] s/NONE [1 2 nil 3 nil])))
   (is (predand= list? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))

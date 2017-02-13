@@ -1,12 +1,13 @@
 ## 0.13.3-SNAPSHOT
 
 * Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `ALL`, and `MAP-VALS`
-* Dynamic navs automatically compile sequence returns if completely static
-* Eliminate reflection warnings for clj (thanks @mpenet)
+* Add `nthpath` navigator
 * Add `with-fresh-collected` higher order navigator
 * Added `traverse-all` which returns a transducer that traverses over all elements matching the given path.
 * `select-first` and `select-any` now avoid traversal beyond the first value matched by the path (like when using `ALL`), so they are faster now for those use cases.
 * Improved `ALL` performance for PersistentHashSet
+* Dynamic navs automatically compile sequence returns if completely static
+* Eliminate reflection warnings for clj (thanks @mpenet)
 
 ## 0.13.2
 

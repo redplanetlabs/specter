@@ -481,7 +481,8 @@
       (assoc structure key newv))))
 
 (defrichnav
-  ^{:doc "Navigates to the specified key, navigating to nil if it does not exist."}
+  ^{:doc "Navigates to the specified key, navigating to nil if it does not exist.
+          Setting the value to NONE will remove it from the collection."}
   keypath*
   [key]
   (select* [this vals structure next-fn]
@@ -492,7 +493,8 @@
 
 
 (defrichnav
-  ^{:doc "Navigates to the key only if it exists in the map."}
+  ^{:doc "Navigates to the key only if it exists in the map. Setting the value to NONE
+          will remove it from the collection."}
   must*
   [k]
   (select* [this vals structure next-fn]
@@ -503,3 +505,26 @@
    (if (contains? structure k)
      (do-keypath-transform vals structure k next-fn)
      structure)))
+
+(defnav nthpath*
+  ^{:doc "Navigates to the given position in the sequence. Setting the value to NONE
+          will remove it from the sequence. Works for all sequence types."}
+  [i]
+  (select* [this structure next-fn]
+    (next-fn (nth structure i)))
+  (transform* [this structure next-fn]
+    (if (vector? structure)
+      (let [newv (next-fn (nth structure i))]
+        (if (identical? newv i/NONE)
+          (i/srange-transform* structure i (inc i) (fn [_] []))
+            (assoc structure i newv)))
+      (i/srange-transform* ; can make this much more efficient with alternate impl
+        structure
+        i
+        (inc i)
+        (fn [[e]]
+          (let [v (next-fn e)]
+           (if (identical? v i/NONE)
+             []
+             [v])
+           ))))))

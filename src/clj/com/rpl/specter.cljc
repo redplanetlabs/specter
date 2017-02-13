@@ -796,6 +796,7 @@
 
 (def keypath (eachnav n/keypath*))
 (def must (eachnav n/must*))
+(def nthpath (eachnav n/nthpath*))
 
 
 (defrichnav
