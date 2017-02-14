@@ -506,15 +506,15 @@
      (do-keypath-transform vals structure k next-fn)
      structure)))
 
-(defnav nthpath*
+(defrichnav nthpath*
   ^{:doc "Navigates to the given position in the sequence. Setting the value to NONE
           will remove it from the sequence. Works for all sequence types."}
   [i]
-  (select* [this structure next-fn]
-    (next-fn (nth structure i)))
-  (transform* [this structure next-fn]
+  (select* [this vals structure next-fn]
+    (next-fn vals (nth structure i)))
+  (transform* [this vals structure next-fn]
     (if (vector? structure)
-      (let [newv (next-fn (nth structure i))]
+      (let [newv (next-fn vals (nth structure i))]
         (if (identical? newv i/NONE)
           (i/srange-transform* structure i (inc i) (fn [_] []))
             (assoc structure i newv)))
@@ -523,7 +523,7 @@
         i
         (inc i)
         (fn [[e]]
-          (let [v (next-fn e)]
+          (let [v (next-fn vals e)]
            (if (identical? v i/NONE)
              []
              [v])
