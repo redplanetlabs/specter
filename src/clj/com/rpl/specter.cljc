@@ -972,7 +972,7 @@
             :else (i/throw-illegal "NAME can only be used on symbols or keywords - " structure)
             ))))
 
-(defnav ^{:doc "Navigates to the name portion of the keyword or symbol"}
+(defnav ^{:doc "Navigates to the namespace portion of the keyword or symbol"}
   NAMESPACE
   []
   (select* [this structure next-fn]
