@@ -1408,3 +1408,14 @@
                        (s/selected? (collected? [n] (even? n))))
                      [4 2 3])))
   )
+
+(deftest name-namespace-test
+  (= :a (setval s/NAME "a" :e))
+  (= :a/b (setval s/NAME "b" :a/e))
+  (= 'a (setval s/NAME "a" 'e))
+  (= 'a/b (setval s/NAME "b" 'a/e))
+  (= :a/e (setval s/NAMESPACE "a" :e))
+  (= :a/e (setval s/NAMESPACE "a" :f/e))
+  (= 'a/e (setval s/NAMESPACE "a" 'e))
+  (= 'a/e (setval s/NAMESPACE "a" 'f/e))
+  )

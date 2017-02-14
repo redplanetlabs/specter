@@ -959,6 +959,32 @@
   (transform* [this structure next-fn]
     (with-meta structure (next-fn (meta structure)))))
 
+(defnav ^{:doc "Navigates to the name portion of the keyword or symbol"}
+  NAME
+  []
+  (select* [this structure next-fn]
+    (next-fn (name structure)))
+  (transform* [this structure next-fn]
+    (let [new-name (next-fn (name structure))
+          ns (namespace structure)]
+      (cond (keyword? structure) (keyword ns new-name)
+            (symbol? structure) (symbol ns new-name)
+            :else (i/throw-illegal "NAME can only be used on symbols or keywords - " structure)
+            ))))
+
+(defnav ^{:doc "Navigates to the name portion of the keyword or symbol"}
+  NAMESPACE
+  []
+  (select* [this structure next-fn]
+    (next-fn (name structure)))
+  (transform* [this structure next-fn]
+    (let [name (name structure)
+          new-ns (next-fn (namespace structure))]
+      (cond (keyword? structure) (keyword new-ns name)
+            (symbol? structure) (symbol new-ns name)
+            :else (i/throw-illegal "NAMESPACE can only be used on symbols or keywords - " structure)
+            ))))
+
 (defdynamicnav
   ^{:doc "Adds the result of running select with the given path on the
           current value to the collected vals."}
