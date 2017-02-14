@@ -271,10 +271,10 @@
 
 #?(
    :clj
-   (defmacro compiled-traverse* [path result-fn structure]
+   (defmacro compiled-traverse-with-vals* [path result-fn vals structure]
      `(exec-select*
        ~path
-       []
+       ~vals
        ~structure
        (fn [vals# structure#]
         (if (identical? vals# [])
@@ -282,16 +282,19 @@
           (~result-fn (conj vals# structure#))))))
 
    :cljs
-   (defn compiled-traverse* [path result-fn structure]
+   (defn compiled-traverse-with-vals* [path result-fn vals structure]
      (exec-select*
       path
-      []
+      vals
       structure
       (fn [vals structure]
        (if (identical? vals [])
          (result-fn structure)
          (result-fn (conj vals structure)))))))
 
+
+(defn compiled-traverse* [path result-fn structure]
+  (compiled-traverse-with-vals* path result-fn [] structure))
 
 (defn do-compiled-traverse* [apath structure]
   (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
@@ -379,8 +382,10 @@
 
 
 
-(defn compiled-select-any* [path structure]
-  (unreduced (compiled-traverse* path reduced structure)))
+(defn compiled-select-any*
+  ([path structure] (compiled-select-any* path [] structure))
+  ([path vals structure]
+    (unreduced (compiled-traverse-with-vals* path reduced vals structure))))
 
 (defn compiled-select-first* [path structure]
   (let [ret (compiled-select-any* path structure)]
@@ -461,14 +466,14 @@
   (.-dynamic? c))
 
 
-(defn filter-select [afn structure next-fn]
+(defn filter-select [afn vals structure next-fn]
   (if (afn structure)
-    (next-fn structure)
+    (next-fn vals structure)
     NONE))
 
-(defn filter-transform [afn structure next-fn]
+(defn filter-transform [afn vals structure next-fn]
   (if (afn structure)
-    (next-fn structure)
+    (next-fn vals structure)
     structure))
 
 (defn ^:direct-nav pred* [afn]

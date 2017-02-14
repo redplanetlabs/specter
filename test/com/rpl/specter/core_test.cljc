@@ -1394,3 +1394,17 @@
 
 (deftest select-any-vals-test
   (is (= [1 1] (select-any s/VAL 1))))
+
+(deftest conditional-vals-test
+  (is (= 2 (select-any (s/with-fresh-collected
+                         (s/collect-one (s/keypath 0))
+                         (s/if-path (collected? [n] (even? n))
+                           (s/keypath 1)
+                           (s/keypath 2)))
+                       [4 2 3])))
+  (is (= [4 2 3]
+         (select-any (s/with-fresh-collected
+                       (s/collect-one (s/keypath 0))
+                       (s/selected? (collected? [n] (even? n))))
+                     [4 2 3])))
+  )

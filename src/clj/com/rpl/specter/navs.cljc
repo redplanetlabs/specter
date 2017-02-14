@@ -13,14 +13,14 @@
 
 
 (defn not-selected?*
-  [compiled-path structure]
+  [compiled-path vals structure]
   (->> structure
-       (i/compiled-select-any* compiled-path)
+       (i/compiled-select-any* compiled-path vals)
        (identical? i/NONE)))
 
 (defn selected?*
-  [compiled-path structure]
-  (not (not-selected?* compiled-path structure)))
+  [compiled-path vals structure]
+  (not (not-selected?* compiled-path vals structure)))
 
 (defn walk-select [pred continue-fn structure]
   (let [ret (i/mutable-cell i/NONE)

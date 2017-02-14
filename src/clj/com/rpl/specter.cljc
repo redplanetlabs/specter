@@ -839,30 +839,34 @@
   [& path]
   (if-let [afn (n/extract-basic-filter-fn path)]
     afn
-    (late-bound-nav [late (late-path path)]
-      (select* [this structure next-fn]
+    (late-bound-richnav [late (late-path path)]
+      (select* [this vals structure next-fn]
         (i/filter-select
-          #(n/selected?* late %)
+          #(n/selected?* late vals %)
+          vals
           structure
           next-fn))
-      (transform* [this structure next-fn]
+      (transform* [this vals structure next-fn]
         (i/filter-transform
-          #(n/selected?* late %)
+          #(n/selected?* late vals %)
+          vals
           structure
           next-fn)))))
 
 (defdynamicnav not-selected? [& path]
   (if-let [afn (n/extract-basic-filter-fn path)]
     (fn [s] (not (afn s)))
-    (late-bound-nav [late (late-path path)]
-      (select* [this structure next-fn]
+    (late-bound-richnav [late (late-path path)]
+      (select* [this vals structure next-fn]
         (i/filter-select
-          #(n/not-selected?* late %)
+          #(n/not-selected?* late vals %)
+          vals
           structure
           next-fn))
-      (transform* [this structure next-fn]
+      (transform* [this vals structure next-fn]
         (i/filter-transform
-          #(n/not-selected?* late %)
+          #(n/not-selected?* late vals %)
+          vals
           structure
           next-fn)))))
 
@@ -1039,7 +1043,7 @@
           vals
           structure
           next-fn
-          #(n/selected?* late-cond %)
+          #(n/selected?* late-cond vals %)
           late-then
           late-else))
       (transform* [this vals structure next-fn]
@@ -1047,7 +1051,7 @@
           vals
           structure
           next-fn
-          #(n/selected?* late-cond %)
+          #(n/selected?* late-cond vals %)
           late-then
           late-else))))))
 
