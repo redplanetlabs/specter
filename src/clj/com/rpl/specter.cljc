@@ -794,10 +794,21 @@
                                       next-val))
                             structure)))))
 
-(def keypath (eachnav n/keypath*))
-(def must (eachnav n/must*))
-(def nthpath (eachnav n/nthpath*))
+(def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,
+             that element is removed from the map or vector."}
+  keypath
+  (eachnav n/keypath*))
 
+(def ^{:doc "Navigate to the specified keys one after another, only if they exist
+             in the data structure. If navigate to NONE, that element is removed
+             from the map or vector."}
+  must
+  (eachnav n/must*))
+
+(def ^{:doc "Navigate to the specified indices one after another.If navigate to
+            NONE, that element is removed from the sequence."}
+  nthpath
+  (eachnav n/nthpath*))
 
 (defrichnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
