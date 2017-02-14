@@ -1391,3 +1391,6 @@
           0
           (traverse [s/ALL s/ALL]
             [[1 2] [3 4] [5]])))))
+
+(deftest select-any-vals-test
+  (is (= [1 1] (select-any s/VAL 1))))
