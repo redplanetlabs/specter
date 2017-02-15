@@ -706,10 +706,12 @@
   BEGINNING
   []
   (select* [this structure next-fn]
-    (next-fn []))
+    (next-fn (if (string? structure) "" [])))
   (transform* [this structure next-fn]
-    (let [to-prepend (next-fn [])]
-      (n/prepend-all structure to-prepend))))
+    (if (string? structure)
+      (str (next-fn "") structure)
+      (let [to-prepend (next-fn [])]
+        (n/prepend-all structure to-prepend)))))
 
 
 (defnav
@@ -717,11 +719,12 @@
   END
   []
   (select* [this structure next-fn]
-    (next-fn []))
+    (next-fn (if (string? structure) "" [])))
   (transform* [this structure next-fn]
-    (let [to-append (next-fn [])]
-      (n/append-all structure to-append))))
-
+    (if (string? structure)
+      (str structure (next-fn ""))
+      (let [to-append (next-fn [])]
+        (n/append-all structure to-append)))))
 
 (defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).

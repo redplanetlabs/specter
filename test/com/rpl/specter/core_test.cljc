@@ -1419,3 +1419,16 @@
   (= 'a/e (setval s/NAMESPACE "a" 'e))
   (= 'a/e (setval s/NAMESPACE "a" 'f/e))
   )
+
+(deftest string-navigation-test
+  (= "ad" (setval (s/srange 1 4) "" "abcd"))
+  (= "bc" (select-any (s/srange 1 4) "abcd"))
+  (= "ab" (setval s/END "b" "a"))
+  (= "ba" (setval s/BEGINNING "b" "a"))
+  (= "" (select-any s/BEGINNING "abc"))
+  (= "" (select-any s/END "abc"))
+  (= \a (select-any s/FIRST "abc"))
+  (= \c (select-any s/LAST "abc"))
+  (= "qbc" (setval s/FIRST \q "abc"))
+  (= "abq" (setval s/FIRST "q" "abc"))
+  )

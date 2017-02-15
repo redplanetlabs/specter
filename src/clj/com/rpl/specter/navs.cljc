@@ -298,7 +298,11 @@
 
 
 (defn srange-select [structure start end next-fn]
-  (next-fn (-> structure vec (subvec start end))))
+  (next-fn
+    (if (string? structure)
+      (subs structure start end)
+      (-> structure vec (subvec start end))
+      )))
 
 (def srange-transform i/srange-transform*)
 
@@ -430,6 +434,15 @@
         (let [i (dec c)]
           (assoc v i (afn (nth v i)))))))
 
+  #?(:clj String :cljs string)
+  (update-first [s afn]
+    (str (afn (nth s 0)) (subs s 1 (count s))))
+
+  (update-last [s afn]
+    (let [last-idx (-> s count dec)]
+      (str (subs s 0 last-idx) (afn (nth s last-idx)))
+      ))
+
   #?(:clj Object :cljs default)
   (update-first [l val]
     (update-first-list l val))
@@ -443,11 +456,19 @@
     (nth v 0))
   (get-last [v]
     (peek v))
+
   #?(:clj Object :cljs default)
   (get-first [s]
     (first s))
   (get-last [s]
-    (last s)))
+    (last s))
+
+  #?(:clj String :cljs string)
+  (get-first [s]
+    (nth s 0))
+  (get-last [s]
+    (nth s (-> s count dec))
+    ))
 
 
 

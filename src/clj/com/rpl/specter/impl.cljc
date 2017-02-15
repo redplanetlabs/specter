@@ -521,14 +521,21 @@
 (mk-comp-navs)
 
 (defn srange-transform* [structure start end next-fn]
-  (let [structurev (vec structure)
-        newpart (next-fn (-> structurev (subvec start end)))
-        res (concat (subvec structurev 0 start)
-                    newpart
-                    (subvec structurev end (count structure)))]
-    (if (vector? structure)
-      (vec res)
-      res)))
+  (if (string? structure)
+    (let [newss (next-fn (subs structure start end))]
+      (str (subs structure 0 start)
+           newss
+           (subs structure end (count structure))
+           ))
+    (let [structurev (vec structure)
+          newpart (next-fn (-> structurev (subvec start end)))
+          res (concat (subvec structurev 0 start)
+                      newpart
+                      (subvec structurev end (count structure)))]
+      (if (vector? structure)
+        (vec res)
+        res
+        ))))
 
 (defn- matching-indices [aseq p]
   (keep-indexed (fn [i e] (if (p e) i)) aseq))
