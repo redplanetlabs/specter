@@ -987,7 +987,7 @@
   NAMESPACE
   []
   (select* [this structure next-fn]
-    (next-fn (name structure)))
+    (next-fn (namespace structure)))
   (transform* [this structure next-fn]
     (let [name (name structure)
           new-ns (next-fn (namespace structure))]
