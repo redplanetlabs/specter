@@ -199,9 +199,10 @@
 
 
 (let [v (vec (range 1000))]
-  (run-benchmark "END on large vector"
+  (run-benchmark "Append to a large vector"
     2000000
     (setval END [1] v)
+    (setval AFTER-ELEM 1 v)
     (reduce conj v [1])
     (conj v 1)))
 

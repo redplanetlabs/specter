@@ -344,7 +344,10 @@
 
 (defprotocol AddExtremes
   (append-all [structure elements])
-  (prepend-all [structure elements]))
+  (prepend-all [structure elements])
+  (append-one [structure elem])
+  (prepend-one [structure elem])
+  )
 
 (extend-protocol AddExtremes
   nil
@@ -352,6 +355,10 @@
     elements)
   (prepend-all [_ elements]
     elements)
+  (append-one [_ elem]
+    (list elem))
+  (prepend-one [_ elem]
+    (list elem))
 
   #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
   (append-all [structure elements]
@@ -362,13 +369,22 @@
             (reduce conj! <> elements)
             (reduce conj! <> structure)
             (persistent! <>))))
+  (append-one [structure elem]
+    (conj structure elem))
+  (prepend-one [structure elem]
+    (into [elem] structure))
 
 
   #?(:clj Object :cljs default)
   (append-all [structure elements]
     (concat structure elements))
   (prepend-all [structure elements]
-    (concat elements structure)))
+    (concat elements structure))
+  (append-one [structure elem]
+    (concat structure [elem]))
+  (prepend-one [structure elem]
+    (cons elem structure))
+  )
 
 
 

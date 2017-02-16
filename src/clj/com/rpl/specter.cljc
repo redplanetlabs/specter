@@ -727,6 +727,51 @@
         (n/append-all structure to-append)))))
 
 (defnav
+  ^{:doc "Navigate to 'void' elem in the set.
+          For transformations - if result is not `NONE`,
+          then add that value to the set."}
+  NONE-ELEM
+  []
+  (select* [this structure next-fn]
+    (next-fn NONE))
+  (transform* [this structure next-fn]
+    (let [newe (next-fn NONE)]
+      (if (identical? NONE newe)
+        structure
+        (conj structure newe)
+        ))))
+
+(defnav
+  ^{:doc "Navigate to 'void' element before the sequence.
+          For transformations – if result is not `NONE`,
+          then prepend that value."}
+  BEFORE-ELEM
+  []
+  (select* [this structure next-fn]
+    (next-fn NONE))
+  (transform* [this structure next-fn]
+    (let [newe (next-fn NONE)]
+      (if (identical? NONE newe)
+        structure
+        (n/prepend-one structure newe)
+        ))))
+
+(defnav
+  ^{:doc "Navigate to 'void' element after the sequence.
+          For transformations – if result is not `NONE`,
+          then append that value."}
+  AFTER-ELEM
+  []
+  (select* [this structure next-fn]
+    (next-fn NONE))
+  (transform* [this structure next-fn]
+    (let [newe (next-fn NONE)]
+      (if (identical? NONE newe)
+        structure
+        (n/append-one structure newe)
+        ))))
+
+(defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
           In a transform, that subset in the original set is changed to the
           new value of the subset."}

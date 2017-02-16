@@ -7,6 +7,7 @@
 * `select-first` and `select-any` now avoid traversal beyond the first value matched by the path (like when using `ALL`), so they are faster now for those use cases.
 * Add `NAME` and `NAMESPACE` navigators
 * Extend `srange`, `BEGINNING`, `END`, `FIRST`, and `LAST` on strings to navigate to substrings
+* Add `BEFORE-ELEM`, `AFTER-ELEM`, and `NONE-ELEM` for efficiently adding a single element to a sequence or set
 * Improved `ALL` performance for PersistentHashSet
 * Dynamic navs automatically compile sequence returns if completely static
 * Eliminate reflection warnings for clj (thanks @mpenet)
