@@ -165,7 +165,7 @@
 
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
-  (run-benchmark "first value of a vector" 10000000
+  (run-benchmark "first value of a size 10 vector" 10000000
     (first data)
     (select-any ALL data)
     (select-any FIRST data)

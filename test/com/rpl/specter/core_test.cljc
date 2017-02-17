@@ -1441,6 +1441,7 @@
   (is (predand= list? '(3 1 2) (setval s/BEFORE-ELEM 3 '(1 2))))
   (is (predand= list? '(1) (setval s/BEFORE-ELEM 1 nil)))
   (is (= #{1 2 3} (setval s/NONE-ELEM 3 #{1 2})))
+  (is (= #{1} (setval s/NONE-ELEM 1 nil)))
   )
 
 (deftest subvec-test

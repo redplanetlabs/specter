@@ -738,8 +738,10 @@
     (let [newe (next-fn NONE)]
       (if (identical? NONE newe)
         structure
-        (conj structure newe)
-        ))))
+        (if (nil? structure)
+          #{newe}
+          (conj structure newe)
+          )))))
 
 (defnav
   ^{:doc "Navigate to 'void' element before the sequence.
