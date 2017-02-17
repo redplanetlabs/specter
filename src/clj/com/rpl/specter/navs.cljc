@@ -99,7 +99,7 @@
          (clojure.lang.MapEntry. newk newv))))
 
 
-  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
+  #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (all-transform [structure next-fn]
     (into []
       (comp (map next-fn)
@@ -360,7 +360,7 @@
   (prepend-one [_ elem]
     (list elem))
 
-  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
+  #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (append-all [structure elements]
     (reduce conj structure elements))
   (prepend-all [structure elements]
@@ -436,7 +436,7 @@
 
 
 (extend-protocol UpdateExtremes
-  #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)
+  #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (update-first [v afn]
     (let [val (nth v 0)]
       (assoc v 0 (afn val))))

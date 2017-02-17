@@ -14,6 +14,7 @@
 * Dynamic navs automatically compile sequence returns if completely static
 * Eliminate reflection warnings for clj (thanks @mpenet)
 * Bug fix: Collected vals now properly passed to subpaths for `if-path`, `selected?`, and `not-selected?`
+* Bug fix: `LAST`, `FIRST`, `srange`, `BEGINNING`, and `END` properly transform subvector types to a vector type
 
 ## 0.13.2
 

@@ -1442,3 +1442,15 @@
   (is (predand= list? '(1) (setval s/BEFORE-ELEM 1 nil)))
   (is (= #{1 2 3} (setval s/NONE-ELEM 3 #{1 2})))
   )
+
+(deftest subvec-test
+  (let [v (subvec [1] 0)]
+    (is (predand= vector? [2] (transform s/FIRST inc v)))
+    (is (predand= vector? [2] (transform s/LAST inc v)))
+    (is (predand= vector? [2] (transform s/ALL inc v)))
+    (is (predand= vector? [0 1] (setval s/BEGINNING [0] v)))
+    (is (predand= vector? [1 0] (setval s/END [0] v)))
+    (is (predand= vector? [0 1] (setval s/BEFORE-ELEM 0 v)))
+    (is (predand= vector? [1 0] (setval s/AFTER-ELEM 0 v)))
+    (is (predand= vector? [1 0] (setval (s/srange 1 1) [0] v)))
+    ))
