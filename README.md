@@ -82,6 +82,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 - Introductory blog post: [Functional-navigational programming in Clojure(Script) with Specter](http://nathanmarz.com/blog/functional-navigational-programming-in-clojurescript-with-sp.html)
 - Presentation about Specter: [Specter: Powerful and Simple Data Structure Manipulation](https://www.youtube.com/watch?v=VTCy_DkAJGk)
+  - Note that this presentation was given before Specter's inline compilation/caching system was developed. You no longer need to do anything special to get near-optimal performance.
 - List of navigators with examples: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
 - Core operations and defining new navigators: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Macros) provides a more comprehensive overview than the API docs of the core select/transform/etc. operations and the operations for defining new navigators.
 - [API docs](http://nathanmarz.github.io/specter/)
