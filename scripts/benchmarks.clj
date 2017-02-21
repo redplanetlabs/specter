@@ -206,6 +206,12 @@
     (reduce conj v [1])
     (conj v 1)))
 
+(let [data [1 2 3 4 5 6 7 8 9 10]]
+  (run-benchmark "prepend to a vector" 1000000
+    (vec (cons 0 data))
+    (setval BEFORE-ELEM 0 data)
+    (into [0] data)
+    ))
 
 (declarepath TreeValues)
 
