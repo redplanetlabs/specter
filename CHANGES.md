@@ -5,6 +5,7 @@
 * Add `with-fresh-collected` higher order navigator
 * Added `traverse-all` which returns a transducer that traverses over all elements matching the given path.
 * `select-first` and `select-any` now avoid traversal beyond the first value matched by the path (like when using `ALL`), so they are faster now for those use cases.
+* Add `MAP-KEYS` navigator that's more efficient than `[ALL FIRST]`
 * Add `NAME` and `NAMESPACE` navigators
 * Extend `srange`, `BEGINNING`, `END` to work on strings. Navigates to a substring.
 * Extend `FIRST` and `LAST` to work on strings. Navigates to a character.
