@@ -67,7 +67,6 @@
         (afn structure curr)))
     [identity (get-k :c) (get-k :b) (get-k :a)]))
 
-
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
   (run-benchmark "get value in nested map" 2500000
@@ -84,6 +83,7 @@
     (-> data (get :a) (get :b) (get :c))
     (-> data :a :b :c)
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
+
 
 
 (let [data {:a {:b {:c 1}}}]
@@ -334,3 +334,22 @@
   (run-benchmark "multi-transform vs. consecutive transforms, three shared navs" 150000
     (->> data (transform [ALL ALL number? even?] mult-10) (transform [ALL ALL number? odd?] dec))
     (multi-transform [ALL ALL number? (multi-path [even? (terminal mult-10)] [odd? (terminal dec)])] data)))
+
+(let [data {:a 1 :b 2 :c 3 :d 4}]
+  (run-benchmark "namespace qualify keys of a small map" 1000000
+    (into {}
+      (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
+      data)
+    (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
+    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
+    ))
+
+
+(let [data (->> (for [i (range 1000)] [(keyword (str i)) i]) (into {}))]
+  (run-benchmark "namespace qualify keys of a large map" 1200
+    (into {}
+      (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
+      data)
+    (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
+    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
+    ))
