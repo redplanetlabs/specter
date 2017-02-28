@@ -1455,3 +1455,17 @@
     (is (predand= vector? [1 0] (setval s/AFTER-ELEM 0 v)))
     (is (predand= vector? [1 0] (setval (s/srange 1 1) [0] v)))
     ))
+
+(defspec map-keys-all-first-equivalence-transform
+  (for-all+
+    [m (limit-size 10 (gen/map gen/int gen/keyword))]
+    (= (transform s/MAP-KEYS inc m)
+       (transform [s/ALL s/FIRST] inc m )
+       )))
+
+(defspec map-keys-all-first-equivalence-select
+  (for-all+
+    [m (limit-size 10 (gen/map gen/int gen/keyword))]
+    (= (select s/MAP-KEYS m)
+       (select [s/ALL s/FIRST] m)
+       )))

@@ -210,8 +210,12 @@
 
 
 
-(defprotocol MapValsTransformProtocol
-  (map-vals-transform [structure next-fn]))
+(defprotocol MapTransformProtocol
+  (map-vals-transform [structure next-fn])
+  (map-keys-transform [structure next-fn])
+  )
+
+
 
 (defn map-vals-non-transient-transform [structure empty-map next-fn]
   (reduce-kv
@@ -223,9 +227,21 @@
     empty-map
     structure))
 
-(extend-protocol MapValsTransformProtocol
+(defn map-keys-non-transient-transform [structure empty-map next-fn]
+  (reduce-kv
+    (fn [m k v]
+      (let [newk (next-fn k)]
+        (if (identical? newk i/NONE)
+          m
+          (assoc m newk v))))
+    empty-map
+    structure))
+
+(extend-protocol MapTransformProtocol
   nil
   (map-vals-transform [structure next-fn]
+    nil)
+  (map-keys-transform [structure next-fn]
     nil)
 
 
@@ -257,17 +273,48 @@
                         array
                         )]
           (clojure.lang.PersistentArrayMap. array)))))
-
+  #?(:clj
+     (map-keys-transform [structure next-fn]
+       (let [k-it (.keyIterator structure)
+             v-it (.valIterator structure)
+             none-cell (i/mutable-cell 0)
+             len (.count structure)
+             array (i/fast-object-array (* 2 len))]
+         (loop [i 0
+                j 0]
+           (if (.hasNext k-it)
+             (let [k (.next k-it)
+                   v (.next v-it)
+                   newk (next-fn k)]
+               (if (identical? newk i/NONE)
+                (do
+                  (i/update-cell! none-cell inc)
+                  (recur (+ i 2) j))
+                (do
+                  (aset array j newk)
+                  (aset array (inc j) v)
+                  (recur (+ i 2) (+ j 2)))))))
+         (let [none-count (i/get-cell none-cell)
+               array (if (not= 0 none-count)
+                        (java.util.Arrays/copyOf array (int (* 2 (- len none-count))))
+                        array
+                        )]
+          (clojure.lang.PersistentArrayMap/createAsIfByAssoc array)))))
 
   #?(:cljs cljs.core/PersistentArrayMap)
   #?(:cljs
      (map-vals-transform [structure next-fn]
        (map-vals-non-transient-transform structure {} next-fn)))
+  #?(:cljs
+     (map-keys-transform [structure next-fn]
+       (map-keys-non-transient-transform structure {} next-fn)))
 
 
   #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap)
   (map-vals-transform [structure next-fn]
     (map-vals-non-transient-transform structure (empty structure) next-fn))
+  (map-keys-transform [structure next-fn]
+    (map-keys-non-transient-transform structure (empty structure) next-fn))
 
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
@@ -283,7 +330,18 @@
           #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
 
         structure)))
+  (map-keys-transform [structure next-fn]
+    (persistent!
+      (reduce-kv
+        (fn [m k v]
+          (let [newk (next-fn k)]
+            (if (identical? newk i/NONE)
+              m
+              (assoc! m newk v))))
+        (transient
+          #?(:clj clojure.lang.PersistentHashMap/EMPTY :cljs cljs.core.PersistentHashMap.EMPTY))
 
+        structure)))
 
   #?(:clj Object :cljs default)
   (map-vals-transform [structure next-fn]
@@ -294,8 +352,16 @@
             m
             (assoc m k newv))))
       (empty structure)
+      structure))
+  (map-keys-transform [structure next-fn]
+    (reduce-kv
+      (fn [m k v]
+        (let [newk (next-fn k)]
+          (if (identical? newk i/NONE)
+            m
+            (assoc m newk v))))
+      (empty structure)
       structure)))
-
 
 (defn srange-select [structure start end next-fn]
   (next-fn

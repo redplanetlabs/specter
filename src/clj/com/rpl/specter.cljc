@@ -650,6 +650,16 @@
   (transform* [this structure next-fn]
     (n/map-vals-transform structure next-fn)))
 
+(defnav
+  ^{:doc "Navigate to each key of the map. This is more efficient than
+          navigating via [ALL FIRST]"}
+  MAP-KEYS
+  []
+  (select* [this structure next-fn]
+    (doseqres NONE [k (keys structure)]
+      (next-fn k)))
+  (transform* [this structure next-fn]
+    (n/map-keys-transform structure next-fn)))
 
 
 (defcollector VAL []
