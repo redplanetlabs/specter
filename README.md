@@ -90,8 +90,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 Specter's API is contained in these files:
 
-- [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
-- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and functional versions of `select/transform/etc.`
+- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and the definition of the core operations.
 - [transients.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transients.cljc): This contains navigators for transient collections.
 - [zipper.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljc): This integrates zipper-based navigation into Specter.
 
