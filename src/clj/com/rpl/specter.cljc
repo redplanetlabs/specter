@@ -1089,7 +1089,12 @@
   (collect-val [this structure]
     val))
 
-(defdynamicnav with-fresh-collected
+(defdynamicnav
+  ^{:doc
+    "Continues navigating on the given path with the collected vals reset to []. Once
+     navigation leaves the scope of with-fresh-collected, the collected vals revert
+     to what they were before."}
+  with-fresh-collected
   [& path]
   (late-bound-richnav [late (late-path path)]
     (select* [this vals structure next-fn]
