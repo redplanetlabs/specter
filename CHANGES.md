@@ -1,6 +1,6 @@
 ## 0.13.3-SNAPSHOT
 
-* Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `ALL`, and `MAP-VALS`
+* Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `nthpath`, `ALL`, `MAP-VALS`, `FIRST`, and `LAST`
 * Add `nthpath` navigator
 * Add `with-fresh-collected` higher order navigator
 * Added `traverse-all` which returns a transducer that traverses over all elements matching the given path.

@@ -476,10 +476,18 @@
       (updater structure next-fn))))
 
 (defn- update-first-list [l afn]
-  (cons (afn (first l)) (rest l)))
+  (let [newf (afn (first l))
+        restl (rest l)]
+    (if (identical? i/NONE newf)
+      restl
+      (cons newf restl))))
 
 (defn- update-last-list [l afn]
-  (concat (butlast l) [(afn (last l))]))
+  (let [lastl (afn (last l))
+        bl (butlast l)]
+    (if (identical? i/NONE lastl)
+      (if (nil? bl) '() bl)
+      (concat bl [lastl]))))
 
 #?(
    :clj
@@ -504,26 +512,49 @@
 (extend-protocol UpdateExtremes
   #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (update-first [v afn]
-    (let [val (nth v 0)]
-      (assoc v 0 (afn val))))
+    (let [val (nth v 0)
+          newv (afn val)]
+      (if (identical? i/NONE newv)
+        (subvec v 1)
+        (assoc v 0 newv)
+        )))
 
   (update-last [v afn]
     ;; type-hinting vec-count to ^int caused weird errors with case
     (let [c (int (vec-count v))]
       (case c
-        1 (let [[e] v] [(afn e)])
-        2 (let [[e1 e2] v] [e1 (afn e2)])
-        (let [i (dec c)]
-          (assoc v i (afn (nth v i)))))))
+        1 (let [[e] v
+                newe (afn e)]
+                (if (identical? i/NONE newe)
+                  []
+                  [newe]))
+        2 (let [[e1 e2] v
+                 newe (afn e2)]
+            (if (identical? i/NONE newe)
+              [e1]
+              [e1 newe]))
+        (let [i (dec c)
+              newe (afn (nth v i))]
+          (if (identical? i/NONE newe)
+            (pop v)
+            (assoc v i newe))))))
 
   #?(:clj String :cljs string)
   (update-first [s afn]
-    (str (afn (nth s 0)) (subs s 1 (count s))))
+    (let [rests (subs s 1 (count s))
+          newb (afn (nth s 0))]
+      (if (identical? i/NONE newb)
+        rests
+        (str newb rests))))
 
   (update-last [s afn]
-    (let [last-idx (-> s count dec)]
-      (str (subs s 0 last-idx) (afn (nth s last-idx)))
-      ))
+    (let [last-idx (-> s count dec)
+          newl (afn (nth s last-idx))
+          begins (subs s 0 last-idx)]
+      (if (identical? i/NONE newl)
+        begins
+        (str begins newl)
+        )))
 
   #?(:clj Object :cljs default)
   (update-first [l val]

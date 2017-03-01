@@ -1469,3 +1469,41 @@
     (= (select s/MAP-KEYS m)
        (select [s/ALL s/FIRST] m)
        )))
+
+(defspec remove-first-vector
+  (for-all+
+    [v (limit-size 10 (gen/not-empty (gen/vector gen/int)))]
+    (let [newv (setval s/FIRST s/NONE v)]
+      (and (= newv (vec (rest v)))
+           (vector? newv)
+           ))))
+
+(defspec remove-first-list
+  (for-all+
+    [l (limit-size 10 (gen/not-empty (gen/list gen/int)))]
+    (let [newl (setval s/FIRST s/NONE l)]
+      (and (= newl (rest l))
+           (list? newl)
+           ))))
+
+(defspec remove-last-vector
+  (for-all+
+    [v (limit-size 10 (gen/not-empty (gen/vector gen/int)))]
+    (let [newv (setval s/LAST s/NONE v)]
+      (and (= newv (vec (butlast v)))
+           (vector? newv)
+           ))))
+
+(defspec remove-last-list
+  (for-all+
+    [l (limit-size 10 (gen/not-empty (gen/list gen/int)))]
+    (let [newl (setval s/LAST s/NONE l)
+          bl (butlast l)]
+      (and (or (= newl bl) (and (nil? bl) (= '() newl)))
+           (seq? newl)
+           ))))
+
+(deftest remove-extreme-string
+  (is (= "b" (setval s/FIRST s/NONE "ab")))
+  (is (= "a" (setval s/LAST s/NONE "ab")))
+  )
