@@ -1,7 +1,7 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
             [cljs.test :refer [is deftest]]
-            [cljs.test.check.cljs-test :refer [defspec]]
+            [clojure.test.check.clojure-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter.test-helpers :refer [ic-test]]
             [com.rpl.specter
@@ -27,9 +27,9 @@
 
   (:require #?(:clj [clojure.test.check.generators :as gen])
             #?(:clj [clojure.test.check.properties :as prop])
-            #?(:cljs [cljs.test.check :as tc])
-            #?(:cljs [cljs.test.check.generators :as gen])
-            #?(:cljs [cljs.test.check.properties :as prop :include-macros true])
+            #?(:cljs [clojure.test.check :as tc])
+            #?(:cljs [clojure.test.check.generators :as gen])
+            #?(:cljs [clojure.test.check.properties :as prop :include-macros true])
             [com.rpl.specter :as s]
             [com.rpl.specter.transients :as t]
             [clojure.set :as set]))
