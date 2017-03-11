@@ -25,7 +25,8 @@
                         :source-paths ["src/clj" "target/classes" "test"]
                         :compiler {:output-to "out/testable.js"
                                    :main 'com.rpl.specter.cljs-test-runner
-                                   :optimizations :simple}}]}
+                                   :target :nodejs
+                                   :optimizations :none}}]}
 
   :profiles {:dev {:dependencies
                    [[org.clojure/test.check "0.9.0"]
