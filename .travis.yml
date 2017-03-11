@@ -5,4 +5,4 @@ cache:
   - $HOME/.m2
 script:
   - lein test
-  - lein doo phantom test-build once
+#  - lein doo phantom test-build once
