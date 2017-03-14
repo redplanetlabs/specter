@@ -36,14 +36,6 @@
     (walker structure)
     (i/get-cell ret)))
 
-
-(defn key-select [akey structure next-fn]
-  (next-fn (get structure akey)))
-
-(defn key-transform [akey structure next-fn]
-  (assoc structure akey (next-fn (get structure akey))))
-
-
 (defn all-select [structure next-fn]
   (doseqres i/NONE [e structure]
     (next-fn e)))
