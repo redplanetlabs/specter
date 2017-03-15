@@ -238,7 +238,7 @@
 
              cache-sym (vary-meta
                         (gensym "pathcache")
-                        merge {:cljs.analyzer/no-resolve true :no-doc true})
+                        merge {:cljs.analyzer/no-resolve true :no-doc true :private true})
 
              info-sym (gensym "info")
 
