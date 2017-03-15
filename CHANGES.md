@@ -1,3 +1,7 @@
+## 1.0.1-SNAPSHOT
+
+* Inline cache vars are marked private so as not to interfere with tooling
+
 ## 1.0.0
 
 * Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `nthpath`, `ALL`, `MAP-VALS`, `FIRST`, and `LAST`
