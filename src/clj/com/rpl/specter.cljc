@@ -32,10 +32,15 @@
 (defn wrap-dynamic-nav [f]
   (fn [& args]
     (let [ret (apply f args)]
-      (if (and (sequential? ret) (static-path? ret))
-        (i/comp-paths* ret)
-        ret
-        ))))
+      (cond (and (sequential? ret) (static-path? ret))
+            (i/comp-paths* ret)
+
+            (and (sequential? ret) (= 1 (count ret)))
+            (first ret)
+
+            :else
+            ret
+            ))))
 
 #?(:clj
    (do
