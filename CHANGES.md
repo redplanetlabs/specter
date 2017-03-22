@@ -1,6 +1,7 @@
 ## 1.0.1-SNAPSHOT
 
 * Inline cache vars are marked private so as not to interfere with tooling
+* Bug fix: Dynamic navs in argument position to another nav now properly expanded and compiled
 
 ## 1.0.0
 
