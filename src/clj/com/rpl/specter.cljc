@@ -978,7 +978,8 @@
 
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
-          late-bound parameterized version of using a function directly in a path."}
+          late-bound parameterized version of using a function directly in a path."
+    :direct-nav true}
   pred
   i/pred*)
 
