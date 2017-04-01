@@ -191,7 +191,7 @@
                   [e]
 
                   (sequential? e)
-                  (ic-possible-params e)))
+                  (concat (if (vector? e) [e]) (ic-possible-params e))))
 
 
           path)))

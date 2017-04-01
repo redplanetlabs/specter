@@ -824,6 +824,8 @@
         ;; e.g. (terminal-val [v])
         (if (identical? NONE (walk-select dynamic-param? identity o))
           (static-val-code o)
+          ;; done this way so it's compatible with cljs as well (since this dynamic val will be
+          ;; a possible param)
           (resolve-arg-code (->DynamicVal (walk-until dynamic-param? :code o)) possible-params)
           )))
 
