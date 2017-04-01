@@ -825,16 +825,16 @@
   walker
   [afn]
   (select* [this structure next-fn]
-    (n/walk-select afn next-fn structure))
+    (i/walk-select afn next-fn structure))
   (transform* [this structure next-fn]
-    (n/walk-until afn next-fn structure)))
+    (i/walk-until afn next-fn structure)))
 
 (defnav
   ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
   [afn]
   (select* [this structure next-fn]
-    (n/walk-select afn next-fn structure))
+    (i/walk-select afn next-fn structure))
   (transform* [this structure next-fn]
     (i/codewalk-until afn next-fn structure)))
 

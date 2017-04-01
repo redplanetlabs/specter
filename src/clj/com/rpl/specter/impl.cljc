@@ -572,6 +572,25 @@
         (with-meta ret (meta structure))
         ret))))
 
+(defn walk-select [pred continue-fn structure]
+  (let [ret (mutable-cell NONE)
+        walker (fn this [structure]
+                 (if (pred structure)
+                   (let [r (continue-fn structure)]
+                     (if-not (identical? r NONE)
+                       (set-cell! ret r))
+                     r)
+
+                   (walk/walk this identity structure)))]
+
+    (walker structure)
+    (get-cell ret)))
+
+(defn walk-until [pred on-match-fn structure]
+  (if (pred structure)
+    (on-match-fn structure)
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)))
+
 
 #?(:clj
    (do
@@ -645,7 +664,7 @@
   (-> o meta :direct-nav))
 
 (defn all-static? [params]
-  (every? (complement dynamic-param?) params))
+  (identical? NONE (walk-select dynamic-param? identity params)))
 
 (defn late-resolved-fn [afn]
   (fn [& args]
@@ -654,11 +673,14 @@
       (->DynamicFunction afn args)
       )))
 
+(defn preserve-map [afn o]
+  (if (or (list? o) (seq? o))
+    (map afn o)
+    (into (empty o) (map afn o))))
+
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
-        (if (or (list? o) (seq? o))
-          (map magic-precompilation* o)
-          (into (empty o) (map magic-precompilation* o)))
+        (preserve-map magic-precompilation* o)
 
         (instance? VarUse o)
         (if (dynamic-var? (:var o))
@@ -694,17 +716,15 @@
   ([o] (static-combine o true))
   ([o nav-pos?]
    (cond (sequential? o)
-         (do
-           (if-not nav-pos?
-             ;; should never happen...
-             (throw-illegal "Cannot statically combine sequential when not in nav pos"))
+         (if nav-pos?
            (let [res (continuous-subseqs-transform*
                        rich-nav?
                        (doall (map static-combine (flatten o)))
                        (fn [s] [(comp-paths* s)]))]
              (if (= 1 (count res))
                (first res)
-               res)))
+               res))
+           (preserve-map #(static-combine % false) o))
 
          (instance? DynamicFunction o)
          (->DynamicFunction
@@ -800,7 +820,12 @@
         (resolve-nav-code o possible-params)
 
         :else
-        (static-val-code o)))
+        ;; handle dynamic params nested inside data structures
+        ;; e.g. (terminal-val [v])
+        (if (identical? NONE (walk-select dynamic-param? identity o))
+          (static-val-code o)
+          (resolve-arg-code (->DynamicVal (walk-until dynamic-param? :code o)) possible-params)
+          )))
 
 (defn resolve-nav-code [o possible-params]
   (cond

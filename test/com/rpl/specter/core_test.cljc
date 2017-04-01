@@ -1507,3 +1507,9 @@
   (is (= "b" (setval s/FIRST s/NONE "ab")))
   (is (= "a" (setval s/LAST s/NONE "ab")))
   )
+
+(deftest nested-dynamic-arg-test
+  (let [foo (fn [v] (multi-transform (s/terminal-val [v]) nil))]
+    (is (= [1] (foo 1)))
+    (is (= [10] (foo 10)))
+    ))

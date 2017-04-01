@@ -8,7 +8,6 @@
   (:use #?(:clj [com.rpl.specter.macros :only [defnav defrichnav]])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as walk]
             #?(:clj [clojure.core.reducers :as r])))
 
 
@@ -22,19 +21,6 @@
   [compiled-path vals structure]
   (not (not-selected?* compiled-path vals structure)))
 
-(defn walk-select [pred continue-fn structure]
-  (let [ret (i/mutable-cell i/NONE)
-        walker (fn this [structure]
-                 (if (pred structure)
-                   (let [r (continue-fn structure)]
-                     (if-not (identical? r i/NONE)
-                       (i/set-cell! ret r))
-                     r)
-
-                   (walk/walk this identity structure)))]
-
-    (walker structure)
-    (i/get-cell ret)))
 
 (defn all-select [structure next-fn]
   (doseqres i/NONE [e structure]
@@ -590,12 +576,6 @@
   #?(:clj Object :cljs default)
   (fast-empty? [s]
     (empty? s)))
-
-
-(defn walk-until [pred on-match-fn structure]
-  (if (pred structure)
-    (on-match-fn structure)
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)))
 
 
 (defn- do-keypath-transform [vals structure key next-fn]
