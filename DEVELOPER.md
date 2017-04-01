@@ -8,5 +8,5 @@ lein cleantest
 
 ```
 lein javac
-lein doo phantom test-build once
+lein doo node test-build once
 ```
