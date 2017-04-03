@@ -1,5 +1,6 @@
 ## 1.0.1-SNAPSHOT
 
+* Add `satisfies-protpath?`
 * Inline cache vars are marked private so as not to interfere with tooling
 * Bug fix: Using `pred` no longer inserts unecessary `coerce-nav` call at callsite
 * Bug fix: Dynamic navs in argument position to another nav now properly expanded and compiled

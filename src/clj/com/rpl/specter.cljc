@@ -430,6 +430,9 @@
                   (let [inav# ~retrieve]
                     (i/exec-transform* inav# ~@rargs))))))))
 
+     (defmacro satisfies-protpath? [protpath o]
+       `(satisfies? ~(protpath-sym protpath) ~o))
+
      (defn extend-protocolpath* [protpath-prot extensions]
        (let [m (-> protpath-prot :sigs keys first)
              params (-> protpath-prot :sigs first last :arglists first)]

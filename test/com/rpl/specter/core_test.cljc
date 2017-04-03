@@ -10,7 +10,7 @@
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
-                      defdynamicnav traverse-all]]))
+                      defdynamicnav traverse-all satisfies-protpath?]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -21,7 +21,7 @@
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
-                    defdynamicnav traverse-all]]))
+                    defdynamicnav traverse-all satisfies-protpath?]]))
 
 
 
@@ -1513,3 +1513,11 @@
     (is (= [1] (foo 1)))
     (is (= [10] (foo 10)))
     ))
+
+(defprotocolpath FooPP)
+(extend-protocolpath FooPP String s/STAY)
+
+(deftest satisfies-protpath-test
+  (is (satisfies-protpath? FooPP "a"))
+  (is (not (satisfies-protpath? FooPP 1)))
+  )
