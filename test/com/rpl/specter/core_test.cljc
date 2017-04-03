@@ -1515,10 +1515,11 @@
     ))
 
 #?(:clj
-  (defprotocolpath FooPP)
-  (extend-protocolpath FooPP String s/STAY)
+  (do
+    (defprotocolpath FooPP)
+    (extend-protocolpath FooPP String s/STAY)
 
-  (deftest satisfies-protpath-test
-    (is (satisfies-protpath? FooPP "a"))
-    (is (not (satisfies-protpath? FooPP 1)))
-    ))
+    (deftest satisfies-protpath-test
+      (is (satisfies-protpath? FooPP "a"))
+      (is (not (satisfies-protpath? FooPP 1)))
+      )))
