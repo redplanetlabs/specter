@@ -135,6 +135,13 @@
           ret)))))
 
 
+(let [data '(1 2 3 4 5)]
+  (run-benchmark "transform values of a list" 500000
+    (transform ALL inc data)
+    (sequence (map inc) data)
+    (reverse (into '() (map inc) data))
+    ))
+
 (let [data {:a 1 :b 2 :c 3 :d 4}]
   (run-benchmark "transform values of a small map" 500000
     (into {} (for [[k v] data] [k (inc v)]))

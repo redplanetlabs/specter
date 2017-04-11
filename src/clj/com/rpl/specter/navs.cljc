@@ -55,12 +55,7 @@
 
 
 (defn- all-transform-list [structure next-fn]
-  ;; this is done to maintain order, otherwise lists get reversed
-  (->> structure
-       (into '()
-             (comp (map next-fn) (filter not-NONE?)))
-       reverse
-       ))
+  (sequence (comp (map next-fn) (filter not-NONE?)) structure))
 
 (extend-protocol AllTransformProtocol
   nil
