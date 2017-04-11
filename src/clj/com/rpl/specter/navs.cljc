@@ -55,7 +55,7 @@
 
 
 (defn- all-transform-list [structure next-fn]
-  (sequence (comp (map next-fn) (filter not-NONE?)) structure))
+  (doall (sequence (comp (map next-fn) (filter not-NONE?)) structure)))
 
 (extend-protocol AllTransformProtocol
   nil

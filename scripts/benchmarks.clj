@@ -55,7 +55,7 @@
        (println "\n********************************\n"))))
 
 (defn specter-dynamic-nested-get [data a b c]
-  (select-any [(keypath a) (keypath b) (keypath c)] data))
+  (select-any (keypath a b c) data))
 
 
 (defn get-k [k] (fn [m next] (next (get m k))))
@@ -138,7 +138,7 @@
 (let [data '(1 2 3 4 5)]
   (run-benchmark "transform values of a list" 500000
     (transform ALL inc data)
-    (sequence (map inc) data)
+    (doall (sequence (map inc) data))
     (reverse (into '() (map inc) data))
     ))
 
