@@ -847,7 +847,10 @@
 
   Requires that the input navigators will walk the structure's
   children in the same order when executed on \"select\" and then
-  \"transform\"."
+  \"transform\".
+
+  If transformed sequence is smaller than input sequence, missing entries
+  will be filled in with NONE, triggering removal if supported by that navigator."
   [& path]
   (late-bound-nav [late (late-path path)]
     (select* [this structure next-fn]
@@ -857,9 +860,12 @@
             transformed (next-fn select-result)
             values-to-insert (i/mutable-cell transformed)]
         (compiled-transform late
-                            (fn [_] (let [next-val (first (i/get-cell values-to-insert))]
-                                      (i/update-cell! values-to-insert rest)
-                                      next-val))
+                            (fn [_] (let [vs (i/get-cell values-to-insert)]
+                                      (if vs
+                                        (do (i/update-cell! values-to-insert next)
+                                            (first vs))
+                                        NONE
+                                        )))
                             structure)))))
 
 (def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,
@@ -952,7 +958,10 @@
 (defdynamicnav filterer
   "Navigates to a view of the current sequence that only contains elements that
   match the given path. An element matches the selector path if calling select
-  on that element with the path yields anything other than an empty sequence."
+  on that element with the path yields anything other than an empty sequence.
+
+  If transformed sequence is smaller than input sequence, the corresponding entries
+  will be removed from original sequence."
   [& path]
   (subselect ALL (selected? path)))
 

@@ -1,5 +1,6 @@
 ## 1.0.1-SNAPSHOT
 
+* `subselect`/`filterer` can remove entries in source by transforming to a smaller sequence
 * Add `satisfies-protpath?`
 * Inline cache vars are marked private so as not to interfere with tooling
 * Improve performance of `ALL` transform on lists by 20%

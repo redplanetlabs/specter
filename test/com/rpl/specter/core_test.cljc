@@ -1514,6 +1514,10 @@
     (is (= [10] (foo 10)))
     ))
 
+(deftest filterer-remove-test
+  (is (= [1 :a 3 5] (setval (s/filterer even?) [:a] [1 2 3 4 5])))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
