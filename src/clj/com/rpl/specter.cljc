@@ -960,8 +960,9 @@
   match the given path. An element matches the selector path if calling select
   on that element with the path yields anything other than an empty sequence.
 
-  If transformed sequence is smaller than input sequence, the corresponding entries
-  will be removed from original sequence."
+  For transformation: `NONE` entries in the result sequence cause corresponding entries in
+  input to be removed. A result sequence smaller than the input sequence is equivalent to
+  padding the result sequence with `NONE` at the end until the same size as the input."
   [& path]
   (subselect ALL (selected? path)))
 
