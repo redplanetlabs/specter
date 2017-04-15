@@ -4,7 +4,7 @@
 * Add `satisfies-protpath?`
 * Inline cache vars are marked private so as not to interfere with tooling
 * Improve performance of `ALL` transform on lists by 20%
-* Bug fix: Using `pred` no longer inserts unecessary `coerce-nav` call at callsite
+* Bug fix: Using `pred` no longer inserts unnecessary `coerce-nav` call at callsite
 * Bug fix: Dynamic navs in argument position to another nav now properly expanded and compiled
 * Bug fix: Dynamic parameters nested inside data structures as arguments are now compiled correctly by inline compiler
 
