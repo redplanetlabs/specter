@@ -33,6 +33,11 @@
                     [org.clojure/clojure "1.8.0"]
                     [org.clojure/clojurescript "1.9.229"]]}
 
-             :test {:dependencies [[org.clojure/clojure "1.7.0"]]}}
+             :test {:dependencies [[org.clojure/clojure "1.7.0"]]}
+
+             :self-host {:dependencies [[org.clojure/test.check "0.9.1-SNAPSHOT"]
+                                        [org.clojure/clojure "1.8.0"]
+                                        [org.clojure/clojurescript "1.9.229"]]
+                         :main clojure.main}}
 
   :aliases {"deploy" ["do" "clean," "deploy" "clojars"]})
