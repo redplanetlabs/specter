@@ -1,4 +1,4 @@
-## 1.0.1-SNAPSHOT
+## 1.0.1
 
 * `subselect`/`filterer` can remove entries in source by transforming to a smaller sequence
 * Add `satisfies-protpath?`
