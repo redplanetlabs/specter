@@ -1,3 +1,7 @@
+## 1.0.2-SNAPSHOT
+
+* Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
+
 ## 1.0.1
 
 * `subselect`/`filterer` can remove entries in source by transforming to a smaller sequence

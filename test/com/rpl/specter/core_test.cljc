@@ -1518,6 +1518,15 @@
   (is (= [1 :a 3 5] (setval (s/filterer even?) [:a] [1 2 3 4 5])))
   )
 
+(deftest helper-preds-test
+  (let [data [1 2 2 3 4 0]]
+    (is (= [2 2] (select [s/ALL (s/pred= 2)] data)))
+    (is (= [1 2 2 0] (select [s/ALL (s/pred< 3)] data)))
+    (is (= [1 2 2 3 0] (select [s/ALL (s/pred<= 3)] data)))
+    (is (= [4] (select [s/ALL (s/pred> 3)] data)))
+    (is (= [3 4] (select [s/ALL (s/pred>= 3)] data)))
+    ))
+
 #?(:clj
   (do
     (defprotocolpath FooPP)

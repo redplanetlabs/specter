@@ -996,6 +996,13 @@
   pred
   i/pred*)
 
+
+(defn ^:direct-nav pred= [v] (pred #(= % v)))
+(defn ^:direct-nav pred< [v] (pred #(< % v)))
+(defn ^:direct-nav pred> [v] (pred #(> % v)))
+(defn ^:direct-nav pred<= [v] (pred #(<= % v)))
+(defn ^:direct-nav pred>= [v] (pred #(>= % v)))
+
 (extend-type nil
   ImplicitNav
   (implicit-nav [this] STAY))

@@ -192,7 +192,7 @@ user> (transform [(srange 4 11) (filterer even?)]
 Append [:c :d] to every subsequence that has at least two even numbers:
 ```clojure
 user> (setval [ALL
-               (selected? (filterer even?) (view count) #(>= % 2))
+               (selected? (filterer even?) (view count) (pred>= 2))
                END]
               [:c :d]
               [[1 2 3 4 5 6] [7 0 -1] [8 8] []])
