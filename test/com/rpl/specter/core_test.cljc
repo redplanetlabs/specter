@@ -1527,6 +1527,11 @@
     (is (= [3 4] (select [s/ALL (s/pred>= 3)] data)))
     ))
 
+(deftest map-key-test
+  (is (= {:b nil :c 3} (setval (s/map-key :a) :b {:c 3})))
+  (is (= {:b 2} (setval (s/map-key :a) :b {:a 2})))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)

@@ -1,6 +1,7 @@
 ## 1.0.2-SNAPSHOT
 
 * Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
+* Add `map-key` navigator
 
 ## 1.0.1
 
