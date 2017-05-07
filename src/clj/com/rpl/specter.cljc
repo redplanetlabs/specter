@@ -869,17 +869,37 @@
                             structure)))))
 
 (defrichnav
-  ^{:doc "Navigates to the given key in the map (not to the value). Navigates regardless
-          of whether the key currently exists in the map. For transforms, will assoc nil
-          value if key doesn't currently exist in map."}
+  ^{:doc "Navigates to the given key in the map (not to the value). Navigates only if the
+          key currently exists in the map."}
   map-key
   [key]
   (select* [this vals structure next-fn]
-    (next-fn vals key))
+    (if (contains? structure key)
+      (next-fn vals key)
+      NONE
+      ))
   (transform* [this vals structure next-fn]
-    (let [newkey (next-fn vals key)
-          oldval (get structure key)]
-      (-> structure (dissoc key) (assoc newkey oldval))
+    (if (contains? structure key)
+      (let [newkey (next-fn vals key)
+            oldval (get structure key)]
+        (-> structure (dissoc key) (assoc newkey oldval))
+        )
+      structure
+      )))
+
+(defrichnav
+  ^{:doc "Navigates to the given element in the set only if it exists in the set."}
+  set-elem
+  [elem]
+  (select* [this vals structure next-fn]
+    (if (contains? structure elem)
+      (next-fn vals elem)
+      NONE
+      ))
+  (transform* [this vals structure next-fn]
+    (if (contains? structure elem)
+      (-> structure (disj elem) (conj (next-fn vals elem)))
+      structure
       )))
 
 (def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,

@@ -1528,9 +1528,15 @@
     ))
 
 (deftest map-key-test
-  (is (= {:b nil :c 3} (setval (s/map-key :a) :b {:c 3})))
+  (is (= {:c 3} (setval (s/map-key :a) :b {:c 3})))
   (is (= {:b 2} (setval (s/map-key :a) :b {:a 2})))
   (is (= {:b 2} (setval (s/map-key :a) :b {:a 2 :b 1})))
+  )
+
+(deftest set-elem-test
+  (is (= #{:b :d} (setval (s/set-elem :a) :x #{:b :d})))
+  (is (= #{:x :a} (setval (s/set-elem :b) :x #{:b :a})))
+  (is (= #{:a} (setval (s/set-elem :b) :a #{:b :a})))
   )
 
 #?(:clj

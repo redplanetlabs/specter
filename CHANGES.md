@@ -2,6 +2,7 @@
 
 * Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
 * Add `map-key` navigator
+* Add `set-elem` navigator
 
 ## 1.0.1
 
