@@ -870,7 +870,8 @@
 
 (defrichnav
   ^{:doc "Navigates to the given key in the map (not to the value). Navigates only if the
-          key currently exists in the map."}
+          key currently exists in the map. Can transform to NONE to remove the key/value
+          pair from the map."}
   map-key
   [key]
   (select* [this vals structure next-fn]
@@ -881,14 +882,17 @@
   (transform* [this vals structure next-fn]
     (if (contains? structure key)
       (let [newkey (next-fn vals key)
-            oldval (get structure key)]
-        (-> structure (dissoc key) (assoc newkey oldval))
-        )
+            dissoced (dissoc structure key)]
+        (if (identical? NONE newkey)
+          dissoced
+          (assoc dissoced newkey (get structure key))
+          ))
       structure
       )))
 
 (defrichnav
-  ^{:doc "Navigates to the given element in the set only if it exists in the set."}
+  ^{:doc "Navigates to the given element in the set only if it exists in the set.
+          Can transform to NONE to remove the element from the set."}
   set-elem
   [elem]
   (select* [this vals structure next-fn]
@@ -898,7 +902,12 @@
       ))
   (transform* [this vals structure next-fn]
     (if (contains? structure elem)
-      (-> structure (disj elem) (conj (next-fn vals elem)))
+      (let [newelem (next-fn vals elem)
+            removed (disj structure elem)]
+        (if (identical? NONE newelem)
+          removed
+          (conj removed newelem)
+          ))
       structure
       )))
 

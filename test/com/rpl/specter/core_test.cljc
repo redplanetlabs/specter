@@ -1531,12 +1531,14 @@
   (is (= {:c 3} (setval (s/map-key :a) :b {:c 3})))
   (is (= {:b 2} (setval (s/map-key :a) :b {:a 2})))
   (is (= {:b 2} (setval (s/map-key :a) :b {:a 2 :b 1})))
+  (is (= {:b 2} (setval (s/map-key :a) s/NONE {:a 1 :b 2})))
   )
 
 (deftest set-elem-test
   (is (= #{:b :d} (setval (s/set-elem :a) :x #{:b :d})))
   (is (= #{:x :a} (setval (s/set-elem :b) :x #{:b :a})))
   (is (= #{:a} (setval (s/set-elem :b) :a #{:b :a})))
+  (is (= #{:b} (setval (s/set-elem :a) s/NONE #{:a :b})))
   )
 
 #?(:clj
