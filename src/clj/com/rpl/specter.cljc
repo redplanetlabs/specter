@@ -74,7 +74,7 @@
                 curr-params# [~@curr-params]]
             (if (every? (complement i/dynamic-param?) curr-params#)
               (apply builder# curr-params#)
-              (com.rpl.specter.impl/->DynamicFunction builder# curr-params#)))))
+              (com.rpl.specter.impl/->DynamicFunction builder# curr-params# nil)))))
 
      (defmacro late-bound-nav [bindings & impls]
        (late-bound-operation bindings `nav impls))

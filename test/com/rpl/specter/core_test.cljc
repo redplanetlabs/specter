@@ -1541,6 +1541,12 @@
   (is (= #{:b} (setval (s/set-elem :a) s/NONE #{:a :b})))
   )
 
+;; this function necessary to trigger the bug from happening
+(defn inc2 [v] (inc v))
+(deftest dynamic-function-arg
+  (is (= {[2] 4} (let [a 1] (transform (s/keypath [(inc2 a)]) inc {[2] 3}))))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)

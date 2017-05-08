@@ -435,7 +435,7 @@
   [path])
 
 (defrecord DynamicFunction
-  [op params])
+  [op params code])
 
 (defn dynamic-param? [o]
   (contains? #{DynamicPath DynamicVal DynamicFunction} (type o)))
@@ -670,7 +670,7 @@
   (fn [& args]
     (if (all-static? args)
       (apply afn args)
-      (->DynamicFunction afn args)
+      (->DynamicFunction afn args nil)
       )))
 
 (defn preserve-map [afn o]
@@ -706,7 +706,7 @@
           (if (or (-> op meta :dynamicnav)
                   (all-static? (conj params op)))
             (magic-precompilation* (apply op params))
-            (->DynamicFunction op params)))
+            (->DynamicFunction op params (:code o))))
 
         :else
         ;; this handles dynamicval as well
@@ -729,7 +729,8 @@
          (instance? DynamicFunction o)
          (->DynamicFunction
           (static-combine (:op o) false)
-          (doall (map #(static-combine % false) (:params o))))
+          (doall (map #(static-combine % false) (:params o)))
+          (:code o))
 
          (instance? DynamicPath o)
          (->DynamicPath (static-combine (:path o)))
@@ -805,6 +806,10 @@
 
 (declare resolve-nav-code)
 
+(defn dynamic->code [o]
+  ;; works because both DynamicVal and DynamicFunction have :code field
+  (walk-until dynamic-param? :code o))
+
 (defn resolve-arg-code [o possible-params]
   (cond (instance? DynamicFunction o)
         (let [op (resolve-arg-code (:op o) possible-params)
@@ -826,7 +831,7 @@
           (static-val-code o)
           ;; done this way so it's compatible with cljs as well (since this dynamic val will be
           ;; a possible param)
-          (resolve-arg-code (->DynamicVal (walk-until dynamic-param? :code o)) possible-params)
+          (resolve-arg-code (->DynamicVal (dynamic->code o)) possible-params)
           )))
 
 (defn resolve-nav-code [o possible-params]
