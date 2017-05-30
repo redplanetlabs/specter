@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.util-macros
              :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]))
-
+  #?(:cljs (:refer-clojure :exclude [NONE]))
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val RichNavigator]]
         #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))

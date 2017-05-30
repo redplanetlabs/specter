@@ -14,6 +14,7 @@
 
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
+  #?(:cljs (:refer-clojure :exclude [NONE]))
 
   (:use [com.rpl.specter.protocols :only [ImplicitNav RichNavigator]]
     #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
