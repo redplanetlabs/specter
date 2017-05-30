@@ -3,6 +3,7 @@
 * Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
 * Add `map-key` navigator
 * Add `set-elem` navigator
+* Workaround ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
 * Bug fix: Fix incorrect inline compilation when a dynamic function invocation is nested in a data structure within a parameter to a navigator builder
 
 ## 1.0.1
