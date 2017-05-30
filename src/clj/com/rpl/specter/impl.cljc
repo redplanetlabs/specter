@@ -2,6 +2,9 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.util-macros
              :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]))
+  ;; workaround for cljs bug that emits warnings for vars named the same as a
+  ;; private var in cljs.core (in this case `NONE`, added as private var to
+  ;; cljs.core with 1.9.562)
   #?(:cljs (:refer-clojure :exclude [NONE]))
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val RichNavigator]]
