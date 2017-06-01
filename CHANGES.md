@@ -4,6 +4,7 @@
 * Add `map-key` navigator
 * Add `set-elem` navigator
 * Workaround ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
+* For ALL transforms on maps, interpret transformed key/value pair of size < 2 as removal
 * Bug fix: Fix incorrect inline compilation when a dynamic function invocation is nested in a data structure within a parameter to a navigator builder
 
 ## 1.0.1
