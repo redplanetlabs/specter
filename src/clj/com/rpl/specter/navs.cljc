@@ -39,11 +39,14 @@
 (defprotocol AllTransformProtocol
   (all-transform [structure next-fn]))
 
+(defn void-transformed-kv-pair? [newkv]
+  (or (identical? newkv i/NONE) (< (count newkv) 2)))
+
 (defn- non-transient-map-all-transform [structure next-fn empty-map]
   (reduce-kv
     (fn [m k v]
       (let [newkv (next-fn [k v])]
-        (if (identical? newkv i/NONE)
+        (if (void-transformed-kv-pair? newkv)
           m
           (assoc m (nth newkv 0) (nth newkv 1)))))
 
@@ -100,7 +103,7 @@
              (let [k (.next k-it)
                    v (.next v-it)
                    newkv (next-fn [k v])]
-               (if (identical? newkv i/NONE)
+               (if (void-transformed-kv-pair? newkv)
                 (do
                   (i/update-cell! none-cell inc)
                   (recur (+ i 2) j))
@@ -133,7 +136,7 @@
       (reduce-kv
         (fn [m k v]
           (let [newkv (next-fn [k v])]
-            (if (identical? newkv i/NONE)
+            (if (void-transformed-kv-pair? newkv)
               m
               (assoc! m (nth newkv 0) (nth newkv 1)))))
 
@@ -156,7 +159,7 @@
                (reduce-kv
                  (fn [m k v]
                    (let [newkv (next-fn [k v])]
-                     (if (identical? newkv i/NONE)
+                     (if (void-transformed-kv-pair? newkv)
                       m
                       (assoc m (nth newkv 0) (nth newkv 1)))))
 
@@ -175,8 +178,21 @@
   #?(:cljs
      (all-transform [structure next-fn]
        (let [empty-structure (empty structure)]
-         (if (and (list? empty-structure) (not (queue? empty-structure)))
+         (cond
+           (and (list? empty-structure) (not (queue? empty-structure)))
            (all-transform-list structure next-fn)
+
+           (map? structure)
+           (reduce-kv
+             (fn [m k v]
+               (let [newkv (next-fn [k v])]
+                 (if (void-transformed-kv-pair? newkv)
+                  m
+                  (assoc m (nth newkv 0) (nth newkv 1)))))
+                  empty-structure
+                  structure)
+
+           :else
            (into empty-structure
                  (comp (map next-fn) (filter not-NONE?))
                  structure))))))
