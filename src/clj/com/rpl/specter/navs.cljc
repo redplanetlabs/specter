@@ -129,6 +129,13 @@
   (all-transform [structure next-fn]
     (non-transient-map-all-transform structure next-fn (empty structure)))
 
+  clojure.lang.IRecord
+  (all-transform [structure next-fn]
+    (reduce
+      (fn [res kv] (conj res (next-fn kv)))
+      structure
+      structure
+      ))
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
   (all-transform [structure next-fn]
