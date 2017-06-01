@@ -653,6 +653,19 @@
     (n/all-transform structure next-fn)))
 
 (defnav
+  ^{:doc "Same as ALL, except maintains metadata on the structure."}
+  ALL-WITH-META
+  []
+  (select* [this structure next-fn]
+    (n/all-select structure next-fn))
+  (transform* [this structure next-fn]
+    (let [m (meta structure)
+          res (n/all-transform structure next-fn)]
+      (if (some? res)
+        (with-meta res m)
+        ))))
+
+(defnav
   ^{:doc "Navigate to each value of the map. This is more efficient than
           navigating via [ALL LAST]"}
   MAP-VALS
@@ -826,15 +839,6 @@
           newmap (next-fn submap)]
       (merge (reduce dissoc structure m-keys)
              newmap))))
-
-(defnav
-  ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
-  codewalker
-  [afn]
-  (select* [this structure next-fn]
-    (i/walk-select afn next-fn structure))
-  (transform* [this structure next-fn]
-    (i/codewalk-until afn next-fn structure)))
 
 (defdynamicnav subselect
   "Navigates to a sequence that contains the results of (select ...),
@@ -1285,4 +1289,12 @@
   (recursive-path [apred] p
     (cond-path (pred apred) STAY
                coll? [ALL p]
+               )))
+
+(def
+  ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
+  codewalker
+  (recursive-path [apred] p
+    (cond-path (pred apred) STAY
+               coll? [ALL-WITH-META p]
                )))
