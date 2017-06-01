@@ -10,7 +10,8 @@
                defdynamicnav
                dynamicnav
                richnav
-               defrichnav]]
+               defrichnav
+               recursive-path]]
 
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
@@ -827,16 +828,6 @@
              newmap))))
 
 (defnav
-  ^{:doc "Using clojure.walk, navigate the data structure until reaching
-          a value for which `afn` returns truthy."}
-  walker
-  [afn]
-  (select* [this structure next-fn]
-    (i/walk-select afn next-fn structure))
-  (transform* [this structure next-fn]
-    (i/walk-until afn next-fn structure)))
-
-(defnav
   ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
   [afn]
@@ -1285,3 +1276,13 @@
    to implement post-order traversal."
   [& path]
   (multi-path path STAY))
+
+(def
+  ^{:doc "Navigate the data structure until reaching
+          a value for which `afn` returns truthy. Has
+          same semantics as clojure.walk."}
+  walker
+  (recursive-path [apred] p
+    (cond-path (pred apred) STAY
+               coll? [ALL p]
+               )))

@@ -129,7 +129,7 @@
   (all-transform [structure next-fn]
     (non-transient-map-all-transform structure next-fn (empty structure)))
 
-  clojure.lang.IRecord
+  #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)
   (all-transform [structure next-fn]
     (reduce
       (fn [res kv] (conj res (next-fn kv)))
