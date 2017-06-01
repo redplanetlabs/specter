@@ -1422,6 +1422,7 @@
 
 (deftest string-navigation-test
   (is (= "ad" (setval (s/srange 1 3) "" "abcd")))
+  (is (= "abcxd" (setval [(s/srange 1 3) s/END] "x" "abcd")))
   (is (= "bc" (select-any (s/srange 1 3) "abcd")))
   (is (= "ab" (setval s/END "b" "a")))
   (is (= "ba" (setval s/BEGINNING "b" "a")))
