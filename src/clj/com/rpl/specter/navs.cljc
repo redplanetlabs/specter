@@ -60,6 +60,13 @@
 (defn- all-transform-list [structure next-fn]
   (doall (sequence (comp (map next-fn) (filter not-NONE?)) structure)))
 
+(defn- all-transform-record [structure next-fn]
+  (reduce
+    (fn [res kv] (conj res (next-fn kv)))
+    structure
+    structure
+    ))
+
 (extend-protocol AllTransformProtocol
   nil
   (all-transform [structure next-fn]
@@ -129,13 +136,10 @@
   (all-transform [structure next-fn]
     (non-transient-map-all-transform structure next-fn (empty structure)))
 
-  #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)
+  #?(:clj clojure.lang.IRecord)
+  #?(:clj
   (all-transform [structure next-fn]
-    (reduce
-      (fn [res kv] (conj res (next-fn kv)))
-      structure
-      structure
-      ))
+    (all-transform-record structure next-fn)))
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
   (all-transform [structure next-fn]
@@ -184,25 +188,28 @@
   #?(:cljs default)
   #?(:cljs
      (all-transform [structure next-fn]
-       (let [empty-structure (empty structure)]
-         (cond
-           (and (list? empty-structure) (not (queue? empty-structure)))
-           (all-transform-list structure next-fn)
+       (if (record? structure)
+         ;; this case is solely for cljs since extending to IRecord doesn't work for cljs
+         (all-transform-record structure next-fn)
+         (let [empty-structure (empty structure)]
+           (cond
+             (and (list? empty-structure) (not (queue? empty-structure)))
+             (all-transform-list structure next-fn)
 
-           (map? structure)
-           (reduce-kv
-             (fn [m k v]
-               (let [newkv (next-fn [k v])]
-                 (if (void-transformed-kv-pair? newkv)
-                  m
-                  (assoc m (nth newkv 0) (nth newkv 1)))))
-                  empty-structure
-                  structure)
+             (map? structure)
+             (reduce-kv
+               (fn [m k v]
+                 (let [newkv (next-fn [k v])]
+                   (if (void-transformed-kv-pair? newkv)
+                    m
+                    (assoc m (nth newkv 0) (nth newkv 1)))))
+                    empty-structure
+                    structure)
 
-           :else
-           (into empty-structure
-                 (comp (map next-fn) (filter not-NONE?))
-                 structure))))))
+             :else
+             (into empty-structure
+                   (comp (map next-fn) (filter not-NONE?))
+                   structure)))))))
 
 
 
