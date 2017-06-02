@@ -1286,15 +1286,15 @@
           a value for which `afn` returns truthy. Has
           same semantics as clojure.walk."}
   walker
-  (recursive-path [apred] p
-    (cond-path (pred apred) STAY
+  (recursive-path [afn] p
+    (cond-path (pred afn) STAY
                coll? [ALL p]
                )))
 
 (def
   ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
-  (recursive-path [apred] p
-    (cond-path (pred apred) STAY
+  (recursive-path [afn] p
+    (cond-path (pred afn) STAY
                coll? [ALL-WITH-META p]
                )))
