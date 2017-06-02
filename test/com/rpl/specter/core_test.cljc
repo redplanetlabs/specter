@@ -1548,6 +1548,19 @@
   (is (= {[2] 4} (let [a 1] (transform (s/keypath [(inc2 a)]) inc {[2] 3}))))
   )
 
+(defrecord FooW [a b])
+
+(deftest walker-test
+  (is (= [1 2 3 4 5 6] (select (s/walker number?) [{1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (is (= [{:b '(:c)} #{:d}] (setval (s/walker number?) s/NONE [{:q 3 10 :l 1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (is (= [{:q 4 11 :l 2 3 :b '(4 :c 5)} 6 #{7 :d}]
+         (transform (s/walker number?) inc [{:q 3 10 :l 1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (let [f (->FooW 1 2)]
+    (is (= [[:a 1] [:b 2]] (select (s/walker (complement record?)) f)))
+    (is (= (assoc f :a! 1 :b! 2) (setval [(s/walker (complement record?)) s/FIRST s/NAME s/END] "!" f)))
+    (is (= (assoc f :b 1 :c 2) (transform [(s/walker (complement record?)) s/FIRST] (fn [k] (if (= :a k) :b :c)) f)))
+    ))
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
