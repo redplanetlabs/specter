@@ -1,8 +1,8 @@
 (ns com.rpl.specter.benchmarks
   (:use [com.rpl.specter]
-        [com.rpl.specter.transients]
-        [com.rpl.specter.impl :only [benchmark]])
-  (:require [clojure.walk :as walk]))
+        [com.rpl.specter.transients])
+  (:require [clojure.walk :as walk]
+            [com.rpl.specter.impl :as i]))
 
 
 ;; run via `lein repl` with `(load-file "scripts/benchmarks.clj")`
@@ -83,7 +83,6 @@
     (-> data (get :a) (get :b) (get :c))
     (-> data :a :b :c)
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
-
 
 
 (let [data {:a {:b {:c 1}}}]
@@ -359,4 +358,16 @@
       data)
     (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
     (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
+    ))
+
+(defnav walker-old [afn]
+  (select* [this structure next-fn]
+    (i/walk-select afn next-fn structure))
+  (transform* [this structure next-fn]
+    (i/walk-until afn next-fn structure)))
+
+(let [data {:a [1 2 {:c '(3 4) :d {:e [1 2 3] 7 8 9 10}}]}]
+  (run-benchmark "walker vs. clojure.walk version" 150000
+    (transform (walker number?) inc data)
+    (transform (walker-old number?) inc data)
     ))
