@@ -5,6 +5,7 @@
 * Add `set-elem` navigator
 * Add `ALL-WITH-META` navigator
 * `walker` and `codewalker` can now be used with `NONE` to remove elements
+* Improve `walker` performance by 70% by replacing clojure.walk implementation with custom recursive path
 * Extend `ALL` to work on records (navigate to key/value pairs)
 * Workaround ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
 * For ALL transforms on maps, interpret transformed key/value pair of size < 2 as removal
