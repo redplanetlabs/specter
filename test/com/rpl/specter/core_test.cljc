@@ -1544,7 +1544,7 @@
 
 ;; this function necessary to trigger the bug from happening
 (defn inc2 [v] (inc v))
-(deftest dynamic-function-arg
+(deftest dynamic-function-arg-test
   (is (= {[2] 4} (let [a 1] (transform (s/keypath [(inc2 a)]) inc {[2] 3}))))
   )
 
