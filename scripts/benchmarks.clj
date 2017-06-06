@@ -151,8 +151,10 @@
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
     (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (into {} (map (fn [e] [(key e) (inc (val e))])) data)
     (map-vals-map-iterable data inc)
-    (map-vals-map-iterable-transient data inc)))
+    (map-vals-map-iterable-transient data inc)
+    ))
 
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
@@ -166,6 +168,7 @@
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
     (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (into {} (map (fn [e] [(key e) (inc (val e))])) data)
     (map-vals-map-iterable data inc)
     (map-vals-map-iterable-transient data inc)))
 
