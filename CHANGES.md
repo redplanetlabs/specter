@@ -8,7 +8,7 @@
 * Improve `walker` performance by 70% by replacing clojure.walk implementation with custom recursive path
 * Extend `ALL` to work on records (navigate to key/value pairs)
 * Add ability to declare a function for end index of `srange-dynamic` that takes in the result of the start index fn. Use `end-fn` macro to declare this function (takes in 2 args of [collection, start-index]). Functions defined with normal mechanisms (e.g. `fn`) will still only take in the collection as an argument.
-* Workaround ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
+* Workaround for ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
 * For ALL transforms on maps, interpret transformed key/value pair of size < 2 as removal
 * Bug fix: Fix incorrect inline compilation when a dynamic function invocation is nested in a data structure within a parameter to a navigator builder
 
