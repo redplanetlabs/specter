@@ -10,7 +10,7 @@
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
-                      defdynamicnav traverse-all satisfies-protpath?]]))
+                      defdynamicnav traverse-all satisfies-protpath? end-fn]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -21,7 +21,7 @@
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
-                    defdynamicnav traverse-all satisfies-protpath?]]))
+                    defdynamicnav traverse-all satisfies-protpath? end-fn]]))
 
 
 
@@ -1560,6 +1560,22 @@
     (is (= (assoc f :a! 1 :b! 2) (setval [(s/walker (complement record?)) s/FIRST s/NAME s/END] "!" f)))
     (is (= (assoc f :b 1 :c 2) (transform [(s/walker (complement record?)) s/FIRST] (fn [k] (if (= :a k) :b :c)) f)))
     ))
+
+(def MIDDLE
+  (s/comp-paths
+    (s/srange-dynamic
+      (fn [aseq] (long (/ (count aseq) 2)))
+      (end-fn [aseq s] (if (empty? aseq) 0 (inc s))))
+    s/FIRST
+    ))
+
+(deftest srange-dynamic-test
+  (is (= 2 (select-any MIDDLE [1 2 3])))
+  (is (identical? s/NONE (select-any MIDDLE [])))
+  (is (= 1 (select-any MIDDLE [1])))
+  (is (= 2 (select-any MIDDLE [1 2])))
+  (is (= [1 3 3] (transform MIDDLE inc [1 2 3])))
+  )
 
 #?(:clj
   (do

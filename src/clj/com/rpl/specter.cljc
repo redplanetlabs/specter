@@ -452,7 +452,12 @@
              embed (vec (for [[t p] extensions] [t `(quote ~p)]))]
          `(extend-protocolpath*
            ~(protpath-sym protpath)
-           ~embed)))))
+           ~embed)))
+
+    (defmacro end-fn [& args]
+      `(n/->SrangeEndFunction (fn ~@args)))
+
+    ))
 
 
 
@@ -710,9 +715,11 @@
   srange-dynamic
   [start-fn end-fn]
   (select* [this structure next-fn]
-    (n/srange-select structure (start-fn structure) (end-fn structure) next-fn))
+    (let [s (start-fn structure)]
+      (n/srange-select structure s (n/invoke-end-fn end-fn structure s) next-fn)))
   (transform* [this structure next-fn]
-    (n/srange-transform structure (start-fn structure) (end-fn structure) next-fn)))
+    (let [s (start-fn structure)]
+      (n/srange-transform structure s (n/invoke-end-fn end-fn structure s) next-fn))))
 
 
 (defnav

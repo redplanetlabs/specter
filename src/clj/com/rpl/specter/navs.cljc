@@ -659,3 +659,12 @@
              []
              [v])
            ))))))
+
+(defrecord SrangeEndFunction [end-fn])
+
+;; done this way to maintain backwards compatibility
+(defn invoke-end-fn [end-fn structure start]
+  (if (instance? SrangeEndFunction end-fn)
+    ((:end-fn end-fn) structure start)
+    (end-fn structure)
+    ))
