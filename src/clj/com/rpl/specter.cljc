@@ -710,16 +710,17 @@
   (n/PosNavigator n/get-first n/update-first))
 
 (defnav
-  ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
-          to select when navigating. Each function takes in the structure as input."}
+  ^{:doc "Uses start-index-fn and end-index-fn to determine the bounds of the subsequence
+          to select when navigating. `start-index-fn` takes in the structure as input. `end-index-fn`
+          can be one of two forms. If a regular function (e.g. defined with `fn`), it takes in only the structure as input. If a function defined using special `end-fn` macro, it takes in the structure and the result of `start-index-fn`."}
   srange-dynamic
-  [start-fn end-fn]
+  [start-index-fn end-index-fn]
   (select* [this structure next-fn]
-    (let [s (start-fn structure)]
-      (n/srange-select structure s (n/invoke-end-fn end-fn structure s) next-fn)))
+    (let [s (start-index-fn structure)]
+      (n/srange-select structure s (n/invoke-end-fn end-index-fn structure s) next-fn)))
   (transform* [this structure next-fn]
-    (let [s (start-fn structure)]
-      (n/srange-transform structure s (n/invoke-end-fn end-fn structure s) next-fn))))
+    (let [s (start-index-fn structure)]
+      (n/srange-transform structure s (n/invoke-end-fn end-index-fn structure s) next-fn))))
 
 
 (defnav
