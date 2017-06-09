@@ -292,6 +292,15 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 ;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
 ```
 
+# ClojureScript
+
+Specter supports ClojureScript! However, some of the differences between Clojure and ClojureScript affect how you use Specter in ClojureScript, in particular with the namespace declarations. In Clojure, you might `(use 'com.rpl.specter)` or say `(require [com.rpl.specter :refer :all])` in your namespace declaration. But in ClojureScript, these options [aren't allowed](https://groups.google.com/d/msg/clojurescript/SzYK08Oduxo/MxLUjg50gQwJ). Instead, consider using one of these options:
+
+```clojure
+(:require [com.rpl.specter :as s])
+(:require [com.rpl.specter :as s :refer-macros [select transform]]) ;; add in the Specter macros that you need
+```
+
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
 - Make it possible to parallelize selects/transforms
