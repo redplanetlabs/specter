@@ -294,7 +294,7 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 
 # ClojureScript
 
-Specter supports ClojureScript! However, some of the differences between Clojure and ClojureScript affect how you use Specter in ClojureScript, in particular with the namespace declarations. In Clojure, you might `(use 'com.rpl.specter)` or say `(require [com.rpl.specter :refer :all])` in your namespace declaration. But in ClojureScript, these options [aren't allowed](https://groups.google.com/d/msg/clojurescript/SzYK08Oduxo/MxLUjg50gQwJ). Instead, consider using one of these options:
+Specter supports ClojureScript! However, some of the differences between Clojure and ClojureScript affect how you use Specter in ClojureScript, in particular with the namespace declarations. In Clojure, you might `(use 'com.rpl.specter)` or say `(:require [com.rpl.specter :refer :all])` in your namespace declaration. But in ClojureScript, these options [aren't allowed](https://groups.google.com/d/msg/clojurescript/SzYK08Oduxo/MxLUjg50gQwJ). Instead, consider using one of these options:
 
 ```clojure
 (:require [com.rpl.specter :as s])
