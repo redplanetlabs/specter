@@ -857,7 +857,9 @@
   \"transform\".
 
   If transformed sequence is smaller than input sequence, missing entries
-  will be filled in with NONE, triggering removal if supported by that navigator."
+  will be filled in with NONE, triggering removal if supported by that navigator.
+
+  Value collection (e.g. collect, collect-one) may not be used in the subpath."
   [& path]
   (late-bound-nav [late (late-path path)]
     (select* [this structure next-fn]
