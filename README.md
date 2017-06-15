@@ -80,7 +80,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 # Learn Specter
 
-- Introductory blog post: [Functional-navigational programming in Clojure(Script) with Specter](http://nathanmarz.com/blog/functional-navigational-programming-in-clojurescript-with-sp.html)
+- Introductory blog post: [Clojure's missing piece](http://nathanmarz.com/blog/clojures-missing-piece.html)
 - Presentation about Specter: [Specter: Powerful and Simple Data Structure Manipulation](https://www.youtube.com/watch?v=VTCy_DkAJGk)
   - Note that this presentation was given before Specter's inline compilation/caching system was developed. You no longer need to do anything special to get near-optimal performance.
 - List of navigators with examples: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
@@ -90,8 +90,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 
 Specter's API is contained in these files:
 
-- [macros.clj](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/macros.clj): This contains the core `select/transform/etc.` operations as well as macros for defining new navigators.
-- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and functional versions of `select/transform/etc.`
+- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and the definition of the core operations.
 - [transients.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transients.cljc): This contains navigators for transient collections.
 - [zipper.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljc): This integrates zipper-based navigation into Specter.
 
@@ -193,7 +192,7 @@ user> (transform [(srange 4 11) (filterer even?)]
 Append [:c :d] to every subsequence that has at least two even numbers:
 ```clojure
 user> (setval [ALL
-               (selected? (filterer even?) (view count) #(>= % 2))
+               (selected? (filterer even?) (view count) (pred>= 2))
                END]
               [:c :d]
               [[1 2 3 4 5 6] [7 0 -1] [8 8] []])
@@ -291,6 +290,15 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
   [1 2 [3 [[4]] 5] [6 [7 8] 9 [[10]]]]
   )
 ;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
+```
+
+# ClojureScript
+
+Specter supports ClojureScript! However, some of the differences between Clojure and ClojureScript affect how you use Specter in ClojureScript, in particular with the namespace declarations. In Clojure, you might `(use 'com.rpl.specter)` or say `(:require [com.rpl.specter :refer :all])` in your namespace declaration. But in ClojureScript, these options [aren't allowed](https://groups.google.com/d/msg/clojurescript/SzYK08Oduxo/MxLUjg50gQwJ). Instead, consider using one of these options:
+
+```clojure
+(:require [com.rpl.specter :as s])
+(:require [com.rpl.specter :as s :refer-macros [select transform]]) ;; add in the Specter macros that you need
 ```
 
 # Future work

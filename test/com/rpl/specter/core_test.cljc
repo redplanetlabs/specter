@@ -1,7 +1,7 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
             [cljs.test :refer [is deftest]]
-            [cljs.test.check.cljs-test :refer [defspec]]
+            [clojure.test.check.clojure-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter.test-helpers :refer [ic-test]]
             [com.rpl.specter
@@ -10,7 +10,7 @@
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
-                      defdynamicnav traverse-all]]))
+                      defdynamicnav traverse-all satisfies-protpath? end-fn]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -21,15 +21,15 @@
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
-                    defdynamicnav traverse-all]]))
+                    defdynamicnav traverse-all satisfies-protpath? end-fn]]))
 
 
 
   (:require #?(:clj [clojure.test.check.generators :as gen])
             #?(:clj [clojure.test.check.properties :as prop])
-            #?(:cljs [cljs.test.check :as tc])
-            #?(:cljs [cljs.test.check.generators :as gen])
-            #?(:cljs [cljs.test.check.properties :as prop :include-macros true])
+            #?(:cljs [clojure.test.check :as tc])
+            #?(:cljs [clojure.test.check.generators :as gen])
+            #?(:cljs [clojure.test.check.properties :as prop :include-macros true])
             [com.rpl.specter :as s]
             [com.rpl.specter.transients :as t]
             [clojure.set :as set]))
@@ -1422,6 +1422,7 @@
 
 (deftest string-navigation-test
   (is (= "ad" (setval (s/srange 1 3) "" "abcd")))
+  (is (= "abcxd" (setval [(s/srange 1 3) s/END] "x" "abcd")))
   (is (= "bc" (select-any (s/srange 1 3) "abcd")))
   (is (= "ab" (setval s/END "b" "a")))
   (is (= "ba" (setval s/BEGINNING "b" "a")))
@@ -1507,3 +1508,81 @@
   (is (= "b" (setval s/FIRST s/NONE "ab")))
   (is (= "a" (setval s/LAST s/NONE "ab")))
   )
+
+(deftest nested-dynamic-arg-test
+  (let [foo (fn [v] (multi-transform (s/terminal-val [v]) nil))]
+    (is (= [1] (foo 1)))
+    (is (= [10] (foo 10)))
+    ))
+
+(deftest filterer-remove-test
+  (is (= [1 :a 3 5] (setval (s/filterer even?) [:a] [1 2 3 4 5])))
+  )
+
+(deftest helper-preds-test
+  (let [data [1 2 2 3 4 0]]
+    (is (= [2 2] (select [s/ALL (s/pred= 2)] data)))
+    (is (= [1 2 2 0] (select [s/ALL (s/pred< 3)] data)))
+    (is (= [1 2 2 3 0] (select [s/ALL (s/pred<= 3)] data)))
+    (is (= [4] (select [s/ALL (s/pred> 3)] data)))
+    (is (= [3 4] (select [s/ALL (s/pred>= 3)] data)))
+    ))
+
+(deftest map-key-test
+  (is (= {:c 3} (setval (s/map-key :a) :b {:c 3})))
+  (is (= {:b 2} (setval (s/map-key :a) :b {:a 2})))
+  (is (= {:b 2} (setval (s/map-key :a) :b {:a 2 :b 1})))
+  (is (= {:b 2} (setval (s/map-key :a) s/NONE {:a 1 :b 2})))
+  )
+
+(deftest set-elem-test
+  (is (= #{:b :d} (setval (s/set-elem :a) :x #{:b :d})))
+  (is (= #{:x :a} (setval (s/set-elem :b) :x #{:b :a})))
+  (is (= #{:a} (setval (s/set-elem :b) :a #{:b :a})))
+  (is (= #{:b} (setval (s/set-elem :a) s/NONE #{:a :b})))
+  )
+
+;; this function necessary to trigger the bug from happening
+(defn inc2 [v] (inc v))
+(deftest dynamic-function-arg-test
+  (is (= {[2] 4} (let [a 1] (transform (s/keypath [(inc2 a)]) inc {[2] 3}))))
+  )
+
+(defrecord FooW [a b])
+
+(deftest walker-test
+  (is (= [1 2 3 4 5 6] (select (s/walker number?) [{1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (is (= [{:b '(:c)} #{:d}] (setval (s/walker number?) s/NONE [{:q 3 10 :l 1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (is (= [{:q 4 11 :l 2 3 :b '(4 :c 5)} 6 #{7 :d}]
+         (transform (s/walker number?) inc [{:q 3 10 :l 1 2 :b '(3 :c 4)} 5 #{6 :d}])))
+  (let [f (->FooW 1 2)]
+    (is (= [[:a 1] [:b 2]] (select (s/walker (complement record?)) f)))
+    (is (= (assoc f :a! 1 :b! 2) (setval [(s/walker (complement record?)) s/FIRST s/NAME s/END] "!" f)))
+    (is (= (assoc f :b 1 :c 2) (transform [(s/walker (complement record?)) s/FIRST] (fn [k] (if (= :a k) :b :c)) f)))
+    ))
+
+(def MIDDLE
+  (s/comp-paths
+    (s/srange-dynamic
+      (fn [aseq] (long (/ (count aseq) 2)))
+      (end-fn [aseq s] (if (empty? aseq) 0 (inc s))))
+    s/FIRST
+    ))
+
+(deftest srange-dynamic-test
+  (is (= 2 (select-any MIDDLE [1 2 3])))
+  (is (identical? s/NONE (select-any MIDDLE [])))
+  (is (= 1 (select-any MIDDLE [1])))
+  (is (= 2 (select-any MIDDLE [1 2])))
+  (is (= [1 3 3] (transform MIDDLE inc [1 2 3])))
+  )
+
+#?(:clj
+  (do
+    (defprotocolpath FooPP)
+    (extend-protocolpath FooPP String s/STAY)
+
+    (deftest satisfies-protpath-test
+      (is (satisfies-protpath? FooPP "a"))
+      (is (not (satisfies-protpath? FooPP 1)))
+      )))

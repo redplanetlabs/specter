@@ -1,8 +1,8 @@
 (ns com.rpl.specter.benchmarks
   (:use [com.rpl.specter]
-        [com.rpl.specter.transients]
-        [com.rpl.specter.impl :only [benchmark]])
-  (:require [clojure.walk :as walk]))
+        [com.rpl.specter.transients])
+  (:require [clojure.walk :as walk]
+            [com.rpl.specter.impl :as i]))
 
 
 ;; run via `lein repl` with `(load-file "scripts/benchmarks.clj")`
@@ -55,7 +55,7 @@
        (println "\n********************************\n"))))
 
 (defn specter-dynamic-nested-get [data a b c]
-  (select-any [(keypath a) (keypath b) (keypath c)] data))
+  (select-any (keypath a b c) data))
 
 
 (defn get-k [k] (fn [m next] (next (get m k))))
@@ -83,7 +83,6 @@
     (-> data (get :a) (get :b) (get :c))
     (-> data :a :b :c)
     (select-any [(keypath :a) (keypath :b) (keypath :c)] data)))
-
 
 
 (let [data {:a {:b {:c 1}}}]
@@ -135,6 +134,13 @@
           ret)))))
 
 
+(let [data '(1 2 3 4 5)]
+  (run-benchmark "transform values of a list" 500000
+    (transform ALL inc data)
+    (doall (sequence (map inc) data))
+    (reverse (into '() (map inc) data))
+    ))
+
 (let [data {:a 1 :b 2 :c 3 :d 4}]
   (run-benchmark "transform values of a small map" 500000
     (into {} (for [[k v] data] [k (inc v)]))
@@ -145,8 +151,10 @@
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
     (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (into {} (map (fn [e] [(key e) (inc (val e))])) data)
     (map-vals-map-iterable data inc)
-    (map-vals-map-iterable-transient data inc)))
+    (map-vals-map-iterable-transient data inc)
+    ))
 
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
@@ -160,6 +168,7 @@
     (transform MAP-VALS inc data)
     (zipmap (keys data) (map inc (vals data)))
     (into {} (map (fn [e] [(key e) (inc (val e))]) data))
+    (into {} (map (fn [e] [(key e) (inc (val e))])) data)
     (map-vals-map-iterable data inc)
     (map-vals-map-iterable-transient data inc)))
 
@@ -352,4 +361,16 @@
       data)
     (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
     (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
+    ))
+
+(defnav walker-old [afn]
+  (select* [this structure next-fn]
+    (i/walk-select afn next-fn structure))
+  (transform* [this structure next-fn]
+    (i/walk-until afn next-fn structure)))
+
+(let [data {:a [1 2 {:c '(3 4) :d {:e [1 2 3] 7 8 9 10}}]}]
+  (run-benchmark "walker vs. clojure.walk version" 150000
+    (transform (walker number?) inc data)
+    (transform (walker-old number?) inc data)
     ))

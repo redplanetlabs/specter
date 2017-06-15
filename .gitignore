@@ -9,4 +9,5 @@ pom.xml.asc
 .lein-repl-history
 .lein-plugins/
 .lein-failures
+.cljs_node_repl
 out/

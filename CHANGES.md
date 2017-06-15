@@ -1,4 +1,30 @@
-## 0.13.3-SNAPSHOT
+## 1.0.3-SNAPSHOT
+
+## 1.0.2
+
+* Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
+* Add `map-key` navigator
+* Add `set-elem` navigator
+* Add `ALL-WITH-META` navigator
+* `walker` and `codewalker` can now be used with `NONE` to remove elements
+* Improve `walker` performance by 70% by replacing clojure.walk implementation with custom recursive path
+* Extend `ALL` to work on records (navigate to key/value pairs)
+* Add ability to declare a function for end index of `srange-dynamic` that takes in the result of the start index fn. Use `end-fn` macro to declare this function (takes in 2 args of [collection, start-index]). Functions defined with normal mechanisms (e.g. `fn`) will still only take in the collection as an argument.
+* Workaround for ClojureScript bug that emits warnings for vars named the same as a private var in cljs.core (in this case `NONE`, added as private var to cljs.core with 1.9.562)
+* For ALL transforms on maps, interpret transformed key/value pair of size < 2 as removal
+* Bug fix: Fix incorrect inline compilation when a dynamic function invocation is nested in a data structure within a parameter to a navigator builder
+
+## 1.0.1
+
+* `subselect`/`filterer` can remove entries in source by transforming to a smaller sequence
+* Add `satisfies-protpath?`
+* Inline cache vars are marked private so as not to interfere with tooling
+* Improve performance of `ALL` transform on lists by 20%
+* Bug fix: Using `pred` no longer inserts unnecessary `coerce-nav` call at callsite
+* Bug fix: Dynamic navs in argument position to another nav now properly expanded and compiled
+* Bug fix: Dynamic parameters nested inside data structures as arguments are now compiled correctly by inline compiler
+
+## 1.0.0
 
 * Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `nthpath`, `ALL`, `MAP-VALS`, `FIRST`, and `LAST`
 * Add `nthpath` navigator

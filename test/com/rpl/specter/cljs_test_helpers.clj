@@ -6,8 +6,8 @@
         vars (vec (map first parts))
         genned (reduce
                 (fn [curr [v code]]
-                  `(cljs.test.check.generators/bind ~code (fn [~v] ~curr)))
-                `(cljs.test.check.generators/return ~vars)
+                  `(clojure.test.check.generators/bind ~code (fn [~v] ~curr)))
+                `(clojure.test.check.generators/return ~vars)
                 (reverse parts))]
-    `(cljs.test.check.properties/for-all [~vars ~genned]
+    `(clojure.test.check.properties/for-all [~vars ~genned]
                    ~@body)))

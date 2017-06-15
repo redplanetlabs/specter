@@ -8,7 +8,6 @@
   (:use #?(:clj [com.rpl.specter.macros :only [defnav defrichnav]])
         #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
-            [clojure.walk :as walk]
             #?(:clj [clojure.core.reducers :as r])))
 
 
@@ -21,27 +20,6 @@
 (defn selected?*
   [compiled-path vals structure]
   (not (not-selected?* compiled-path vals structure)))
-
-(defn walk-select [pred continue-fn structure]
-  (let [ret (i/mutable-cell i/NONE)
-        walker (fn this [structure]
-                 (if (pred structure)
-                   (let [r (continue-fn structure)]
-                     (if-not (identical? r i/NONE)
-                       (i/set-cell! ret r))
-                     r)
-
-                   (walk/walk this identity structure)))]
-
-    (walker structure)
-    (i/get-cell ret)))
-
-
-(defn key-select [akey structure next-fn]
-  (next-fn (get structure akey)))
-
-(defn key-transform [akey structure next-fn]
-  (assoc structure akey (next-fn (get structure akey))))
 
 
 (defn all-select [structure next-fn]
@@ -61,11 +39,14 @@
 (defprotocol AllTransformProtocol
   (all-transform [structure next-fn]))
 
+(defn void-transformed-kv-pair? [newkv]
+  (or (identical? newkv i/NONE) (< (count newkv) 2)))
+
 (defn- non-transient-map-all-transform [structure next-fn empty-map]
   (reduce-kv
     (fn [m k v]
       (let [newkv (next-fn [k v])]
-        (if (identical? newkv i/NONE)
+        (if (void-transformed-kv-pair? newkv)
           m
           (assoc m (nth newkv 0) (nth newkv 1)))))
 
@@ -77,12 +58,14 @@
 
 
 (defn- all-transform-list [structure next-fn]
-  ;; this is done to maintain order, otherwise lists get reversed
-  (->> structure
-       (into '()
-             (comp (map next-fn) (filter not-NONE?)))
-       reverse
-       ))
+  (doall (sequence (comp (map next-fn) (filter not-NONE?)) structure)))
+
+(defn- all-transform-record [structure next-fn]
+  (reduce
+    (fn [res kv] (conj res (next-fn kv)))
+    structure
+    structure
+    ))
 
 (extend-protocol AllTransformProtocol
   nil
@@ -127,7 +110,7 @@
              (let [k (.next k-it)
                    v (.next v-it)
                    newkv (next-fn [k v])]
-               (if (identical? newkv i/NONE)
+               (if (void-transformed-kv-pair? newkv)
                 (do
                   (i/update-cell! none-cell inc)
                   (recur (+ i 2) j))
@@ -153,6 +136,10 @@
   (all-transform [structure next-fn]
     (non-transient-map-all-transform structure next-fn (empty structure)))
 
+  #?(:clj clojure.lang.IRecord)
+  #?(:clj
+  (all-transform [structure next-fn]
+    (all-transform-record structure next-fn)))
 
   #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
   (all-transform [structure next-fn]
@@ -160,7 +147,7 @@
       (reduce-kv
         (fn [m k v]
           (let [newkv (next-fn [k v])]
-            (if (identical? newkv i/NONE)
+            (if (void-transformed-kv-pair? newkv)
               m
               (assoc! m (nth newkv 0) (nth newkv 1)))))
 
@@ -183,7 +170,7 @@
                (reduce-kv
                  (fn [m k v]
                    (let [newkv (next-fn [k v])]
-                     (if (identical? newkv i/NONE)
+                     (if (void-transformed-kv-pair? newkv)
                       m
                       (assoc m (nth newkv 0) (nth newkv 1)))))
 
@@ -201,12 +188,28 @@
   #?(:cljs default)
   #?(:cljs
      (all-transform [structure next-fn]
-       (let [empty-structure (empty structure)]
-         (if (and (list? empty-structure) (not (queue? empty-structure)))
-           (all-transform-list structure next-fn)
-           (into empty-structure
-                 (comp (map next-fn) (filter not-NONE?))
-                 structure))))))
+       (if (record? structure)
+         ;; this case is solely for cljs since extending to IRecord doesn't work for cljs
+         (all-transform-record structure next-fn)
+         (let [empty-structure (empty structure)]
+           (cond
+             (and (list? empty-structure) (not (queue? empty-structure)))
+             (all-transform-list structure next-fn)
+
+             (map? structure)
+             (reduce-kv
+               (fn [m k v]
+                 (let [newkv (next-fn [k v])]
+                   (if (void-transformed-kv-pair? newkv)
+                    m
+                    (assoc m (nth newkv 0) (nth newkv 1)))))
+                    empty-structure
+                    structure)
+
+             :else
+             (into empty-structure
+                   (comp (map next-fn) (filter not-NONE?))
+                   structure)))))))
 
 
 
@@ -600,12 +603,6 @@
     (empty? s)))
 
 
-(defn walk-until [pred on-match-fn structure]
-  (if (pred structure)
-    (on-match-fn structure)
-    (walk/walk (partial walk-until pred on-match-fn) identity structure)))
-
-
 (defn- do-keypath-transform [vals structure key next-fn]
   (let [newv (next-fn vals (get structure key))]
     (if (identical? newv i/NONE)
@@ -662,3 +659,12 @@
              []
              [v])
            ))))))
+
+(defrecord SrangeEndFunction [end-fn])
+
+;; done this way to maintain backwards compatibility
+(defn invoke-end-fn [end-fn structure start]
+  (if (instance? SrangeEndFunction end-fn)
+    ((:end-fn end-fn) structure start)
+    (end-fn structure)
+    ))

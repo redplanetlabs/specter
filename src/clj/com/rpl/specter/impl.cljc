@@ -2,7 +2,10 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.util-macros
              :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]))
-
+  ;; workaround for cljs bug that emits warnings for vars named the same as a
+  ;; private var in cljs.core (in this case `NONE`, added as private var to
+  ;; cljs.core with 1.9.562)
+  #?(:cljs (:refer-clojure :exclude [NONE]))
   (:use [com.rpl.specter.protocols :only
           [select* transform* collect-val RichNavigator]]
         #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))
@@ -435,7 +438,7 @@
   [path])
 
 (defrecord DynamicFunction
-  [op params])
+  [op params code])
 
 (defn dynamic-param? [o]
   (contains? #{DynamicPath DynamicVal DynamicFunction} (type o)))
@@ -572,6 +575,25 @@
         (with-meta ret (meta structure))
         ret))))
 
+(defn walk-select [pred continue-fn structure]
+  (let [ret (mutable-cell NONE)
+        walker (fn this [structure]
+                 (if (pred structure)
+                   (let [r (continue-fn structure)]
+                     (if-not (identical? r NONE)
+                       (set-cell! ret r))
+                     r)
+
+                   (walk/walk this identity structure)))]
+
+    (walker structure)
+    (get-cell ret)))
+
+(defn walk-until [pred on-match-fn structure]
+  (if (pred structure)
+    (on-match-fn structure)
+    (walk/walk (partial walk-until pred on-match-fn) identity structure)))
+
 
 #?(:clj
    (do
@@ -645,20 +667,23 @@
   (-> o meta :direct-nav))
 
 (defn all-static? [params]
-  (every? (complement dynamic-param?) params))
+  (identical? NONE (walk-select dynamic-param? identity params)))
 
 (defn late-resolved-fn [afn]
   (fn [& args]
     (if (all-static? args)
       (apply afn args)
-      (->DynamicFunction afn args)
+      (->DynamicFunction afn args nil)
       )))
+
+(defn preserve-map [afn o]
+  (if (or (list? o) (seq? o))
+    (map afn o)
+    (into (empty o) (map afn o))))
 
 (defn- magic-precompilation* [o]
   (cond (sequential? o)
-        (if (or (list? o) (seq? o))
-          (map magic-precompilation* o)
-          (into (empty o) (map magic-precompilation* o)))
+        (preserve-map magic-precompilation* o)
 
         (instance? VarUse o)
         (if (dynamic-var? (:var o))
@@ -684,7 +709,7 @@
           (if (or (-> op meta :dynamicnav)
                   (all-static? (conj params op)))
             (magic-precompilation* (apply op params))
-            (->DynamicFunction op params)))
+            (->DynamicFunction op params (:code o))))
 
         :else
         ;; this handles dynamicval as well
@@ -694,22 +719,21 @@
   ([o] (static-combine o true))
   ([o nav-pos?]
    (cond (sequential? o)
-         (do
-           (if-not nav-pos?
-             ;; should never happen...
-             (throw-illegal "Cannot statically combine sequential when not in nav pos"))
+         (if nav-pos?
            (let [res (continuous-subseqs-transform*
                        rich-nav?
                        (doall (map static-combine (flatten o)))
                        (fn [s] [(comp-paths* s)]))]
              (if (= 1 (count res))
                (first res)
-               res)))
+               res))
+           (preserve-map #(static-combine % false) o))
 
          (instance? DynamicFunction o)
          (->DynamicFunction
           (static-combine (:op o) false)
-          (doall (map #(static-combine % false) (:params o))))
+          (doall (map #(static-combine % false) (:params o)))
+          (:code o))
 
          (instance? DynamicPath o)
          (->DynamicPath (static-combine (:path o)))
@@ -785,6 +809,10 @@
 
 (declare resolve-nav-code)
 
+(defn dynamic->code [o]
+  ;; works because both DynamicVal and DynamicFunction have :code field
+  (walk-until dynamic-param? :code o))
+
 (defn resolve-arg-code [o possible-params]
   (cond (instance? DynamicFunction o)
         (let [op (resolve-arg-code (:op o) possible-params)
@@ -800,7 +828,14 @@
         (resolve-nav-code o possible-params)
 
         :else
-        (static-val-code o)))
+        ;; handle dynamic params nested inside data structures
+        ;; e.g. (terminal-val [v])
+        (if (identical? NONE (walk-select dynamic-param? identity o))
+          (static-val-code o)
+          ;; done this way so it's compatible with cljs as well (since this dynamic val will be
+          ;; a possible param)
+          (resolve-arg-code (->DynamicVal (dynamic->code o)) possible-params)
+          )))
 
 (defn resolve-nav-code [o possible-params]
   (cond

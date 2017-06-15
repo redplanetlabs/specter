@@ -9,7 +9,8 @@
   :test-paths ["test", "target/test-classes"]
   :auto-clean false
   :dependencies [[riddley "0.1.12"]]
-  :plugins [[lein-codox "0.9.5"]]
+  :plugins [[lein-codox "0.9.5"]
+            [lein-doo "0.1.7"]]
   :codox {:source-paths ["target/classes" "src/clj"]
           :namespaces [com.rpl.specter
                        com.rpl.specter.zipper
@@ -20,8 +21,15 @@
              #".*"             "https://github.com/nathanmarz/specter/tree/{version}/src/clj/{classpath}#L{line}"}}
 
 
+  :cljsbuild {:builds [{:id "test-build"
+                        :source-paths ["src/clj" "target/classes" "test"]
+                        :compiler {:output-to "out/testable.js"
+                                   :main 'com.rpl.specter.cljs-test-runner
+                                   :target :nodejs
+                                   :optimizations :none}}]}
+
   :profiles {:dev {:dependencies
-                   [[org.clojure/test.check "0.7.0"]
+                   [[org.clojure/test.check "0.9.0"]
                     [org.clojure/clojure "1.8.0"]
                     [org.clojure/clojurescript "1.9.229"]]}
 

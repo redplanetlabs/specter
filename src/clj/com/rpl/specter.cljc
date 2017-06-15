@@ -10,10 +10,15 @@
                defdynamicnav
                dynamicnav
                richnav
-               defrichnav]]
+               defrichnav
+               recursive-path]]
 
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
+  ;; workaround for cljs bug that emits warnings for vars named the same as a
+  ;; private var in cljs.core (in this case `NONE`, added as private var to
+  ;; cljs.core with 1.9.562)
+  #?(:cljs (:refer-clojure :exclude [NONE]))
 
   (:use [com.rpl.specter.protocols :only [ImplicitNav RichNavigator]]
     #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
@@ -32,10 +37,15 @@
 (defn wrap-dynamic-nav [f]
   (fn [& args]
     (let [ret (apply f args)]
-      (if (and (sequential? ret) (static-path? ret))
-        (i/comp-paths* ret)
-        ret
-        ))))
+      (cond (and (sequential? ret) (static-path? ret))
+            (i/comp-paths* ret)
+
+            (and (sequential? ret) (= 1 (count ret)))
+            (first ret)
+
+            :else
+            ret
+            ))))
 
 #?(:clj
    (do
@@ -69,7 +79,7 @@
                 curr-params# [~@curr-params]]
             (if (every? (complement i/dynamic-param?) curr-params#)
               (apply builder# curr-params#)
-              (com.rpl.specter.impl/->DynamicFunction builder# curr-params#)))))
+              (com.rpl.specter.impl/->DynamicFunction builder# curr-params# nil)))))
 
      (defmacro late-bound-nav [bindings & impls]
        (late-bound-operation bindings `nav impls))
@@ -186,7 +196,7 @@
                   [e]
 
                   (sequential? e)
-                  (ic-possible-params e)))
+                  (concat (if (vector? e) [e]) (ic-possible-params e))))
 
 
           path)))
@@ -238,7 +248,7 @@
 
              cache-sym (vary-meta
                         (gensym "pathcache")
-                        merge {:cljs.analyzer/no-resolve true :no-doc true})
+                        merge {:cljs.analyzer/no-resolve true :no-doc true :private true})
 
              info-sym (gensym "info")
 
@@ -425,6 +435,9 @@
                   (let [inav# ~retrieve]
                     (i/exec-transform* inav# ~@rargs))))))))
 
+     (defmacro satisfies-protpath? [protpath o]
+       `(satisfies? ~(protpath-sym protpath) ~o))
+
      (defn extend-protocolpath* [protpath-prot extensions]
        (let [m (-> protpath-prot :sigs keys first)
              params (-> protpath-prot :sigs first last :arglists first)]
@@ -439,7 +452,12 @@
              embed (vec (for [[t p] extensions] [t `(quote ~p)]))]
          `(extend-protocolpath*
            ~(protpath-sym protpath)
-           ~embed)))))
+           ~embed)))
+
+    (defmacro end-fn [& args]
+      `(n/->SrangeEndFunction (fn ~@args)))
+
+    ))
 
 
 
@@ -640,6 +658,19 @@
     (n/all-transform structure next-fn)))
 
 (defnav
+  ^{:doc "Same as ALL, except maintains metadata on the structure."}
+  ALL-WITH-META
+  []
+  (select* [this structure next-fn]
+    (n/all-select structure next-fn))
+  (transform* [this structure next-fn]
+    (let [m (meta structure)
+          res (n/all-transform structure next-fn)]
+      (if (some? res)
+        (with-meta res m)
+        ))))
+
+(defnav
   ^{:doc "Navigate to each value of the map. This is more efficient than
           navigating via [ALL LAST]"}
   MAP-VALS
@@ -679,14 +710,17 @@
   (n/PosNavigator n/get-first n/update-first))
 
 (defnav
-  ^{:doc "Uses start-fn and end-fn to determine the bounds of the subsequence
-          to select when navigating. Each function takes in the structure as input."}
+  ^{:doc "Uses start-index-fn and end-index-fn to determine the bounds of the subsequence
+          to select when navigating. `start-index-fn` takes in the structure as input. `end-index-fn`
+          can be one of two forms. If a regular function (e.g. defined with `fn`), it takes in only the structure as input. If a function defined using special `end-fn` macro, it takes in the structure and the result of `start-index-fn`."}
   srange-dynamic
-  [start-fn end-fn]
+  [start-index-fn end-index-fn]
   (select* [this structure next-fn]
-    (n/srange-select structure (start-fn structure) (end-fn structure) next-fn))
+    (let [s (start-index-fn structure)]
+      (n/srange-select structure s (n/invoke-end-fn end-index-fn structure s) next-fn)))
   (transform* [this structure next-fn]
-    (n/srange-transform structure (start-fn structure) (end-fn structure) next-fn)))
+    (let [s (start-index-fn structure)]
+      (n/srange-transform structure s (n/invoke-end-fn end-index-fn structure s) next-fn))))
 
 
 (defnav
@@ -814,32 +848,18 @@
       (merge (reduce dissoc structure m-keys)
              newmap))))
 
-(defnav
-  ^{:doc "Using clojure.walk, navigate the data structure until reaching
-          a value for which `afn` returns truthy."}
-  walker
-  [afn]
-  (select* [this structure next-fn]
-    (n/walk-select afn next-fn structure))
-  (transform* [this structure next-fn]
-    (n/walk-until afn next-fn structure)))
-
-(defnav
-  ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
-  codewalker
-  [afn]
-  (select* [this structure next-fn]
-    (n/walk-select afn next-fn structure))
-  (transform* [this structure next-fn]
-    (i/codewalk-until afn next-fn structure)))
-
 (defdynamicnav subselect
   "Navigates to a sequence that contains the results of (select ...),
   but is a view to the original structure that can be transformed.
 
   Requires that the input navigators will walk the structure's
   children in the same order when executed on \"select\" and then
-  \"transform\"."
+  \"transform\".
+
+  If transformed sequence is smaller than input sequence, missing entries
+  will be filled in with NONE, triggering removal if supported by that navigator.
+
+  Value collection (e.g. collect, collect-one) may not be used in the subpath."
   [& path]
   (late-bound-nav [late (late-path path)]
     (select* [this structure next-fn]
@@ -849,10 +869,56 @@
             transformed (next-fn select-result)
             values-to-insert (i/mutable-cell transformed)]
         (compiled-transform late
-                            (fn [_] (let [next-val (first (i/get-cell values-to-insert))]
-                                      (i/update-cell! values-to-insert rest)
-                                      next-val))
+                            (fn [_] (let [vs (i/get-cell values-to-insert)]
+                                      (if vs
+                                        (do (i/update-cell! values-to-insert next)
+                                            (first vs))
+                                        NONE
+                                        )))
                             structure)))))
+
+(defrichnav
+  ^{:doc "Navigates to the given key in the map (not to the value). Navigates only if the
+          key currently exists in the map. Can transform to NONE to remove the key/value
+          pair from the map."}
+  map-key
+  [key]
+  (select* [this vals structure next-fn]
+    (if (contains? structure key)
+      (next-fn vals key)
+      NONE
+      ))
+  (transform* [this vals structure next-fn]
+    (if (contains? structure key)
+      (let [newkey (next-fn vals key)
+            dissoced (dissoc structure key)]
+        (if (identical? NONE newkey)
+          dissoced
+          (assoc dissoced newkey (get structure key))
+          ))
+      structure
+      )))
+
+(defrichnav
+  ^{:doc "Navigates to the given element in the set only if it exists in the set.
+          Can transform to NONE to remove the element from the set."}
+  set-elem
+  [elem]
+  (select* [this vals structure next-fn]
+    (if (contains? structure elem)
+      (next-fn vals elem)
+      NONE
+      ))
+  (transform* [this vals structure next-fn]
+    (if (contains? structure elem)
+      (let [newelem (next-fn vals elem)
+            removed (disj structure elem)]
+        (if (identical? NONE newelem)
+          removed
+          (conj removed newelem)
+          ))
+      structure
+      )))
 
 (def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,
              that element is removed from the map or vector."}
@@ -944,7 +1010,11 @@
 (defdynamicnav filterer
   "Navigates to a view of the current sequence that only contains elements that
   match the given path. An element matches the selector path if calling select
-  on that element with the path yields anything other than an empty sequence."
+  on that element with the path yields anything other than an empty sequence.
+
+  For transformation: `NONE` entries in the result sequence cause corresponding entries in
+  input to be removed. A result sequence smaller than the input sequence is equivalent to
+  padding the result sequence with `NONE` at the end until the same size as the input."
   [& path]
   (subselect ALL (selected? path)))
 
@@ -973,9 +1043,17 @@
 
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
-          late-bound parameterized version of using a function directly in a path."}
+          late-bound parameterized version of using a function directly in a path."
+    :direct-nav true}
   pred
   i/pred*)
+
+
+(defn ^:direct-nav pred= [v] (pred #(= % v)))
+(defn ^:direct-nav pred< [v] (pred #(< % v)))
+(defn ^:direct-nav pred> [v] (pred #(> % v)))
+(defn ^:direct-nav pred<= [v] (pred #(<= % v)))
+(defn ^:direct-nav pred>= [v] (pred #(>= % v)))
 
 (extend-type nil
   ImplicitNav
@@ -1212,3 +1290,21 @@
    to implement post-order traversal."
   [& path]
   (multi-path path STAY))
+
+(def
+  ^{:doc "Navigate the data structure until reaching
+          a value for which `afn` returns truthy. Has
+          same semantics as clojure.walk."}
+  walker
+  (recursive-path [afn] p
+    (cond-path (pred afn) STAY
+               coll? [ALL p]
+               )))
+
+(def
+  ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
+  codewalker
+  (recursive-path [afn] p
+    (cond-path (pred afn) STAY
+               coll? [ALL-WITH-META p]
+               )))
