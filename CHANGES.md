@@ -1,5 +1,7 @@
 ## 1.0.3-SNAPSHOT
 
+* Workaround for ClojureScript regression that causes warnings for record fields named "var" or other reserved named
+
 ## 1.0.2
 
 * Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
