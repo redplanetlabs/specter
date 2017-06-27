@@ -1,6 +1,6 @@
 ## 1.0.3-SNAPSHOT
 
-* Workaround for ClojureScript regression that causes warnings for record fields named "var" or other reserved named
+* Workaround for ClojureScript regression that causes warnings for record fields named "var" or other reserved names
 
 ## 1.0.2
 
