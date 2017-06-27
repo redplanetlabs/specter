@@ -421,8 +421,10 @@
 (defrecord LocalSym
   [val sym])
 
+;; needs to be named "avar" instead of "var" due to regression in cljs circa
+;; 6/26/2017. See https://github.com/nathanmarz/specter/issues/215
 (defrecord VarUse
-  [val var sym])
+  [val avar sym])
 
 (defrecord SpecialFormUse
   [val code])
@@ -686,14 +688,14 @@
         (preserve-map magic-precompilation* o)
 
         (instance? VarUse o)
-        (if (dynamic-var? (:var o))
+        (if (dynamic-var? (:avar o))
           (->DynamicVal (maybe-direct-nav
                          (:sym o)
-                         (or (-> o :var direct-nav?)
+                         (or (-> o :avar direct-nav?)
                              (-> o :sym direct-nav?))))
           (maybe-direct-nav
             (:val o)
-            (or (-> o :var direct-nav?)
+            (or (-> o :avar direct-nav?)
                 (-> o :sym direct-nav?)
                 (-> o :val direct-nav?))))
 

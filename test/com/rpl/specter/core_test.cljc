@@ -1577,6 +1577,16 @@
   (is (= [1 3 3] (transform MIDDLE inc [1 2 3])))
   )
 
+(def ^:dynamic *dvar* :a)
+
+(defn dvar-tester []
+  (select-any *dvar* {:a 1 :b 2}))
+
+(deftest dynamic-var-ic-test
+  (is (= 1 (dvar-tester)))
+  (is (= 2 (binding [*dvar* :b] (dvar-tester))))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
