@@ -970,7 +970,7 @@
       (let [newi (next-fn vals i)]
         (if (= newi i)
           structure
-          (let [v (select-any (nthpath i) structure)]
+          (let [v (nth structure i)]
             (if (vector? structure)
               (let [shifted (if (< newi i)
                               (loop [j (dec i)
