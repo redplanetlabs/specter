@@ -937,6 +937,60 @@
   (eachnav n/nthpath*))
 
 (defrichnav
+  ^{:doc "Navigates to the empty space between the index and the prior index. For select
+          navigates to NONE, and transforms to non-NONE insert at that position."}
+  before-index
+  [index]
+  (select* [this vals structure next-fn]
+    NONE)
+  (transform* [this vals structure next-fn]
+    (let [v (next-fn vals NONE)]
+      (if (identical? NONE v)
+        structure
+        ;; TODO: make a more efficient impl
+        (setval (srange index index) [v] structure)
+        ))))
+
+(defrichnav
+  ^{:doc "Navigates to the index of the sequence if within 0 and size. Transforms move element
+          at that index to the new index, shifting other elements in the sequence."}
+  index-nav
+  [i]
+  (select* [this vals structure next-fn]
+    (if (and (>= i 0) (< i (count structure)))
+      (next-fn vals i)
+      NONE
+      ))
+  (transform* [this vals structure next-fn]
+    (if (and (>= i 0) (< i (count structure)))
+      (let [newi (next-fn vals i)]
+        (if (= newi i)
+          structure
+          (let [v (select-any (nthpath i) structure)]
+            (if (vector? structure)
+              (let [shifted (if (< newi i)
+                              (loop [j (dec i)
+                                     s structure]
+                                (if (< j newi)
+                                  s
+                                  (recur (dec j) (assoc s (inc j) (nth s j)))
+                                  ))
+                              (loop [j (inc i)
+                                     s structure]
+                                (if (> j newi)
+                                  s
+                                  (recur (inc j) (assoc s (dec j) (nth s j)))
+                                  )))]
+                (assoc shifted newi v)
+                )
+                (->> structure
+                     (setval (nthpath i) NONE)
+                     (setval (before-index newi) v)
+                     )))))
+      structure
+      )))
+
+(defrichnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
   view
   [afn]

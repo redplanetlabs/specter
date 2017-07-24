@@ -1587,6 +1587,36 @@
   (is (= 2 (binding [*dvar* :b] (dvar-tester))))
   )
 
+(deftest before-index-test
+  (let [data [1 2 3]
+        datal '(1 2 3)]
+    (is (predand= vector? [:a 1 2 3] (setval (s/before-index 0) :a data)))
+    (is (predand= vector? [1 2 3] (setval (s/before-index 1) s/NONE data)))
+    (is (predand= vector? [1 :a 2 3] (setval (s/before-index 1) :a data)))
+    (is (predand= vector? [1 2 3 :a] (setval (s/before-index 3) :a data)))
+    (is (predand= list? '(:a 1 2 3) (setval (s/before-index 0) :a datal)))
+    (is (predand= list? '(1 :a 2 3) (setval (s/before-index 1) :a datal)))
+    (is (predand= list? '(1 2 3 :a) (setval (s/before-index 3) :a datal)))
+    ))
+
+(deftest index-nav-test
+  (let [data [1 2 3 4 5 6]
+        datal '(1 2 3 4 5 6)]
+    (is (predand= vector? [3 1 2 4 5 6] (setval (s/index-nav 2) 0 data)))
+    (is (predand= vector? [1 3 2 4 5 6] (setval (s/index-nav 2) 1 data)))
+    (is (predand= vector? [1 2 3 4 5 6] (setval (s/index-nav 2) 2 data)))
+    (is (predand= vector? [1 2 4 5 3 6] (setval (s/index-nav 2) 4 data)))
+    (is (predand= vector? [1 2 4 5 6 3] (setval (s/index-nav 2) 5 data)))
+    (is (predand= vector? [6 1 2 3 4 5] (setval (s/index-nav 5) 0 data)))
+
+    (is (predand= list? '(3 1 2 4 5 6) (setval (s/index-nav 2) 0 datal)))
+    (is (predand= list? '(1 3 2 4 5 6) (setval (s/index-nav 2) 1 datal)))
+    (is (predand= list? '(1 2 3 4 5 6) (setval (s/index-nav 2) 2 datal)))
+    (is (predand= list? '(1 2 4 5 3 6) (setval (s/index-nav 2) 4 datal)))
+    (is (predand= list? '(1 2 4 5 6 3) (setval (s/index-nav 2) 5 datal)))
+    (is (predand= list? '(6 1 2 3 4 5) (setval (s/index-nav 5) 0 datal)))
+    ))
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
