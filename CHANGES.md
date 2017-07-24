@@ -1,5 +1,7 @@
 ## 1.0.3-SNAPSHOT
 
+* Added `before-index` navigator for inserting a single element into a sequence.
+* Added `index-nav` navigator for moving an element in a sequence to a new index, shifting other elements in the process.
 * Workaround for ClojureScript regression that causes warnings for record fields named "var" or other reserved names
 
 ## 1.0.2
