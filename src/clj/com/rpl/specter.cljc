@@ -11,7 +11,11 @@
                dynamicnav
                richnav
                defrichnav
-               recursive-path]]
+               recursive-path
+               select
+               transform
+               setval
+               select-any]]
 
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
