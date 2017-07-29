@@ -1100,8 +1100,8 @@
       )))
 
 (def
-  ^{:doc "Keeps the element only if it matches the supplied predicate. This is the
-          late-bound parameterized version of using a function directly in a path."
+  ^{:doc "Keeps the element only if it matches the supplied predicate. Functions in paths
+          implicitly convert to this navigator."
     :direct-nav true}
   pred
   i/pred*)
@@ -1299,11 +1299,7 @@
    Tests the structure if selecting with cond-path returns anything.
    If so, it uses the following path for this portion of the navigation.
    Otherwise, it tries the next cond-path. If nothing matches, then the structure
-   is not selected.
-
-   The input paths may be parameterized, in which case the result of cond-path
-   will be parameterized in the order of which the parameterized navigators
-   were declared."
+   is not selected."
   [& conds]
   (let [pairs (reverse (partition 2 conds))]
     (reduce
