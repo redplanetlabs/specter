@@ -995,9 +995,9 @@
       )))
 
 (defnav
-  ^{:doc "Navigate to [index elem] pairs for each element in a sequence. Changing in index in transforms
+  ^{:doc "Navigate to [index elem] pairs for each element in a sequence. Changing index in transform
           has same effect as `index-nav`. Indices seen during transform take into account any shifting
-          resulting from prior sequence elements changing indices."}
+          from prior sequence elements changing indices."}
   INDEXED-VALS
   []
   (select* [this structure next-fn]
