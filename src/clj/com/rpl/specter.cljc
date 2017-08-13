@@ -1001,7 +1001,7 @@
   INDEXED-VALS
   []
   (select* [this structure next-fn]
-    ;; could be more efficient with a primitve mutable field
+    ;; could be more efficient with a primitive mutable field
     (let [i (i/mutable-cell -1)]
       (doseqres NONE [e structure]
         (i/update-cell! i inc)
