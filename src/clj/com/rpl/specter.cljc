@@ -1028,7 +1028,6 @@
            (->> s
                 (setval (nthpath curri) newe)
                 (setval (index-nav curri) newi)
-                i/spy
                 )))
        structure
        structure

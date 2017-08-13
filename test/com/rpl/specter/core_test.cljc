@@ -1617,6 +1617,15 @@
     (is (predand= list? '(6 1 2 3 4 5) (setval (s/index-nav 5) 0 datal)))
     ))
 
+(deftest indexed-vals-test
+  (let [data [:a :b :c :d :e]]
+    (is (= [[0 :a] [1 :b] [2 :c] [3 :d] [4 :e]] (select s/INDEXED-VALS data)))
+    (is (= [:e :d :c :b :a] (setval [s/INDEXED-VALS s/FIRST] 0 data)))
+    (is (= [:a :b :e :d :c] (setval [s/INDEXED-VALS s/FIRST] 2 data)))
+    (is (= [:b :a :d :c :e] (transform [s/INDEXED-VALS s/FIRST odd?] dec data)))
+    (is (= [:a :b :c :d :e] (transform [s/INDEXED-VALS s/FIRST odd?] inc data)))
+    ))
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
