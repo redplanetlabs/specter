@@ -994,6 +994,46 @@
       structure
       )))
 
+(defnav
+  ^{:doc "Navigate to [index elem] pairs for each element in a sequence. Changing in index in transforms
+          has same effect as `index-nav`. Indices seen during transform take into account any shifting
+          resulting from prior sequence elements changing indices."}
+  INDEXED-VALS
+  []
+  (select* [this structure next-fn]
+    ;; could be more efficient with a primitve mutable field
+    (let [i (i/mutable-cell -1)]
+      (doseqres NONE [e structure]
+        (i/update-cell! i inc)
+        (next-fn [(i/get-cell i) e])
+        )))
+  (transform* [this structure next-fn]
+    (let [i (i/mutable-cell 0)
+          indices (i/mutable-cell (-> structure count range vec))]
+      (reduce
+       (fn [s e]
+         (let [curri (nth (i/get-cell indices) (i/get-cell i))
+               [newi newe] (next-fn [curri e])]
+           (if (> newi curri)
+             (i/update-cell! indices
+               (fn [ii]
+                 (loop [j (inc curri)
+                        s ii]
+                   (let [news (update s j dec)]
+                     (if (< j newi)
+                       (recur (inc j) news)
+                       news
+                       ))))))
+           (i/update-cell! i inc)
+           (->> s
+                (setval (nthpath curri) newe)
+                (setval (index-nav curri) newi)
+                i/spy
+                )))
+       structure
+       structure
+       ))))
+
 (defrichnav
   ^{:doc "Navigates to result of running `afn` on the currently navigated value."}
   view
