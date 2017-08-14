@@ -1,4 +1,4 @@
-## 1.0.3-SNAPSHOT
+## 1.0.3
 
 * Added `before-index` navigator for inserting a single element into a sequence.
 * Added `index-nav` navigator for moving an element in a sequence to a new index, shifting other elements in the process.
