@@ -1,3 +1,7 @@
+## 1.0.4-SNAPSHOT
+
+* Bug fix: Fix `INDEXED-VALS` invalidly overwriting elements in some transforms involving multiple index changes
+
 ## 1.0.3
 
 * Added `before-index` navigator for inserting a single element into a sequence.

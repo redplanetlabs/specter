@@ -1624,6 +1624,8 @@
     (is (= [:a :b :e :d :c] (setval [s/INDEXED-VALS s/FIRST] 2 data)))
     (is (= [:b :a :d :c :e] (transform [s/INDEXED-VALS s/FIRST odd?] dec data)))
     (is (= [:a :b :c :d :e] (transform [s/INDEXED-VALS s/FIRST odd?] inc data)))
+    (is (= [0 2 2 4] (transform [s/INDEXED-VALS s/LAST odd?] inc [0 1 2 3])))
+    (is (= [0 1 2 3] (transform [s/INDEXED-VALS (s/collect-one s/LAST) s/FIRST] (fn [i _] i) [2 1 3 0])))
     ))
 
 #?(:clj

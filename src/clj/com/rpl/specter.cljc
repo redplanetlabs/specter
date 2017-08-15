@@ -1008,23 +1008,19 @@
         (next-fn [(i/get-cell i) e])
         )))
   (transform* [this structure next-fn]
-    (let [i (i/mutable-cell 0)
-          indices (i/mutable-cell (-> structure count range vec))]
+    (let [indices (i/mutable-cell (-> structure count range))]
       (reduce
        (fn [s e]
-         (let [curri (nth (i/get-cell indices) (i/get-cell i))
+         (let [curri (first (i/get-cell indices))
                [newi newe] (next-fn [curri e])]
-           (if (> newi curri)
-             (i/update-cell! indices
-               (fn [ii]
-                 (loop [j (inc curri)
-                        s ii]
-                   (let [news (update s j dec)]
-                     (if (< j newi)
-                       (recur (inc j) news)
-                       news
-                       ))))))
-           (i/update-cell! i inc)
+           (i/update-cell!
+             indices
+             (fn [ii]
+               (let [ii2 (next ii)]
+                 (if (> newi curri)
+                   (transform [ALL #(>= % (inc curri)) #(<= % newi)] dec ii2)
+                   ii2
+                   ))))
            (->> s
                 (setval (nthpath curri) newe)
                 (setval (index-nav curri) newi)
