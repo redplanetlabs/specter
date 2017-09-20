@@ -84,6 +84,7 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 - Presentation about Specter: [Specter: Powerful and Simple Data Structure Manipulation](https://www.youtube.com/watch?v=VTCy_DkAJGk)
   - Note that this presentation was given before Specter's inline compilation/caching system was developed. You no longer need to do anything special to get near-optimal performance.
 - List of navigators with examples: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
+- [This wiki page](https://github.com/nathanmarz/specter/wiki/Using-Specter-With-Zippers) provides a comprehensive overview of how to use Specter's zipper navigators. Zippers are a much slower navigation method but can perform certain tasks that are not possible with Specter's regular navigators. Note that zippers are rarely needed. 
 - Core operations and defining new navigators: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Macros) provides a more comprehensive overview than the API docs of the core select/transform/etc. operations and the operations for defining new navigators.
 - [API docs](http://nathanmarz.github.io/specter/)
 - Performance guide: [This post](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) provides an overview of how Specter achieves its performance.
