@@ -935,7 +935,7 @@
   must
   (eachnav n/must*))
 
-(def ^{:doc "Navigate to the specified indices one after another.If navigate to
+(def ^{:doc "Navigate to the specified indices one after another. If navigate to
             NONE, that element is removed from the sequence."}
   nthpath
   (eachnav n/nthpath*))
