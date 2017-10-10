@@ -1170,6 +1170,10 @@
   ImplicitNav
   (implicit-nav [this] (pred this)))
 
+(extend-type #?(:clj java.util.regex.Pattern :cljs RegExp)
+  ImplicitNav
+  (implicit-nav [this] (n/regex* this)))
+
 (defnav
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
           navigated at the structure."}
