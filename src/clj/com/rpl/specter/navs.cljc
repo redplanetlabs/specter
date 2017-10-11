@@ -622,12 +622,12 @@
     (do-keypath-transform vals structure key next-fn)
     ))
 
-(defrichnav ^{:doc "Navigates to the regex applied to a string, navigating to nil if it does not exist or nothing is found."}
+(defrichnav ^{:doc "Navigates to the lazy sequence of successive matches when a regex is applied to a string, navigating to nil if it does not exist or nothing is found."}
   ;;           Setting the value to NONE will remove it from the collection.}
   regex*
   [re]
   (select* [this vals structure next-fn]
-           (next-fn vals (re-find re structure)))
+           (next-fn vals (re-seq re structure)))
   #_(transform* [this vals structure next-fn]
                 (next-fn (clojure.string/replace structure re vals))))
 
