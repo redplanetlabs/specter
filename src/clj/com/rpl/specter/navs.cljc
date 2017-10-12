@@ -627,7 +627,8 @@
   regex*
   [re]
   (select* [this vals structure next-fn]
-           (next-fn vals (re-seq re structure)))
+           (doseqres NONE [s (re-seq re structure)]
+                     (next-fn vals s)))
   #_(transform* [this vals structure next-fn]
                 (next-fn (clojure.string/replace structure re vals))))
 
