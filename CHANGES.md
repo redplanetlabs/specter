@@ -1,4 +1,4 @@
-## 1.0.4-SNAPSHOT
+## 1.0.4
 
 * Add `indexed-vals` navigator, a variant of `INDEXED-VALS` that allows for a customized start index.
 * Bug fix: Fix `INDEXED-VALS` invalidly overwriting elements in some transforms involving multiple index changes
