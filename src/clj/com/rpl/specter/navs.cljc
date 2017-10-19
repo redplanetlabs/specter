@@ -478,6 +478,13 @@
       structure
       (updater structure next-fn))))
 
+(defnav regex* [re]
+  (select* [this structure next-fn]
+           (doseqres NONE [s (re-seq re structure)]
+                     (next-fn s)))
+  (transform* [this structure next-fn]
+              (clojure.string/replace structure re next-fn)))
+
 (defn- update-first-list [l afn]
   (let [newf (afn (first l))
         restl (rest l)]
@@ -622,12 +629,6 @@
     (do-keypath-transform vals structure key next-fn)
     ))
 
-(defnav regex* [re]
-  (select* [this structure next-fn]
-           (doseqres NONE [s (re-seq re structure)]
-                     (next-fn s)))
-  (transform* [this structure next-fn]
-              (clojure.string/replace structure re next-fn)))
 
 (defrichnav
   ^{:doc "Navigates to the key only if it exists in the map. Setting the value to NONE
