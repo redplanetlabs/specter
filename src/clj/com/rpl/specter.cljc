@@ -1170,7 +1170,7 @@
   ImplicitNav
   (implicit-nav [this] (pred this)))
 
-(extend-type #?(:clj java.util.regex.Pattern :cljs RegExp)
+(extend-type #?(:clj java.util.regex.Pattern :cljs js/RegExp)
   ImplicitNav
   (implicit-nav [this] (n/regex* this)))
 
