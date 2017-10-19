@@ -1068,6 +1068,13 @@
       (swap! structure next-fn)
       structure)))
 
+(defnav regex-nav [re]
+  (select* [this structure next-fn]
+           (doseqres NONE [s (re-seq re structure)]
+                     (next-fn s)))
+  (transform* [this structure next-fn]
+              (clojure.string/replace structure re next-fn)))
+
 (defdynamicnav selected?
   "Filters the current value based on whether a path finds anything.
   e.g. (selected? :vals ALL even?) keeps the current element only if an
@@ -1172,7 +1179,7 @@
 
 (extend-type #?(:clj java.util.regex.Pattern :cljs js/RegExp)
   ImplicitNav
-  (implicit-nav [this] (n/regex* this)))
+  (implicit-nav [this] (regex-nav this)))
 
 (defnav
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays
