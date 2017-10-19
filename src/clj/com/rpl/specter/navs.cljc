@@ -480,7 +480,7 @@
 
 (defnav regex* [re]
   (select* [this structure next-fn]
-           (doseqres NONE [s (re-seq re structure)]
+           (doseqres i/NONE [s (re-seq re structure)]
                      (next-fn s)))
   (transform* [this structure next-fn]
               (clojure.string/replace structure re next-fn)))
