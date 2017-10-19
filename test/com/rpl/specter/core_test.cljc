@@ -1439,8 +1439,13 @@
   (is (= (select [:a #"t"] {:a "test"}) ["t" "t"]))
   (is (= (transform #"t" clojure.string/capitalize "test") "TesT"))
   (is (= (transform [:a #"t"] clojure.string/capitalize {:a "test"}) {:a "TesT"}))
+  (is (= (transform #"\s+\w" clojure.string/triml "Hello      World!") "HelloWorld!"))
   (is (= (setval #"t" "z" "test") "zesz"))
-  (is (= (setval [:a #"t"] "z" {:a "test"}) {:a "zesz"})))
+  (is (= (setval [:a #"t"] "z" {:a "test"}) {:a "zesz"}))
+  (is (= (transform #"aa*" (fn [s] (-> s count str)) "aadt") "2dt"))
+  (is (= (transform #"[Aa]+" (fn [s] (apply str (take (count s) (repeat "@")))) "Amsterdam Aardvarks") "@msterd@m @@rdv@rks"))
+  (is (= (select [#"(\S+):\ (\d+)" (s/nthpath 2)] "Mary: 1st George: 2nd Arthur: 3rd") ["1" "2" "3"]))
+  (is (= (transform (s/subselect #"\d\w+") reverse "Mary: 1st George: 2nd Arthur: 3rd"))))
 
 (deftest single-value-none-navigators-test
   (is (predand= vector? [1 2 3] (setval s/AFTER-ELEM 3 [1 2])))
@@ -1467,10 +1472,10 @@
 
 (defspec map-keys-all-first-equivalence-transform
   (for-all+
-    [m (limit-size 10 (gen/map gen/int gen/keyword))]
-    (= (transform s/MAP-KEYS inc m)
-       (transform [s/ALL s/FIRST] inc m )
-       )))
+   [m (limit-size 10 (gen/map gen/int gen/keyword))]
+   (= (transform s/MAP-KEYS inc m)
+      (transform [s/ALL s/FIRST] inc m )
+      )))
 
 (defspec map-keys-all-first-equivalence-select
   (for-all+
