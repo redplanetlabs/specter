@@ -1434,6 +1434,14 @@
   (is (= "abq" (setval s/LAST "q" "abc")))
   )
 
+(deftest regex-navigation-test
+  (is (= (select #"t" "test") ["t" "t"]))
+  (is (= (select [:a #"t"] {:a "test"}) ["t" "t"]))
+  (is (= (transform #"t" clojure.string/capitalize "test") "TesT"))
+  (is (= (transform [:a #"t"] clojure.string/capitalize {:a "test"}) {:a "TesT"}))
+  (is (= (setval #"t" "z" "test") "zesz"))
+  (is (= (setval [:a #"t"] "z" {:a "test"}) {:a "zesz"})))
+
 (deftest single-value-none-navigators-test
   (is (predand= vector? [1 2 3] (setval s/AFTER-ELEM 3 [1 2])))
   (is (predand= list? '(1 2 3) (setval s/AFTER-ELEM 3 '(1 2))))
