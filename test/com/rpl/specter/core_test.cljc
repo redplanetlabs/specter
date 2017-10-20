@@ -1434,6 +1434,20 @@
   (is (= "abq" (setval s/LAST "q" "abc")))
   )
 
+(deftest regex-navigation-test
+  (is (= (select (s/regex-nav #"t") "test") ["t" "t"]))
+  (is (= (select [:a (s/regex-nav #"t")] {:a "test"}) ["t" "t"]))
+  (is (= (transform (s/regex-nav #"t") clojure.string/capitalize "test") "TesT"))
+  (is (= (transform [:a (s/regex-nav #"t")] clojure.string/capitalize {:a "test"}) {:a "TesT"}))
+  (is (= (transform (s/regex-nav #"\s+\w") clojure.string/triml "Hello      World!") "HelloWorld!"))
+  (is (= (setval (s/regex-nav #"t") "z" "test") "zesz"))
+  (is (= (setval [:a (s/regex-nav #"t")] "z" {:a "test"}) {:a "zesz"}))
+  (is (= (transform (s/regex-nav #"aa*") (fn [s] (-> s count str)) "aadt") "2dt"))
+  (is (= (transform (s/regex-nav #"[Aa]+") (fn [s] (apply str (take (count s) (repeat "@")))) "Amsterdam Aardvarks") "@msterd@m @@rdv@rks"))
+  (is (= (select [(s/regex-nav #"(\S+):\ (\d+)") (s/nthpath 2)] "Mary: 1st George: 2nd Arthur: 3rd") ["1" "2" "3"]))
+  (is (= (transform (s/subselect (s/regex-nav #"\d\w+")) reverse "Mary: 1st George: 2nd Arthur: 3rd") "Mary: 3rd George: 2nd Arthur: 1st"))
+  )
+
 (deftest single-value-none-navigators-test
   (is (predand= vector? [1 2 3] (setval s/AFTER-ELEM 3 [1 2])))
   (is (predand= list? '(1 2 3) (setval s/AFTER-ELEM 3 '(1 2))))
@@ -1459,10 +1473,10 @@
 
 (defspec map-keys-all-first-equivalence-transform
   (for-all+
-    [m (limit-size 10 (gen/map gen/int gen/keyword))]
-    (= (transform s/MAP-KEYS inc m)
-       (transform [s/ALL s/FIRST] inc m )
-       )))
+   [m (limit-size 10 (gen/map gen/int gen/keyword))]
+   (= (transform s/MAP-KEYS inc m)
+      (transform [s/ALL s/FIRST] inc m )
+      )))
 
 (defspec map-keys-all-first-equivalence-select
   (for-all+

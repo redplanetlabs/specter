@@ -478,6 +478,7 @@
       structure
       (updater structure next-fn))))
 
+
 (defn- update-first-list [l afn]
   (let [newf (afn (first l))
         restl (rest l)]
