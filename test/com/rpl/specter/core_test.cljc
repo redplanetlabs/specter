@@ -1445,7 +1445,7 @@
   (is (= (transform #"aa*" (fn [s] (-> s count str)) "aadt") "2dt"))
   (is (= (transform #"[Aa]+" (fn [s] (apply str (take (count s) (repeat "@")))) "Amsterdam Aardvarks") "@msterd@m @@rdv@rks"))
   (is (= (select [#"(\S+):\ (\d+)" (s/nthpath 2)] "Mary: 1st George: 2nd Arthur: 3rd") ["1" "2" "3"]))
-  (is (= (transform (s/subselect #"\d\w+") reverse "Mary: 1st George: 2nd Arthur: 3rd")))
+  (is (= (transform (s/subselect #"\d\w+") reverse "Mary: 1st George: 2nd Arthur: 3rd") "Mary: 3rd George: 2nd Arthur: 1st"))
   )
 
 (deftest single-value-none-navigators-test
