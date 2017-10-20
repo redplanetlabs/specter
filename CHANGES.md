@@ -1,6 +1,6 @@
 ## 1.0.5-SNAPSHOT
 
-* Add implicit navigator for regexes, which navigate to every match in a string and support replacement with a new substring.
+* Add `regex-nav` navigator for regexes, which navigate to every match in a string and support replacement with a new substring.
 
 ## 1.0.4
 
