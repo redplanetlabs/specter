@@ -1070,10 +1070,10 @@
 
 (defnav regex-nav [re]
   (select* [this structure next-fn]
-           (doseqres NONE [s (re-seq re structure)]
-                     (next-fn s)))
+    (doseqres NONE [s (re-seq re structure)]
+      (next-fn s)))
   (transform* [this structure next-fn]
-              (clojure.string/replace structure re next-fn)))
+    (clojure.string/replace structure re next-fn)))
 
 (defdynamicnav selected?
   "Filters the current value based on whether a path finds anything.
