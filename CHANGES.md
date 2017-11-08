@@ -1,6 +1,8 @@
 ## 1.0.5-SNAPSHOT
 
 * Add `regex-nav` navigator for regexes, which navigates to every match in a string and supports replacement with a new substring (thanks @mwfogleman)
+* Regexes implicitly convert to `regex-nav` in paths
+* Strings, numbers, booleans, characters, and symbols implicitly convert to `keypath` in paths
 
 ## 1.0.4
 

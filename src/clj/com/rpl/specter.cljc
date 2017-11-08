@@ -1169,6 +1169,26 @@
   ImplicitNav
   (implicit-nav [this] (n/keypath* this)))
 
+(extend-type #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)
+  ImplicitNav
+  (implicit-nav [this] (n/keypath* this)))
+
+(extend-type #?(:clj String :cljs string)
+  ImplicitNav
+  (implicit-nav [this] (n/keypath* this)))
+
+(extend-type #?(:clj Number :cljs number)
+  ImplicitNav
+  (implicit-nav [this] (n/keypath* this)))
+
+(extend-type #?(:clj Character :cljs char)
+  ImplicitNav
+  (implicit-nav [this] (n/keypath* this)))
+
+(extend-type #?(:clj Boolean :cljs boolean)
+  ImplicitNav
+  (implicit-nav [this] (n/keypath* this)))
+
 (extend-type #?(:clj clojure.lang.AFn :cljs function)
   ImplicitNav
   (implicit-nav [this] (pred this)))
@@ -1176,6 +1196,10 @@
 (extend-type #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
   ImplicitNav
   (implicit-nav [this] (pred this)))
+
+(extend-type #?(:clj java.util.regex.Pattern :cljs js/RegExp)
+  ImplicitNav
+  (implicit-nav [this] (regex-nav this)))
 
 (defnav
   ^{:doc "Navigates to the provided val if the structure is nil. Otherwise it stays

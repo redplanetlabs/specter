@@ -1435,10 +1435,12 @@
   )
 
 (deftest regex-navigation-test
-  (is (= (select (s/regex-nav #"t") "test") ["t" "t"]))
+  ;; also test regexes as implicit navs
+  (is (= (select #"t" "test") ["t" "t"]))
   (is (= (select [:a (s/regex-nav #"t")] {:a "test"}) ["t" "t"]))
   (is (= (transform (s/regex-nav #"t") clojure.string/capitalize "test") "TesT"))
-  (is (= (transform [:a (s/regex-nav #"t")] clojure.string/capitalize {:a "test"}) {:a "TesT"}))
+  ;; also test regexes as implicit navs
+  (is (= (transform [:a #"t"] clojure.string/capitalize {:a "test"}) {:a "TesT"}))
   (is (= (transform (s/regex-nav #"\s+\w") clojure.string/triml "Hello      World!") "HelloWorld!"))
   (is (= (setval (s/regex-nav #"t") "z" "test") "zesz"))
   (is (= (setval [:a (s/regex-nav #"t")] "z" {:a "test"}) {:a "zesz"}))
@@ -1643,6 +1645,10 @@
     (is (= [-1 0 1 2 3] (transform [(s/indexed-vals -1) (s/collect-one s/LAST) s/FIRST] (fn [i _] i) [3 -1 0 2 1])))
     (is (= [[1 :a] [2 :b] [3 :c]] (select (s/indexed-vals 1) [:a :b :c])))
     ))
+
+(deftest other-implicit-navs-test
+  (is (= 1 (select-any ["a" true \c 10 'd] {"a" {true {\c {10 {'d 1}}}}})))
+  )
 
 #?(:clj
   (do
