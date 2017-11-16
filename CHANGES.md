@@ -1,4 +1,4 @@
-## 1.0.5-SNAPSHOT
+## 1.0.5
 
 * Add `regex-nav` navigator for regexes, which navigates to every match in a string and supports replacement with a new substring (thanks @mwfogleman)
 * Regexes implicitly convert to `regex-nav` in paths
