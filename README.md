@@ -1,8 +1,12 @@
 # Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
 
-Clojure has fantastic facilities for doing immutable programming, with a rich library of persistent data structures and efficient mechanisms for manipulating and traversing them. However, Clojure's story is incomplete. Once you nest data structures – which is extremely common – Clojure becomes cumbersome and complex. Clojure even lacks a facility for a basic task like transforming every value in a generic sequence without changing the type or order of that sequence.
+Specter rejects Clojure's restrictive approach to immutable data structure manipulation, instead exposing an elegant API to allow any sort of manipulation imaginable. Specter especially excels at querying and transforming nested and recursive data, important use cases that are very complex to handle with vanilla Clojure.
 
-Specter, available for both Clojure and ClojureScript, provides a high performance abstraction called navigators which complete the story around immutable programming and make it easy to transform and query nested data structures. It allows you to concisely specify what you want to change within a data structure, and get a new data structure back with only your changes applied – everything else is reconstructed and the types of data structures throughout don't unexpectedly change.
+Specter has an extremely simple core, just a single abstraction called "navigator". Queries and transforms are done by composing navigators into a "path" precisely targeting what you want to retrieve or change. Navigators can be composed with any other navigators, allowing sophisticated manipulations to be expressed very concisely.
+
+In addition, Specter has performance rivaling hand-optimized code  (see [this benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83)). Clojure's only comparable built-in operations are `get-in` and `update-in`, and the Specter equivalents are 30% and 85% faster respectively (while being just as concise). Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition.
+
+There are some key differences between the Clojure approach to data manipulation and the Specter approach. Unlike Clojure, Specter always uses the most efficient method possible to implement an operation for a datatype (e.g. `last` vs. `LAST`). Clojure intentionally leaves out many operations, such as prepending to a vector or inserting into the middle of a sequence. Specter has navigators that cover these use cases (`BEFORE-ELEM` and `before-index`) and many more. Finally, Specter transforms always target precise parts of a data structure, leaving everything else the same. For instance, `ALL` targets every value within a sequence, and the resulting transform is always the same type as the input (e.g. a vector stays a vector, a sorted map stays a sorted map).
 
 Consider these examples:
 
@@ -15,7 +19,7 @@ Consider these examples:
 
 ;; Manual Clojure
 (defn map-vals [m afn]
-  (->> m (map (fn [[k v]] [k (afn v)])) (into {})))
+  (->> m (map (fn [[k v]] [k (afn v)])) (into (empty m))))
 
 (map-vals data
   (fn [v]
@@ -66,10 +70,6 @@ Consider these examples:
 (transform ALL inc data) ;; works for all Clojure datatypes with near-optimal efficiency
 ```
 
-
-Specter has performance rivaling hand-optimized code  (see [this benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83)). Clojure's only comparable built-in operations are `get-in` and `update-in`, and the Specter equivalents are 30% and 85% faster respectively (while being just as concise). Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition. Additionally, the built-in navigators use the most efficient means possible of accessing data structures. For example, `ALL` uses `mapv` on vectors, the `IMapIterable` interface on small maps, and `reduce-kv` in conjunction with transients on larger maps.
-
-The most important aspect of Specter is its composability. Specter navigators can be composed with any other navigators, so the supported use cases grow combinatorially. And because Specter is completely extensible, it can be used to navigate any data structure or object you have.
 
 
 # Latest Version
@@ -306,7 +306,6 @@ Specter supports ClojureScript! However, some of the differences between Clojure
 
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
-- Make it possible to parallelize selects/transforms
 
 # License
 
