@@ -10,7 +10,8 @@
                       select-first transform setval replace-in
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
-                      defdynamicnav traverse-all satisfies-protpath? end-fn]]))
+                      defdynamicnav traverse-all satisfies-protpath? end-fn
+                      vtransform]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -21,7 +22,8 @@
                     select-first transform setval replace-in
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
-                    defdynamicnav traverse-all satisfies-protpath? end-fn]]))
+                    defdynamicnav traverse-all satisfies-protpath? end-fn
+                    vtransform]]))
 
 
 
