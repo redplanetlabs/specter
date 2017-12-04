@@ -1650,6 +1650,12 @@
   (is (= 1 (select-any ["a" true \c 10 'd] {"a" {true {\c {10 {'d 1}}}}})))
   )
 
+(deftest vterminal-test
+  (is (= {:a {:b [[1 2] 3]}}
+         (multi-transform [(s/putval 1) :a (s/putval 2) :b (s/vterminal (fn [vs v] [vs v]))]
+           {:a {:b 3}})))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)

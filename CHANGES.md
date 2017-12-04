@@ -1,3 +1,7 @@
+## 1.0.6-SNAPSHOT
+
+* Add `vterminal` that takes in collected vals as vector in first argument rather than spliced into full argument list.
+
 ## 1.0.5
 
 * Add `regex-nav` navigator for regexes, which navigates to every match in a string and supports replacement with a new substring (thanks @mwfogleman)

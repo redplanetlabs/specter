@@ -351,8 +351,8 @@
 
      (defmacro multi-transform
        "Just like `transform` but expects transform functions to be specified
-       inline in the path using `terminal`. Error is thrown if navigation finishes
-       at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is
+       inline in the path using `terminal` or `vterminal`. Error is thrown if navigation finishes
+       at a non-terminal navigator. `terminal-val` is a wrapper around `terminal` and is
        the `multi-transform` equivalent of `setval`.
        This macro will do inline caching of the path."
        [apath structure]
@@ -564,8 +564,8 @@
 
 (defn multi-transform*
   "Just like `transform` but expects transform functions to be specified
-   inline in the path using `terminal`. Error is thrown if navigation finishes
-   at a non-`terminal` navigator. `terminal-val` is a wrapper around `terminal` and is
+   inline in the path using `terminal` or `vterminal`. Error is thrown if navigation finishes
+   at a non-terminal navigator. `terminal-val` is a wrapper around `terminal` and is
    the `multi-transform` equivalent of `setval`."
   [path structure]
   (compiled-multi-transform (i/comp-paths* path) structure))
@@ -644,6 +644,19 @@
     (transform* [this vals structure next-fn]
       (i/terminal* afn vals structure))))
 
+(def
+  ^{:doc "For usage with `multi-transform`, defines an endpoint in the navigation
+          that will have the parameterized transform function run. The transform
+          function works differently than it does in `transform`. Rather than receive
+          collected vals spliced in as the first arguments to the function, this function
+          always takes two arguemnts. The first is all collected
+          vals in a vector, and the second is the navigated value."}
+  vterminal
+  (richnav [afn]
+    (select* [this vals structure next-fn]
+      (i/throw-illegal "'terminal' should only be used in multi-transform"))
+    (transform* [this vals structure next-fn]
+      (afn vals structure))))
 
 (defn ^:direct-nav terminal-val
   "Like `terminal` but specifies a val to set at the location regardless of
