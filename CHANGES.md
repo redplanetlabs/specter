@@ -1,6 +1,7 @@
 ## 1.0.6-SNAPSHOT
 
-* Add `vterminal` that takes in collected vals as vector in first argument rather than spliced into full argument list.
+* Add `vtransform` variant of `transform` that takes in collected values as a vector in the first argument rather than spliced into argument list.
+* Add `vterminal` that takes in collected vals as vector in first argument rather than spliced into argument list.
 
 ## 1.0.5
 

@@ -349,6 +349,12 @@
        [apath transform-fn structure]
        `(i/compiled-transform* (path ~apath) ~transform-fn ~structure))
 
+     (defmacro vtransform
+       "Navigates to each value specified by the path and replaces it by the result of running
+       the transform-fn on two arguments: the collected values as a vector, and the navigated value."
+       [apath transform-fn structure]
+       `(i/compiled-vtransform* (path ~apath) ~transform-fn ~structure))
+
      (defmacro multi-transform
        "Just like `transform` but expects transform functions to be specified
        inline in the path using `terminal` or `vterminal`. Error is thrown if navigation finishes
@@ -551,6 +557,10 @@
 
 (def ^{:doc "Version of transform that takes in a path precompiled with comp-paths"}
   compiled-transform i/compiled-transform*)
+
+(def ^{:doc "Version of vtransform that takes in a path precompiled with comp-paths"}
+  compiled-vtransform i/compiled-vtransform*)
+
 
 (defn transform*
   "Navigates to each value specified by the path and replaces it by the result of running

@@ -412,6 +412,9 @@
     (fn [vals structure]
       (terminal* transform-fn vals structure))))
 
+(defn compiled-vtransform* [nav transform-fn structure]
+  (exec-transform* nav [] structure transform-fn))
+
 (defn fn-invocation? [f]
   (or #?(:clj  (instance? clojure.lang.Cons f))
       #?(:clj  (instance? clojure.lang.LazySeq f))

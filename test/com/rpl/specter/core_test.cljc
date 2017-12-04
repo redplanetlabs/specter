@@ -1656,6 +1656,10 @@
            {:a {:b 3}})))
   )
 
+(deftest vtransform-test
+  (is (= {:a 6} (vtransform [:a (s/putval 2) (s/putval 3)] (fn [vs v] (+ v (reduce + vs))) {:a 1})))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
