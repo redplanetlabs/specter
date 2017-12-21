@@ -643,28 +643,26 @@
   i/STAY*)
 
 (def
-  ^{:doc "For usage with `multi-transform`, defines an endpoint in the navigation
-          that will have the parameterized transform function run. The transform
+  ^{:doc "Defines an endpoint in the navigation the transform function run. The transform
           function works just like it does in `transform`, with collected values
           given as the first arguments"}
   terminal
   (richnav [afn]
     (select* [this vals structure next-fn]
-      (i/throw-illegal "'terminal' should only be used in multi-transform"))
+       NONE)
     (transform* [this vals structure next-fn]
       (i/terminal* afn vals structure))))
 
 (def
-  ^{:doc "For usage with `multi-transform`, defines an endpoint in the navigation
-          that will have the parameterized transform function run. The transform
+  ^{:doc "Defines an endpoint in the navigation the transform function run.The transform
           function works differently than it does in `transform`. Rather than receive
           collected vals spliced in as the first arguments to the function, this function
-          always takes two arguemnts. The first is all collected
-          vals in a vector, and the second is the navigated value."}
+          always takes two arguemnts. The first is all collected vals in a vector, and
+          the second is the navigated value."}
   vterminal
   (richnav [afn]
     (select* [this vals structure next-fn]
-      (i/throw-illegal "'terminal' should only be used in multi-transform"))
+      NONE)
     (transform* [this vals structure next-fn]
       (afn vals structure))))
 
