@@ -1662,6 +1662,21 @@
   (is (= {:a 6} (vtransform [:a (s/putval 2) (s/putval 3)] (fn [vs v] (+ v (reduce + vs))) {:a 1})))
   )
 
+(deftest compact-test
+  (is (= {} (setval [:a (s/compact :b :c)] s/NONE {:a {:b {:c 1}}})))
+  (is (= {:a {:d 2}} (setval [:a (s/compact :b :c)] s/NONE {:a {:b {:c 1} :d 2}})))
+  (let [TREE-VALUES (recursive-path [] p (s/if-path vector? [(s/compact s/ALL) p] s/STAY))
+        tree [1 [2 3] [4 [[5] [[6]]]]]]
+    (is (= [2 4 6] (select [TREE-VALUES even?] tree)))
+    (is (= [1 [3] [[[5]]]] (setval [TREE-VALUES even?] s/NONE tree)))
+    )
+  (is (= [{:a [{:c 1}]}]
+         (setval [s/ALL (s/compact :a s/ALL :b)]
+           s/NONE
+           [{:a [{:b 3}]}
+            {:a [{:b 2 :c 1}]}])))
+  )
+
 #?(:clj
   (do
     (defprotocolpath FooPP)

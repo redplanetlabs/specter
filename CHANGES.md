@@ -2,6 +2,7 @@
 
 * Add `vtransform` variant of `transform` that takes in collected values as a vector in the first argument rather than spliced into argument list.
 * Add `vterminal` that takes in collected vals as vector in first argument rather than spliced into argument list.
+* Add `compact` navigator. After each step of navigation of its subpath, `compact` removes the collection if it's empty.
 * Change `terminal` to be a no-op on select codepath
 
 ## 1.0.5
