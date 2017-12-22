@@ -895,7 +895,7 @@
             values-to-insert (i/mutable-cell transformed)]
         (compiled-transform late
                             (fn [_] (let [vs (i/get-cell values-to-insert)]
-                                      (if vs
+                                      (if (seq vs)
                                         (do (i/update-cell! values-to-insert next)
                                             (first vs))
                                         NONE

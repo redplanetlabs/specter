@@ -1535,6 +1535,8 @@
 
 (deftest filterer-remove-test
   (is (= [1 :a 3 5] (setval (s/filterer even?) [:a] [1 2 3 4 5])))
+  (is (= [1 3 5] (setval (s/filterer even?) [] [1 2 3 4 5])))
+  (is (= [1 3 5] (setval (s/filterer even?) nil [1 2 3 4 5])))
   )
 
 (deftest helper-preds-test
