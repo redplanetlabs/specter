@@ -30,7 +30,7 @@
 
   :profiles {:dev {:dependencies
                    [[org.clojure/test.check "0.9.0"]
-                    [org.clojure/clojure "1.8.0"]
+                    [org.clojure/clojure "1.9.0"]
                     [org.clojure/clojurescript "1.9.229"]]}
 
              :test {:dependencies [[org.clojure/clojure "1.7.0"]]}}

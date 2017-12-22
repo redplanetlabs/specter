@@ -892,10 +892,10 @@
     (transform* [this structure next-fn]
       (let [select-result (compiled-select late structure)
             transformed (next-fn select-result)
-            values-to-insert (i/mutable-cell transformed)]
+            values-to-insert (i/mutable-cell (seq transformed))]
         (compiled-transform late
                             (fn [_] (let [vs (i/get-cell values-to-insert)]
-                                      (if (seq vs)
+                                      (if vs
                                         (do (i/update-cell! values-to-insert next)
                                             (first vs))
                                         NONE
