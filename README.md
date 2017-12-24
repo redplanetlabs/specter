@@ -146,6 +146,20 @@ user> (setval [:a ALL nil?] NONE {:a [1 2 nil 3 nil]})
 {:a [1 2 3]}
 ```
 
+Remove key/value pair from nested map:
+
+```clojure
+user> (setval [:a :b :c] NONE {:a {:b {:c 1}}})
+{:a {:b {}}}
+```
+
+Remove key/value pair from nested map, removing maps that become empty along the way:
+
+```clojure
+user> (setval [:a (compact :b :c)] NONE {:a {:b {:c 1}}})
+{}
+```
+
 Increment all the odd numbers between indices 1 (inclusive) and 4 (exclusive):
 
 ```clojure
