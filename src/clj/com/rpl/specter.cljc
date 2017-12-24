@@ -1456,10 +1456,11 @@
                coll? [ALL-WITH-META p]
                )))
 
-(let [compact* (stay-then-continue (if-path empty? (terminal-val NONE)))]
+(let [empty->NONE (if-path empty? (terminal-val NONE))
+      compact* (fn [nav] (multi-path nav empty->NONE))]
  (defdynamicnav compact
    "During transforms, after each step of navigation in subpath check if the
     value is empty. If so, remove that value by setting it to NONE."
    [& path]
-   (interleave (repeat (count path) compact*) path)
+   (map compact* path)
    ))
