@@ -175,10 +175,10 @@ user> (select (walker number?)
 [2 1 2 1 2 6 7 4]
 ```
 
-Navigate via non-keyword keys:
+Navigate with string keys:
 
 ```clojure
-user> (select (keypath "a" "b")
+user> (select ["a" "b"]
               {"a" {"b" 10}})
 [10]
 ```
