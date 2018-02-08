@@ -1,4 +1,4 @@
-## 1.1.0
+## 1.1.0 - 2018-01-02
 
 * Add `vtransform` variant of `transform` that takes in collected values as a vector in the first argument rather than spliced into argument list.
 * Add `vterminal` that takes in collected vals as vector in first argument rather than spliced into argument list.
@@ -6,25 +6,25 @@
 * Change `terminal` to be a no-op on select codepath
 * Bug fix: `subselect`/`filterer` removes first matched element instead of setting to nil when transformed to empty sequence
 
-## 1.0.5
+## 1.0.5 - 2017-11-16
 
 * Add `regex-nav` navigator for regexes, which navigates to every match in a string and supports replacement with a new substring (thanks @mwfogleman)
 * Regexes implicitly convert to `regex-nav` in paths
 * Strings, numbers, booleans, characters, and symbols implicitly convert to `keypath` in paths
 
-## 1.0.4
+## 1.0.4 - 2017-10-17
 
 * Add `indexed-vals` navigator, a variant of `INDEXED-VALS` that allows for a customized start index.
 * Bug fix: Fix `INDEXED-VALS` invalidly overwriting elements in some transforms involving multiple index changes
 
-## 1.0.3
+## 1.0.3 - 2017-08-14
 
 * Added `before-index` navigator for inserting a single element into a sequence.
 * Added `index-nav` navigator for moving an element in a sequence to a new index, shifting other elements in the process.
 * Added `INDEXED-VALS` navigator for navigating to every element of a sequence as [index elem] pair. Transform on index portion works the same as `index-nav`.
 * Workaround for ClojureScript regression that causes warnings for record fields named "var" or other reserved names
 
-## 1.0.2
+## 1.0.2 - 2017-06-12
 
 * Added `pred=`, `pred<`, `pred>`, `pred<=`, `pred>=` for filtering using common comparisons
 * Add `map-key` navigator
@@ -38,7 +38,7 @@
 * For ALL transforms on maps, interpret transformed key/value pair of size < 2 as removal
 * Bug fix: Fix incorrect inline compilation when a dynamic function invocation is nested in a data structure within a parameter to a navigator builder
 
-## 1.0.1
+## 1.0.1 - 2017-04-17
 
 * `subselect`/`filterer` can remove entries in source by transforming to a smaller sequence
 * Add `satisfies-protpath?`
@@ -48,7 +48,7 @@
 * Bug fix: Dynamic navs in argument position to another nav now properly expanded and compiled
 * Bug fix: Dynamic parameters nested inside data structures as arguments are now compiled correctly by inline compiler
 
-## 1.0.0
+## 1.0.0 - 2017-03-01
 
 * Transform to `com.rpl.specter/NONE` to remove elements from data structures. Works with `keypath` (for both sequences and maps), `must`, `nthpath`, `ALL`, `MAP-VALS`, `FIRST`, and `LAST`
 * Add `nthpath` navigator
@@ -67,13 +67,13 @@
 * Bug fix: Collected vals now properly passed to subpaths for `if-path`, `selected?`, and `not-selected?`
 * Bug fix: `LAST`, `FIRST`, `BEGINNING`, and `END` properly transform subvector types to a vector type
 
-## 0.13.2
+## 0.13.2 - 2016-12-21
 
 * Bug fix: Fix race condition relating to retrieving path from cache and AOT compilation
 * Bug fix: LAST no longer converts lists to vectors
 * Bug fix: Workaround issue with aot + uberjar
 
-## 0.13.1
+## 0.13.1 - 2016-11-07
 
 * Remove any? in com.rpl.specter.impl to avoid conflict with Clojure 1.9
 * Enhanced dynamic navigators to continue expanding if any other dynamic navs are returned
@@ -84,7 +84,7 @@
 * Bug fix: Fix problems with multi-path and if-path in latest versions of ClojureScript
 * Bug fix: Inline compiler no longer flattens and changes the type of sequential params
 
-## 0.13.0
+## 0.13.0 - 2016-09-06
 
 * BREAKING CHANGE: `com.rpl.specter.macros` namespace removed and all macros moved into core `com.rpl.specter` namespace
 * BREAKING CHANGE: Core protocol `Navigator` changed to `RichNavigator` and functions now have an extra argument.
@@ -118,7 +118,7 @@
 * Bug fix: ALL and MAP-VALS transforms on PersistentArrayMap above the threshold now output PersistentArrayMap instead of PersistentHashMap
 
 
-## 0.12.0
+## 0.12.0 - 2016-08-05
 
 * BREAKING CHANGE: Changed semantics of `Navigator` protocol `select*` in order to enable very large performance improvements to `select`, `select-one`, `select-first`, and `select-one!`. Custom navigators will need to be updated to conform to the new required semantics. Codebases that do not use custom navigators do not require any changes. See the docstring on the protocol for the details.
 * Added `select-any` operation which selects a single element navigated to by the path. Which element returned is undefined. If no elements are navigated to, returns `com.rpl.specter/NONE`. This is the fastest selection operation.
@@ -140,11 +140,13 @@ transformations with `transform` one after another when the transformations shar
 * Bug fix: Using value collection along with `setval` no longer throws exception
 * Bug fix: Fix error when trying to use Specter along with AOT compilation
 
-## 0.11.2
+## 0.11.2 - 2016-06-09
+
 * Renamed com.rpl.specter.transient namespace to com.rpl.specter.transients to eliminate ClojureScript compiler warning about reserved keyword
 * Eliminated compiler warnings for ClojureScript version
 
-## 0.11.1
+## 0.11.1 - 2016-06-08
+
 * More efficient inline caching for Clojure version, benchmarks show inline caching within 5% of manually precompiled code for all cases
 * Added navigators for transients in com.rpl.specter.transient namespace (thanks @aengelberg)
 * Huge performance improvement for ALL transform on maps and vectors
@@ -158,7 +160,8 @@ transformations with `transform` one after another when the transformations shar
 * Bug fix: Fixed nil->val to not replace the val on `false`
 * Bug fix: Eliminate reflection when using primitive parameters in an inline cached path
 
-## 0.11.0
+## 0.11.0 - 2016-05-31
+
 * New `path` macro does intelligent inline caching of the provided path. The path is factored into a static portion and into params which may change on each usage of the path (e.g. local parameters). The static part is factored and compiled on the first run-through, and then re-used for all subsequent invocations. As an example, `[ALL (keypath k)]` is factored into `[ALL keypath]`, which is compiled and cached, and `[k]`, which is provided on each execution. If it is not possible to precompile the path (e.g. [ALL some-local-variable]), nothing is cached and the path will be compiled on each run-through.
 * BREAKING CHANGE: all `select/transform/setval/replace-in` functions changed to macros and moved to com.rpl.specter.macros namespace. The new macros now automatically wrap the provided path in `path` to enable inline caching. Expect up to a 100x performance improvement without using explicit precompilation, and to be within 2% to 15% of the performance of explicitly precompiled usage.
 * Added `select*/transform*/setval*/replace-in*/etc.` functions that have the same functionality as the old `select/transform/setval/replace-in` functions.
@@ -172,7 +175,8 @@ transformations with `transform` one after another when the transformations shar
 * Added "navigator constructors" that can be defined via `defnavconstructor`. These allow defining a flexible function to parameterize a defnav, and the function integrates with inline caching for high performance.
 
 
-## 0.10.0
+## 0.10.0 - 2016-04-26
+
 * Make codebase bootstrap cljs compatible
 * Remove usage of reducers in cljs version in favor of transducers (thanks @StephenRudolph)
 * ALL now maintains type of queues (thanks @StephenRudolph)
@@ -182,7 +186,8 @@ transformations with `transform` one after another when the transformations shar
 * Fix filterer to maintain the type of the input sequence in transforms
 * Integrated zipper navigation into com.rpl.specter.zipper namespace
 
-## 0.9.3
+## 0.9.3 - 2016-04-15
+
 * Change clojure/clojurescript to provided dependencies
 * ALL on maps auto-coerces MapEntry to vector, enabling smoother transformation of map keys
 * declarepath can now be parameterized
@@ -190,7 +195,8 @@ transformations with `transform` one after another when the transformations shar
 * Added convenience syntax for defprotocolpath with no params, e.g. (defprotocolpath foo)
 * Rename VOID to STOP
 
-## 0.9.2
+## 0.9.2 - 2016-01-26
+
 * Added VOID selector which navigates nowhere
 * Better syntax checking for defpath
 * Fixed bug in protocol paths (#48)
@@ -201,33 +207,39 @@ transformations with `transform` one after another when the transformations shar
 * Added declarepath and providepath, which enable arbitrary recursive or mutually recursive paths
 * Renamed paramspath to path
 
-## 0.9.1
+## 0.9.1 - 2016-01-05
+
 * Fixed reflection in protocol path code
 * Optimized late-bound parameterization for JVM implementation by directly creating the object array rather than use object-array
 * Incorrectly specified function names in defpath will now throw error
 
-## 0.9.0
+## 0.9.0 - 2015-12-12
+
 * Fixed bug where comp-paths wouldn't work on lazy seqs in cljs
 * Renamed defparamspath and defparamscollector to defpath and defcollector
 * For Clojure version only, implemented protocol paths (see #38)
 
-## 0.8.0
+## 0.8.0 - 2015-10-10
+
 * Now compatible with Clojure 1.6.0 and 1.5.1 by switching build to cljx (thanks @MerelyAPseudonym)
 * Added subset selector (like srange but for sets)
 * Added nil->val, NIL->SET, NIL->LIST, and NIL->VECTOR selectors to make it easier to manipulate maps (e.g. (setval [:akey NIL->VECTOR END] [:a :b] amap) to append that vector into that value for the map, even if nothing was at that value at the start)
 
-## 0.7.1
+## 0.7.1 - 2015-09-24
+
 * view can now be late-bound parameterized
 * Added a late-bound parameterized version of using a function as a selector called "pred"
 * Added paramsfn helper macro for defining filter functions that take late-bound parameters
 * walker and codewalker can now be late-bound parameterized
 
-## 0.7.0
+## 0.7.0 - 2015-09-11
+
 * Added late-bound parameterization feature: allows selectors that require params to be precompiled without the parameters, and the parameters are supplied later in bulk. This effectively enables Specter to be used in any situation with very high performance.
 * Converted Specter built-in selectors to use late-bound parameterization when appropriate
 * ALL, FIRST, and LAST are now precompiled
 
-## 0.6.2
+## 0.6.2 - 2015-07-03
+
 * Added not-selected? selector
 * Added transformed selector
 * Sped up CLJS implementation for comp-paths by replacing obj-extends? call with satisfies?
@@ -235,33 +247,42 @@ transformations with `transform` one after another when the transformations shar
 * Used not-native hint to enable direct method invocation to speed up CLJS implementation
 
 
-## 0.6.1
+## 0.6.1 - 2015-07-01
+
 * Huge speedup to ClojureScript implementation by optimizing field access
 
-## 0.6.0
+## 0.6.0 - 2015-07-01
+
 * Added ClojureScript compatibility
 
-## 0.5.7
+## 0.5.7 - 2015-06-30
+
 * Fix bug in select-one! which wouldn't allow nil result
 
-## 0.5.6
+## 0.5.6 - 2015-06-29
+
 * Add multi-path implementation
 * change FIRST/LAST to select nothing on an empty sequence
 * Allow sets to be used directly as selectors (acts as filter)
 
-## 0.5.5
+## 0.5.5 - 2015-06-22
+
 * Change filterer to accept a selector (that acts like selected? to determine whether or not to select value)
 
-## 0.5.4
+## 0.5.4 - 2015-06-19
+
 * Change cond-path and if-path to take in a selector for conditionals (same idea as selected?)
 
-## 0.5.3
+## 0.5.3 - 2015-06-18
+
 * Added cond-path and if-path selectors for choosing paths depending on value of structure at that location
 
-## 0.5.2
+## 0.5.2 - 2015-06-01
+
 * Fix error for selectors with one element defined using comp-paths, e.g. [:a (comp-paths :b)]
 
-## 0.5.1
+## 0.5.1 - 2015-05-31
+
 * Added putval for adding external values to collected values list
 * nil is now interpreted as identity selector
 * empty selector is now interpreted as identity selector instead of producing error
