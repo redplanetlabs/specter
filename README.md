@@ -310,6 +310,15 @@ Here's how to reverse the positions of all even numbers in a tree (with order ba
 ;; => [1 10 [3 [[8]] 5] [6 [7 4] 9 [[2]]]]
 ```
 
+If you want to stop navigation in the middle of the vector-path you can use [must](https://github.com/nathanmarz/specter/wiki/List-of-Navigators#must):
+
+```clojure
+(transform [:y ALL] inc {:x [1]}) ;; => {:x [1], :y nil} ;; don't want :y here?
+
+(transform [(must :y) ALL] inc {:x [1]}) ;; => {:x [1]}
+(transform [(must :y) ALL] inc {:y [1]}) ;; => {:y [2]}
+```
+
 # ClojureScript
 
 Specter supports ClojureScript! However, some of the differences between Clojure and ClojureScript affect how you use Specter in ClojureScript, in particular with the namespace declarations. In Clojure, you might `(use 'com.rpl.specter)` or say `(:require [com.rpl.specter :refer :all])` in your namespace declaration. But in ClojureScript, these options [aren't allowed](https://groups.google.com/d/msg/clojurescript/SzYK08Oduxo/MxLUjg50gQwJ). Instead, consider using one of these options:
