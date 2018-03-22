@@ -73,7 +73,6 @@
     nil)
 
 
-  ;; in cljs they're PersistentVector so don't need a special case
   #?(:clj clojure.lang.MapEntry)
   #?(:clj
      (all-transform [structure next-fn]
@@ -81,6 +80,13 @@
              newv (next-fn (val structure))]
          (clojure.lang.MapEntry. newk newv))))
 
+
+  #?(:cljs cljs.core/MapEntry)
+  #?(:cljs
+     (all-transform [structure next-fn]
+       (let [newk (next-fn (key structure))
+             newv (next-fn (val structure))]
+         (cljs.core/->MapEntry newk newv nil))))
 
   #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (all-transform [structure next-fn]

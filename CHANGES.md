@@ -1,3 +1,7 @@
+## 1.1.1-SNAPSHOT
+
+* ClojureScript 1.10 introduced a change causing the `walker` navigator to fail to walk records. `ALL` has been updated to operate over `MapEntry` in ClojureScript, fixing the issue.
+
 ## 1.1.0 - 2018-01-02
 
 * Add `vtransform` variant of `transform` that takes in collected values as a vector in the first argument rather than spliced into argument list.
