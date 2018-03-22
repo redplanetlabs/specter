@@ -566,6 +566,14 @@
         (str begins newl)
         )))
 
+  #?(:cljs cljs.core/MapEntry)
+  #?(:cljs
+    (update-first [e afn]
+      (cljs.core/->MapEntry (-> e key afn) (val e) nil)))
+  #?(:cljs
+    (update-last [e afn]
+      (cljs.core/->MapEntry (key e) (-> e val afn) nil)))
+
   #?(:clj Object :cljs default)
   (update-first [l val]
     (update-first-list l val))
@@ -585,6 +593,12 @@
     (first s))
   (get-last [s]
     (last s))
+
+  #?(:cljs cljs.core/MapEntry)
+  (get-first [e]
+    (key e))
+  (get-last [e]
+    (val e))
 
   #?(:clj String :cljs string)
   (get-first [s]
