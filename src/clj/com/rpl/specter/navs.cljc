@@ -595,10 +595,12 @@
     (last s))
 
   #?(:cljs cljs.core/MapEntry)
-  (get-first [e]
-    (key e))
-  (get-last [e]
-    (val e))
+  #?(:cljs
+    (get-first [e]
+      (key e)))
+  #?(:cljs
+    (get-last [e]
+      (val e)))
 
   #?(:clj String :cljs string)
   (get-first [s]
