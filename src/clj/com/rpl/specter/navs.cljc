@@ -5,8 +5,8 @@
               [defnav defrichnav]]
             [com.rpl.specter.util-macros :refer
               [doseqres]]))
-  (:use #?(:clj [com.rpl.specter.macros :only [defnav defrichnav]])
-        #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
+  #?(:clj (:use [com.rpl.specter.macros :only [defnav defrichnav]]
+                [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             #?(:clj [clojure.core.reducers :as r])))
 
