@@ -11,7 +11,7 @@
         #?(:clj [com.rpl.specter.util-macros :only [doseqres mk-comp-navs]]))
 
   (:require [com.rpl.specter.protocols :as p]
-            #?(:clj [clojure.pprint :as pp] :cljs [cljs.pprint :as pp])
+            #?(:clj [clojure.pprint :as pp])
             [clojure.string :as s]
             [clojure.walk :as walk]
             #?(:clj [riddley.walk :as riddley]))
@@ -907,7 +907,7 @@
        (println "Possible params:")
        (println possible-params)
        (println "\nProduced dynamic object:")
-       (pp/pprint (mk-fn-name-strs resolved-code))
+       (println (mk-fn-name-strs resolved-code))
        (println))
      (fn [dynamic-params]
        (late-resolve resolved-code dynamic-params))))

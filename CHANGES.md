@@ -2,6 +2,7 @@
 
 * ClojureScript 1.10 introduced a change causing the `walker` navigator to fail to walk records. `ALL` has been updated to operate over `MapEntry` in ClojureScript, fixing the issue.
 * Change ns form to comply with cljs.core.specs.alpha (thanks @gnl)
+* Remove usage of pprint in cljs so advanced optimization doesn't include it
 
 ## 1.1.0 - 2018-01-02
 
