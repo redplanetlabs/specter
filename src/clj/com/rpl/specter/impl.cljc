@@ -319,6 +319,17 @@
         (get-cell cell)
         ))))
 
+#?(
+:clj
+(defn- call-reduce-interface [^clojure.lang.IReduce traverser afn start]
+  (.reduce traverser afn start)
+  )
+
+:cljs
+(defn- call-reduce-interface [^cljs.core/IReduce traverser afn start]
+  (-reduce traverser afn start)
+  ))
+
 (defn do-compiled-traverse [apath structure]
   (let [traverser (do-compiled-traverse* apath structure)]
     (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
@@ -327,7 +338,7 @@
         (#?(:clj .reduce :cljs -reduce) this afn (afn)))
       (#?(:clj reduce :cljs -reduce)
         [this afn start]
-        (let [res (#?(:clj .reduce :cljs -reduce) traverser afn start)]
+        (let [res (call-reduce-interface traverser afn start)]
           (unreduced res)
           )))))
 
