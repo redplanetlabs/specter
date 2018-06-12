@@ -702,16 +702,18 @@
         (preserve-map magic-precompilation* o)
 
         (instance? VarUse o)
-        (if (dynamic-var? (:avar o))
-          (->DynamicVal (maybe-direct-nav
-                         (:sym o)
-                         (or (-> o :avar direct-nav?)
-                             (-> o :sym direct-nav?))))
-          (maybe-direct-nav
-            (:val o)
-            (or (-> o :avar direct-nav?)
-                (-> o :sym direct-nav?)
-                (-> o :val direct-nav?))))
+        (let [v (:avar o)]
+          ;; v can be nil if the symbol referred to an imported class
+          (if (and v (dynamic-var? v))
+            (->DynamicVal (maybe-direct-nav
+                           (:sym o)
+                           (or (direct-nav? v)
+                               (-> o :sym direct-nav?))))
+            (maybe-direct-nav
+              (:val o)
+              (or (and v (direct-nav? v))
+                  (-> o :sym direct-nav?)
+                  (-> o :val direct-nav?)))))
 
         (instance? LocalSym o)
         (->DynamicVal (:sym o))

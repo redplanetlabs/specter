@@ -166,7 +166,10 @@
                  embed (i/maybe-direct-nav path (-> s meta :direct-nav))]
              `(com.rpl.specter.impl/->LocalSym ~path (quote ~embed)))
            ;; var-get doesn't work in cljs, so capture the val in the macro instead
-           `(com.rpl.specter.impl/->VarUse ~path (var ~path) (quote ~path)))
+           `(com.rpl.specter.impl/->VarUse
+              ~path
+              ~(if-not (instance? Class (resolve path)) `(var ~path))
+              (quote ~path)))
 
 
          (i/fn-invocation? path)

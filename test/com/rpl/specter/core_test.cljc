@@ -1680,6 +1680,12 @@
   )
 
 #?(:clj
+  (deftest class-constant-test
+    (let [f (fn [p] (fn [v] (str p (inc v))))]
+      (is (= (str String 2) (multi-transform (s/terminal (f String)) 1)))
+      )))
+
+#?(:clj
   (do
     (defprotocolpath FooPP)
     (extend-protocolpath FooPP String s/STAY)
