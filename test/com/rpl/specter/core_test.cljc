@@ -1679,11 +1679,11 @@
             {:a [{:b 2 :c 1}]}])))
   )
 
-#?(:clj
-  (deftest class-constant-test
-    (let [f (fn [p] (fn [v] (str p (inc v))))]
-      (is (= (str String 2) (multi-transform (s/terminal (f String)) 1)))
-      )))
+(deftest class-constant-test
+  (let [f (fn [p] (fn [v] (str p (inc v))))]
+    (is (= (str #?(:clj String :cljs js/String) 2)
+           (multi-transform (s/terminal (f #?(:clj String :cljs js/String))) 1)))
+    ))
 
 #?(:clj
   (do
