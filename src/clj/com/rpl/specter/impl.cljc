@@ -177,7 +177,7 @@
             (coerce-path (vec this))))
   #?(:cljs cljs.core/Subvec)
   #?(:cljs (coerce-path [this]
-            (coerce-path (vec this))))
+            (coerce-path (into [] this))))
 
   #?(:clj Object :cljs default)
   (coerce-path [this]

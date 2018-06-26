@@ -2,6 +2,7 @@
 
 * Eliminate reflection warning
 * Bug fix: Fix inline compiler symbol handling so class references can be used as constants within paths
+* Bug fix: Fix handling of subvector paths in cljs
 
 ## 1.1.1 - 2018-04-23
 
