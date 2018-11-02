@@ -1,4 +1,4 @@
-## 1.1.2-SNAPSHOT
+## 1.1.2
 
 * Eliminate reflection warning
 * Bug fix: Fix inline compiler symbol handling so class references can be used as constants within paths
