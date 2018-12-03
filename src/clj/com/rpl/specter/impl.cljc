@@ -1,7 +1,8 @@
 (ns com.rpl.specter.impl
   #?(:cljs (:require-macros
             [com.rpl.specter.util-macros
-             :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]))
+             :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]
+            [com.rpl.specter.impl :refer [throw-illegal]]))
   ;; workaround for cljs bug that emits warnings for vars named the same as a
   ;; private var in cljs.core (in this case `NONE`, added as private var to
   ;; cljs.core with 1.9.562)
@@ -56,11 +57,14 @@
 #?(
    :clj
    (defmacro throw-illegal [& args]
-     `(throw* IllegalArgumentException ~@args))
-
+     (let [platform (if (contains? &env :locals) :cljs :clj)]
+       (if (= platform :clj)
+         `(throw* IllegalArgumentException ~@args)
+         `(com.rpl.specter.impl/throw-illegal* ~@args)
+         )))
 
    :cljs
-   (defn throw-illegal [& args]
+   (defn throw-illegal* [& args]
      (throw (js/Error. (apply str args)))))
 
 
