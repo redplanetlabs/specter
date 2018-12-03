@@ -1,3 +1,7 @@
+## 1.1.3-SNAPSHOT
+
+* Bug fix: fix throw-illegal in cljs
+
 ## 1.1.2 - 2018-11-01
 
 * Eliminate reflection warning
