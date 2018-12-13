@@ -2,56 +2,27 @@
   (:use [com.rpl.specter]
         [com.rpl.specter.transients])
   (:require [clojure.walk :as walk]
-            [com.rpl.specter.impl :as i]))
-
-
-;; run via `lein repl` with `(load-file "scripts/benchmarks.clj")`
-
-
-(defn pretty-float5 [anum]
-  (format "%.5g" anum))
+            [com.rpl.specter.impl :as i]
+            [criterium.core :as bench]))
 
 (defn pretty-float3 [anum]
   (format "%.3g" anum))
 
-(defn time-ms [amt afn]
-  (let [start (System/nanoTime)
-        _ (dotimes [_ amt] (afn))
-        end (System/nanoTime)]
-   (/ (- end start) 1000000.0)))
+(defn mean [a-fn]
+  (-> a-fn (bench/benchmark* {}) :mean first (* 1000000)))
 
-
-(defn avg [numbers]
-  (/ (reduce + numbers)
-     (count numbers)
-     1.0))
-
-(defn average-time-ms [iters amt-per-iter afn]
-  (avg
-    ;; treat 1st run as warmup
-    (next
-      (for [i (range (inc iters))]
-        (time-ms amt-per-iter afn)))))
-
-(defn compare-benchmark [amt-per-iter afn-map]
-  (System/runFinalization)
-  (System/gc)
-  (let [results (transform MAP-VALS
-                  (fn [afn]
-                    (average-time-ms 8 amt-per-iter afn))
-                  afn-map)
+(defn compare-benchmark [afn-map]
+  (let [results (transform MAP-VALS mean afn-map)
         [[_ best-time] & _ :as sorted] (sort-by last results)]
-
-    (println "\nAvg(ms)\t\tvs best\t\tCode")
+    (println "\nMean(us)\tvs best\t\tCode")
     (doseq [[k t] sorted]
-      (println (pretty-float5 t) "\t\t" (pretty-float3 (/ t best-time 1.0)) "\t\t" k))))
+      (println (pretty-float3 t) "\t\t" (pretty-float3 (/ t best-time 1.0)) "\t\t" k))))
 
-
-(defmacro run-benchmark [name amt-per-iter & exprs]
+(defmacro run-benchmark [name & exprs]
   (let [afn-map (->> exprs shuffle (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
     `(do
-       (println "Benchmark:" ~name (str "(" ~amt-per-iter " iterations)"))
-       (compare-benchmark ~amt-per-iter ~afn-map)
+       (println "Benchmark:" ~name)
+       (compare-benchmark ~afn-map)
        (println "\n********************************\n"))))
 
 (defn specter-dynamic-nested-get [data a b c]
@@ -69,7 +40,7 @@
 
 (let [data {:a {:b {:c 1}}}
       p (comp-paths :a :b :c)]
-  (run-benchmark "get value in nested map" 2500000
+  (run-benchmark "get value in nested map"
     (select-any [:a :b :c] data)
     (select-any (keypath :a :b :c) data)
     (select-one [:a :b :c] data)
@@ -86,7 +57,7 @@
 
 
 (let [data {:a {:b {:c 1}}}]
-  (run-benchmark "set value in nested map" 2500000
+  (run-benchmark "set value in nested map"
     (assoc-in data [:a :b :c] 1)
     (setval [:a :b :c] 1 data)))
 
@@ -103,7 +74,7 @@
           (my-update m3 :c afn))))))
 
 (let [data {:a {:b {:c 1}}}]
-  (run-benchmark "update value in nested map" 500000
+  (run-benchmark "update value in nested map"
     (update-in data [:a :b :c] inc)
     (transform [:a :b :c] inc data)
     (manual-transform data inc)))
@@ -135,14 +106,14 @@
 
 
 (let [data '(1 2 3 4 5)]
-  (run-benchmark "transform values of a list" 500000
+  (run-benchmark "transform values of a list"
     (transform ALL inc data)
     (doall (sequence (map inc) data))
     (reverse (into '() (map inc) data))
     ))
 
 (let [data {:a 1 :b 2 :c 3 :d 4}]
-  (run-benchmark "transform values of a small map" 500000
+  (run-benchmark "transform values of a small map"
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
@@ -158,7 +129,7 @@
 
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
-  (run-benchmark "transform values of large map" 600
+  (run-benchmark "transform values of large map"
     (into {} (for [[k v] data] [k (inc v)]))
     (reduce-kv (fn [m k v] (assoc m k (inc v))) {} data)
     (persistent! (reduce-kv (fn [m k v] (assoc! m k (inc v))) (transient {}) data))
@@ -174,7 +145,7 @@
 
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
-  (run-benchmark "first value of a size 10 vector" 10000000
+  (run-benchmark "first value of a size 10 vector"
     (first data)
     (select-any ALL data)
     (select-any FIRST data)
@@ -182,7 +153,7 @@
     ))
 
 (let [data [1 2 3 4 5]]
-  (run-benchmark "map a function over a vector" 1000000
+  (run-benchmark "map a function over a vector"
     (vec (map inc data))
     (mapv inc data)
     (transform ALL inc data)
@@ -190,7 +161,7 @@
 
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
-  (run-benchmark "filter a sequence" 500000
+  (run-benchmark "filter a sequence"
     (doall (filter even? data))
     (filterv even? data)
     (select [ALL even?] data)
@@ -200,7 +171,7 @@
 
 (let [data [{:a 2 :b 2} {:a 1} {:a 4} {:a 6}]
       xf (comp (map :a) (filter even?))]
-  (run-benchmark "even :a values from sequence of maps" 500000
+  (run-benchmark "even :a values from sequence of maps"
     (select [ALL :a even?] data)
     (->> data (mapv :a) (filter even?) doall)
     (into [] (comp (map :a) (filter even?)) data)
@@ -209,14 +180,13 @@
 
 (let [v (vec (range 1000))]
   (run-benchmark "Append to a large vector"
-    2000000
     (setval END [1] v)
     (setval AFTER-ELEM 1 v)
     (reduce conj v [1])
     (conj v 1)))
 
 (let [data [1 2 3 4 5 6 7 8 9 10]]
-  (run-benchmark "prepend to a vector" 1000000
+  (run-benchmark "prepend to a vector"
     (vec (cons 0 data))
     (setval BEFORE-ELEM 0 data)
     (into [0] data)
@@ -244,7 +214,6 @@
 
 (let [data [1 2 [[3]] [4 6 [7 [8]] 10]]]
   (run-benchmark "update every value in a tree (represented with vectors)"
-    50000
     (walk/postwalk (fn [e] (if (and (number? e) (even? e)) (inc e) e)) data)
     (transform [(walker number?) even?] inc data)
     (transform [TreeValues even?] inc data)
@@ -254,7 +223,6 @@
 
 (let [toappend (range 1000)]
   (run-benchmark "transient comparison: building up vectors"
-    8000
     (reduce (fn [v i] (conj v i)) [] toappend)
     (reduce (fn [v i] (conj! v i)) (transient []) toappend)
     (setval END toappend [])
@@ -262,7 +230,6 @@
 
 (let [toappend (range 1000)]
   (run-benchmark "transient comparison: building up vectors one at a time"
-    7000
     (reduce (fn [v i] (conj v i)) [] toappend)
     (reduce (fn [v i] (conj! v i)) (transient []) toappend)
     (reduce (fn [v i] (setval END [i] v)) [] toappend)
@@ -273,7 +240,6 @@
       tdata (transient data)
       tdata2 (transient data)]
   (run-benchmark "transient comparison: assoc'ing in vectors"
-    2500000
     (assoc data 600 0)
     (assoc! tdata 600 0)
     (setval (keypath 600) 0 data)
@@ -284,7 +250,6 @@
       tdata (transient data)
       tdata2 (transient data)]
   (run-benchmark "transient comparison: assoc'ing in maps"
-    1500000
     (assoc data 600 0)
     (assoc! tdata 600 0)
     (setval (keypath 600) 0 data)
@@ -298,31 +263,27 @@
                       [k (rand)]))
       tdata (transient data)]
   (run-benchmark "transient comparison: submap"
-    150000
     (transform (submap [600 700]) modify-submap data)
     (transform (submap! [600 700]) modify-submap tdata)))
 
 (let [data {:x 1}
       meta-map {:my :metadata}]
   (run-benchmark "set metadata"
-    1500000
     (with-meta data meta-map)
     (setval META meta-map data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "get metadata"
-    15000000
     (meta data)
     (select-any META data)))
 
 (let [data (with-meta {:x 1} {:my :metadata})]
   (run-benchmark "vary metadata"
-    800000
     (vary-meta data assoc :y 2)
     (setval [META :y] 2 data)))
 
 (let [data (range 1000)]
-  (run-benchmark "Traverse into a set" 5000
+  (run-benchmark "Traverse into a set"
     (set data)
     (set (select ALL data))
     (into #{} (traverse ALL data))
@@ -334,18 +295,18 @@
 (defn mult-10 [v] (* 10 v))
 
 (let [data [1 2 3 4 5 6 7 8 9]]
-  (run-benchmark "multi-transform vs. consecutive transforms, one shared nav" 300000
+  (run-benchmark "multi-transform vs. consecutive transforms, one shared nav"
     (->> data (transform [ALL even?] mult-10) (transform [ALL odd?] dec))
     (multi-transform [ALL (multi-path [even? (terminal mult-10)] [odd? (terminal dec)])] data)))
 
 
 (let [data [[1 2 3 4 :a] [5] [6 7 :b 8 9] [10 11 12 13]]]
-  (run-benchmark "multi-transform vs. consecutive transforms, three shared navs" 150000
+  (run-benchmark "multi-transform vs. consecutive transforms, three shared navs"
     (->> data (transform [ALL ALL number? even?] mult-10) (transform [ALL ALL number? odd?] dec))
     (multi-transform [ALL ALL number? (multi-path [even? (terminal mult-10)] [odd? (terminal dec)])] data)))
 
 (let [data {:a 1 :b 2 :c 3 :d 4}]
-  (run-benchmark "namespace qualify keys of a small map" 1000000
+  (run-benchmark "namespace qualify keys of a small map"
     (into {}
       (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
       data)
@@ -355,7 +316,7 @@
 
 
 (let [data (->> (for [i (range 1000)] [(keyword (str i)) i]) (into {}))]
-  (run-benchmark "namespace qualify keys of a large map" 1200
+  (run-benchmark "namespace qualify keys of a large map"
     (into {}
       (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
       data)
@@ -370,7 +331,7 @@
     (i/walk-until afn next-fn structure)))
 
 (let [data {:a [1 2 {:c '(3 4) :d {:e [1 2 3] 7 8 9 10}}]}]
-  (run-benchmark "walker vs. clojure.walk version" 150000
+  (run-benchmark "walker vs. clojure.walk version"
     (transform (walker number?) inc data)
     (transform (walker-old number?) inc data)
     ))
