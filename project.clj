@@ -32,7 +32,8 @@
                    [[org.clojure/test.check "0.9.0"]
                     [org.clojure/clojure "1.9.0"]
                     [org.clojure/clojurescript "1.10.439"]]}
-
+             :bench {:dependencies [[org.clojure/clojure "1.9.0"]
+                                    [criterium "0.4.4"]]}
              :test {:dependencies [[org.clojure/clojure "1.7.0"]]}}
 
   :aliases {"deploy" ["do" "clean," "deploy" "clojars"]})
