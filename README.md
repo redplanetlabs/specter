@@ -1,4 +1,4 @@
-# Specter [![Build Status](https://secure.travis-ci.org/nathanmarz/specter.png?branch=master)](http://travis-ci.org/nathanmarz/specter)
+# Specter [![Build Status](https://secure.travis-ci.org/redplanetlabs/specter.png?branch=master)](http://travis-ci.org/redplanetlabs/specter)
 
 Specter rejects Clojure's restrictive approach to immutable data structure manipulation, instead exposing an elegant API to allow any sort of manipulation imaginable. Specter especially excels at querying and transforming nested and recursive data, important use cases that are very complex to handle with vanilla Clojure.
 
