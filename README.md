@@ -4,7 +4,7 @@ Specter rejects Clojure's restrictive approach to immutable data structure manip
 
 Specter has an extremely simple core, just a single abstraction called "navigator". Queries and transforms are done by composing navigators into a "path" precisely targeting what you want to retrieve or change. Navigators can be composed with any other navigators, allowing sophisticated manipulations to be expressed very concisely.
 
-In addition, Specter has performance rivaling hand-optimized code  (see [this benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83)). Clojure's only comparable built-in operations are `get-in` and `update-in`, and the Specter equivalents are 30% and 85% faster respectively (while being just as concise). Under the hood, Specter uses [advanced dynamic techniques](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition.
+In addition, Specter has performance rivaling hand-optimized code  (see [this benchmark](https://gist.github.com/nathanmarz/b7c612b417647db80b9eaab618ff8d83)). Clojure's only comparable built-in operations are `get-in` and `update-in`, and the Specter equivalents are 30% and 85% faster respectively (while being just as concise). Under the hood, Specter uses [advanced dynamic techniques](https://github.com/redplanetlabs/specter/wiki/Specter's-inline-caching-implementation) to strip away the overhead of composition.
 
 There are some key differences between the Clojure approach to data manipulation and the Specter approach. Unlike Clojure, Specter always uses the most efficient method possible to implement an operation for a datatype (e.g. `last` vs. `LAST`). Clojure intentionally leaves out many operations, such as prepending to a vector or inserting into the middle of a sequence. Specter has navigators that cover these use cases (`BEFORE-ELEM` and `before-index`) and many more. Finally, Specter transforms always target precise parts of a data structure, leaving everything else the same. For instance, `ALL` targets every value within a sequence, and the resulting transform is always the same type as the input (e.g. a vector stays a vector, a sorted map stays a sorted map).
 
@@ -84,23 +84,23 @@ The latest release version of Specter is hosted on [Clojars](https://clojars.org
 - Presentation about Specter: [Specter: Powerful and Simple Data Structure Manipulation](https://www.youtube.com/watch?v=VTCy_DkAJGk)
   - Note that this presentation was given before Specter's inline compilation/caching system was developed. You no longer need to do anything special to get near-optimal performance.
 - Screencast on Specter: [Understanding Specter](https://www.youtube.com/watch?v=rh5J4vacG98)
-- List of navigators with examples: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
-- Core operations and defining new navigators: [This wiki page](https://github.com/nathanmarz/specter/wiki/List-of-Macros) provides a more comprehensive overview than the API docs of the core select/transform/etc. operations and the operations for defining new navigators.
-- [This wiki page](https://github.com/nathanmarz/specter/wiki/Using-Specter-Recursively) explains how to do precise and efficient recursive navigation with Specter.
-- [This wiki page](https://github.com/nathanmarz/specter/wiki/Using-Specter-With-Zippers) provides a comprehensive overview of how to use Specter's zipper navigators. Zippers are a much slower navigation method but can perform certain tasks that are not possible with Specter's regular navigators. Note that zippers are rarely needed.
-- [Cheat Sheet](https://github.com/nathanmarz/specter/wiki/Cheat-Sheet)
-- [API docs](http://nathanmarz.github.io/specter/)
-- Performance guide: [This post](https://github.com/nathanmarz/specter/wiki/Specter's-inline-caching-implementation) provides an overview of how Specter achieves its performance.
+- List of navigators with examples: [This wiki page](https://github.com/redplanetlabs/specter/wiki/List-of-Navigators) provides a more comprehensive overview than the API docs about the behavior of specific navigators and includes many examples.
+- Core operations and defining new navigators: [This wiki page](https://github.com/redplanetlabs/specter/wiki/List-of-Macros) provides a more comprehensive overview than the API docs of the core select/transform/etc. operations and the operations for defining new navigators.
+- [This wiki page](https://github.com/redplanetlabs/specter/wiki/Using-Specter-Recursively) explains how to do precise and efficient recursive navigation with Specter.
+- [This wiki page](https://github.com/redplanetlabs/specter/wiki/Using-Specter-With-Zippers) provides a comprehensive overview of how to use Specter's zipper navigators. Zippers are a much slower navigation method but can perform certain tasks that are not possible with Specter's regular navigators. Note that zippers are rarely needed.
+- [Cheat Sheet](https://github.com/redplanetlabs/specter/wiki/Cheat-Sheet)
+- [API docs](http://redplanetlabs.github.io/specter/)
+- Performance guide: [This post](https://github.com/redplanetlabs/specter/wiki/Specter's-inline-caching-implementation) provides an overview of how Specter achieves its performance.
 
 Specter's API is contained in these files:
 
-- [specter.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and the definition of the core operations.
-- [transients.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/transients.cljc): This contains navigators for transient collections.
-- [zipper.cljc](https://github.com/nathanmarz/specter/blob/master/src/clj/com/rpl/specter/zipper.cljc): This integrates zipper-based navigation into Specter.
+- [specter.cljc](https://github.com/redplanetlabs/specter/blob/master/src/clj/com/rpl/specter.cljc): This contains the built-in navigators and the definition of the core operations.
+- [transients.cljc](https://github.com/redplanetlabs/specter/blob/master/src/clj/com/rpl/specter/transients.cljc): This contains navigators for transient collections.
+- [zipper.cljc](https://github.com/redplanetlabs/specter/blob/master/src/clj/com/rpl/specter/zipper.cljc): This integrates zipper-based navigation into Specter.
 
 # Questions?
 
-You can ask questions about Specter by [opening an issue](https://github.com/nathanmarz/specter/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aquestion+) on Github.
+You can ask questions about Specter by [opening an issue](https://github.com/redplanetlabs/specter/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Aquestion+) on Github.
 
 You can also find help in the #specter channel on [Clojurians](http://clojurians.net/).
 
