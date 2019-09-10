@@ -456,7 +456,8 @@
              params (-> protpath-prot :sigs first last :arglists first)]
          (doseq [[atype path-code] extensions]
             (extend atype protpath-prot
-              {m (eval `(fn ~params (path ~path-code)))}))))
+              {m (binding [*compile-files* false]
+                   (eval `(fn ~params (path ~path-code))))}))))
 
      (defmacro extend-protocolpath
        "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."

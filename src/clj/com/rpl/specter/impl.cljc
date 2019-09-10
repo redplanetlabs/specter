@@ -908,6 +908,8 @@
         (if (fn? e) (re-find #" .*" (pr-str e)) e))
       o)))
 
+(def ^:dynamic *path-compile-files* false)
+
 #?(:clj
    (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-param]
      (let [code `(fn [~@used-locals-list] ~resolved-code)
@@ -916,7 +918,11 @@
         (println "Produced code:")
         (pp/pprint code)
         (println))
-      (binding [*ns* ns] (eval+ code))))
+      (binding [*ns* ns
+                *compile-files* (if *path-compile-files*
+                                  *compile-files*
+                                  false)]
+        (eval+ code))))
 
    :cljs
    (defn mk-dynamic-path-maker [resolved-code ns-str used-locals-list possible-params]
