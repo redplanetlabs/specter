@@ -9,7 +9,7 @@
   :test-paths ["test", "target/test-classes"]
   :auto-clean false
   :dependencies [[riddley "0.1.12"]]
-  :plugins [[lein-codox "0.9.5"]
+  :plugins [[lein-codox "0.10.7"]
             [lein-doo "0.1.7"]]
   :codox {:source-paths ["target/classes" "src/clj"]
           :namespaces [com.rpl.specter
