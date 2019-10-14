@@ -36,4 +36,8 @@
                                     [criterium "0.4.4"]]}
              :test {:dependencies [[org.clojure/clojure "1.7.0"]]}}
 
+   :deploy-repositories
+         [["clojars" {:url "https://repo.clojars.org"
+                      :sign-releases false}]]
+
   :aliases {"deploy" ["do" "clean," "deploy" "clojars"]})
