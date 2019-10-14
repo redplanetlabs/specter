@@ -1,4 +1,4 @@
-## 1.1.3
+## 1.1.3 - 2019-10-13
 
 * Better AOT behavior: path functions for inline caching and protpath extensions no longer write eval'd class files. You can force path functions to not override `*compile-files*` by binding `com.rpl.specter.impl/*path-compile-files*` to `true`.
 * Bug fix: fix throw-illegal in cljs
