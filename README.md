@@ -324,4 +324,4 @@ Specter supports ClojureScript! However, some of the differences between Clojure
 
 # License
 
-Copyright 2015-2019 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
+Copyright 2015-2020 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
