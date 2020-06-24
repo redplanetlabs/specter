@@ -115,7 +115,32 @@
                 (providepath ~self-sym ~path)
                 ~self-sym)))))
 
-     ;; copied from tools.macro to avoid the dependency
+     ;; copied from clojure.core
+     (def
+       ^{:private true}
+       sigs
+       (fn [fdecl]
+         (let [asig
+               (fn [fdecl]
+                 (let [arglist (first fdecl)
+                       ;; elide implicit macro args
+                       arglist (if (= '&form (first arglist))
+                                 (subvec arglist 2 (count arglist))
+                                 arglist)
+                       body (next fdecl)]
+                   (if (map? (first body))
+                     (if (next body)
+                       (with-meta arglist (conj (if (meta arglist) (meta arglist) {}) (first body)))
+                       arglist)
+                     arglist)))]
+           (if (seq? (first fdecl))
+             (loop [ret [] fdecls fdecl]
+               (if fdecls
+                 (recur (conj ret (asig (first fdecls))) (next fdecls))
+                 (seq ret)))
+             (list (asig fdecl))))))
+
+     ;; partially copied from clojure.core/defn
      (defn- name-with-attributes
        "To be used in macro definitions.
        Handles optional docstrings and attribute maps for a name to be defined
@@ -126,20 +151,31 @@
        macro argument list. The return value is a vector containing the name
        with its extended metadata map and the list of unprocessed macro
        arguments."
-       [name macro-args]
-       (let [[docstring macro-args] (if (string? (first macro-args))
-                                      [(first macro-args) (next macro-args)]
-                                      [nil macro-args])
-             [attr macro-args]          (if (map? (first macro-args))
-                                          [(first macro-args) (next macro-args)]
-                                          [{} macro-args])
-             attr                       (if docstring
-                                          (assoc attr :doc docstring)
-                                          attr)
-             attr                       (if (meta name)
-                                          (conj (meta name) attr)
-                                          attr)]
-         [(with-meta name attr) macro-args]))
+       [name fdecl]
+       (let [m (if (string? (first fdecl))
+                 {:doc (first fdecl)}
+                 {})
+
+             fdecl (if (string? (first fdecl))
+                     (next fdecl)
+                     fdecl)
+             m (if (map? (first fdecl))
+                 (conj m (first fdecl))
+                 m)
+             fdecl (if (map? (first fdecl))
+                     (next fdecl)
+                     fdecl)
+             fdecl (if (vector? (first fdecl))
+                     (list fdecl)
+                     fdecl)
+             m (if (map? (last fdecl))
+                 (conj m (last fdecl))
+                 m)
+             fdecl (if (map? (last fdecl))
+                     (butlast fdecl)
+                     fdecl)
+             m (conj {:arglists (list 'quote (sigs fdecl))} m)]
+         [(with-meta name m) fdecl]))
 
      (defmacro dynamicnav [& args]
        `(vary-meta (wrap-dynamic-nav (fn ~@args)) assoc :dynamicnav true))
