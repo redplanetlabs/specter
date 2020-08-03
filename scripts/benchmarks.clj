@@ -335,3 +335,20 @@
     (transform (walker number?) inc data)
     (transform (walker-old number?) inc data)
     ))
+
+(let [size 1000
+      middle-idx (/ size 2)
+      v -1
+      rng (range size)
+      data-vec (vec rng)
+      data-lst (apply list rng)]
+  (run-benchmark "before-index vs. srange in middle (vector)"
+    (setval (before-index middle-idx) v data-vec)
+    (setval (srange middle-idx middle-idx) [v] data-vec))
+  (run-benchmark "before-index vs. srange in middle (list)"
+    (setval (before-index middle-idx) v data-lst)
+    (setval (srange middle-idx middle-idx) [v] data-lst))
+  (run-benchmark "before-index at 0 vs. srange vs. cons (list)"
+    (setval (before-index 0) v data-lst)
+    (setval (srange 0 0) [v] data-lst)
+    (cons v data-lst)))

@@ -974,11 +974,10 @@
     NONE)
   (transform* [this vals structure next-fn]
     (let [v (next-fn vals NONE)]
-      (if (identical? NONE v)
-        structure
-        ;; TODO: make a more efficient impl
-        (setval (srange index index) [v] structure)
-        ))))
+      (if
+        (identical? NONE v)
+          structure
+          (n/insert-before-idx structure index v)))))
 
 (defrichnav
   ^{:doc "Navigates to the index of the sequence if within 0 and size. Transforms move element
