@@ -1694,3 +1694,21 @@
       (is (satisfies-protpath? FooPP "a"))
       (is (not (satisfies-protpath? FooPP 1)))
       )))
+
+(deftest implicit-map-nav-test
+  (def my-x 100)
+  (let [ab-map {:a 1 :b 2}
+        c-map {:k 3 :l 4 :m 5}
+        abc-map (assoc ab-map :c c-map)]
+    (for [filter-map [ab-map abc-map {:c c-map} {}]]
+      ;; all of these cases should select the full map
+      (is (= [abc-map] (select [filter-map] abc-map)))
+    )
+    (is (= [] (select [{:a -9}] abc-map)))
+    (let [my-x 100]
+      (do
+        ;; test with binding
+        (is (= [] (select [{:x my-x :y 17}] {:x (+ my-x 1) :y 17})))
+        (is (= [{:x 100 :y 17}] (select [{:x my-x :y 17}] {:x 100 :y 17})))
+    ))
+  ))

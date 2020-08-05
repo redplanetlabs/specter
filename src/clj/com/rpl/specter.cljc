@@ -1468,3 +1468,24 @@
    [& path]
    (map compact* path)
    ))
+
+(defn- map-filter-helper [item-map keys]
+  (if (empty? keys)
+    STAY ; base case
+    (let [key (first keys) value (get item-map key)]
+      (if-path (i/combine-two-navs (n/keypath* key) (pred= value))
+               (map-filter-helper item-map (rest keys)))
+      )
+    ))
+
+(extend-type #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap)
+  ImplicitNav
+  (implicit-nav [this]
+    (map-filter-helper this (keys this))
+    ))
+
+(extend-type #?(:clj clojure.lang.PersistentHashMap :cljs cljs.core/PersistentHashMap)
+  ImplicitNav
+  (implicit-nav [this]
+    (map-filter-helper this (keys this))
+    ))
