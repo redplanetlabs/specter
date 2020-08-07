@@ -507,6 +507,11 @@
     (defmacro end-fn [& args]
       `(n/->SrangeEndFunction (fn ~@args)))
 
+    (defmacro subseq-pred-fn
+      "Used in conjunction with `continuous-subseqs`.  See [[continuous-subseqs]]."
+      [get-truthy-fn & args]
+      `(i/->SubseqsDynamicPredFn ~get-truthy-fn (i/wrap-pred-with-index (fn ~@args))))
+
     ))
 
 
@@ -800,7 +805,14 @@
 
 
 (defnav
-  ^{:doc "Navigates to every continuous subsequence of elements matching `pred`"}
+  ^{:doc "Navigates to every continuous subsequence of elements matching `pred`. `pred` can be specified one of two
+          forms. If a regular function (e.g. defined with `fn`), it takes in only the current element as input.  If
+          defined using the special `subseq-pred-fn` macro, it takes in a `get-truthy-fn` as its first parameter,
+          followed by arguments to a predicate function [`elem` `prev`], followed by the predicate function body.  The
+          `elem` argument to the predicate function is the current element, and the `pred` argument is the value
+          returned by your predicate on the previous element, so it can be in any structure you choose.  `get-truthy-fn`
+          is a function that should return true from your predicate's return structure if that element should be
+          included in a subsequence."}
   continuous-subseqs
   [pred]
   (select* [this structure next-fn]

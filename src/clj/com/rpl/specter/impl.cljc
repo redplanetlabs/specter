@@ -546,8 +546,38 @@
         res
         ))))
 
+(defn wrap-pred-with-index [pred]
+  (fn [i elem prev]
+    [(pred elem (first prev)), i]))
+
+;; adapted from clojure.core$keep_indexed
+(defn- subseq-pred-fn-transducer
+  ([pred-fn]
+    (fn [rf]
+      (let [last-val (volatile! nil) idx (volatile! -1)]
+        (fn
+          ([] (rf))               ;; init arity
+          ([result] (rf result))  ;; completion arity
+          ([result input]         ;; reduction arity
+            (let [last @last-val
+                  i (vswap! idx inc)
+                  curr ((:pred-fn pred-fn) i input last)]
+              (vreset! last-val curr)
+              (if (nil? curr)
+                result
+                (rf result curr)))))))))
+
+;; see com.rpl.specter.navs.SrangeEndFunction
+(defrecord SubseqsDynamicPredFn [get-truthy-fn pred-fn])
+
 (defn- matching-indices [aseq p]
-  (keep-indexed (fn [i e] (if (p e) i)) aseq))
+  (if (instance? SubseqsDynamicPredFn p)
+  ;;  use new subseq predicate form (taking current and previous vals)
+    (let [index-results (into [] (subseq-pred-fn-transducer p) aseq)]
+      ;; apply the get-truthy-fn to extract the truthy (i.e. include) result
+      (map last (filter (comp true? (:get-truthy-fn p) first) index-results)))
+    ;; else use the previous 1-arity predicate
+    (keep-indexed (fn [i e] (if (p e) i)) aseq)))
 
 (defn matching-ranges [aseq p]
   (first

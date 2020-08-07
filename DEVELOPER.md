@@ -7,6 +7,5 @@ lein do clean, test
 # Running ClojureScript tests
 
 ```
-lein javac
-lein doo node test-build once
+lein do clean, javac, test-cljs
 ```
