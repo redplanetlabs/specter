@@ -39,11 +39,16 @@
  (let [helpers (for [[mname [_ & mparams] & mbody] impls]
                  `(defn ~(helper-name name mname) [~@params ~@mparams] ~@mbody))
        decls (for [[mname & _] impls]
-               `(declare ~(helper-name name mname)))]
+               `(declare ~(helper-name name mname)))
+       name-with-meta (vary-meta name
+                                 assoc :arglists (list 'quote (list params)))]
    `(do
       ~@decls
       ~@helpers
-      (def ~name (nav ~params ~@impls)))))
+      (def ~name-with-meta (nav ~params ~@impls)))))
 
 (defmacro defrichnav [name params & impls]
-  `(def ~name (richnav ~params ~@impls)))
+  (let [name-with-meta (vary-meta name
+                                  assoc :arglists (list 'quote (list params)))]
+   `(def ~name-with-meta
+      (richnav ~params ~@impls))))
