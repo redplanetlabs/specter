@@ -1,7 +1,7 @@
 # Running Clojure tests
 
 ```
-lein cleantest
+lein do clean, test
 ```
 
 # Running ClojureScript tests
