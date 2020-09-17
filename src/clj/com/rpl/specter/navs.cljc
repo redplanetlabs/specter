@@ -705,7 +705,8 @@
   (insert-before-idx [_ idx val]
     (if (= 0 idx)
       (list val)
-      (i/throw-illegal "For a nil structure, can only insert before index 0, not at - " idx)))
+      (throw (ex-info "For a nil structure, can only insert before index 0"
+                      {:insertion-index idx}))))
 
   #?(:clj java.lang.String :cljs string)
   (insert-before-idx [aseq idx val]

@@ -65,4 +65,4 @@
     `(defn ~'late-fn [~f ~args]
        (case (count ~args)
          ~@(apply concat cases)
-         (com.rpl.specter.impl/throw-illegal "Cannot have late function with more than 18 args")))))
+         (throw (ex-info "Cannot have late function with more than 18 args" {}))))))

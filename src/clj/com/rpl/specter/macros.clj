@@ -6,8 +6,8 @@
 (defn- determine-params-impls [impls]
  (let [grouped (->> impls (map (fn [[n & body]] [n body])) (into {}))]
    (if-not (= #{'select* 'transform*} (-> grouped keys set))
-     (i/throw-illegal "defnav must implement select* and transform*, instead got "
-                      (keys grouped)))
+     (throw (ex-info "defnav must implement select* and transform*"
+                     {:methods (keys grouped)})))
    grouped))
 
 

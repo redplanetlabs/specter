@@ -2,7 +2,7 @@
   #?(:cljs (:require-macros
             [com.rpl.specter.util-macros
              :refer [doseqres mk-comp-navs mk-late-fn mk-late-fn-records]]
-            [com.rpl.specter.impl :refer [throw-illegal]]))
+            ))
   ;; workaround for cljs bug that emits warnings for vars named the same as a
   ;; private var in cljs.core (in this case `NONE`, added as private var to
   ;; cljs.core with 1.9.562)
@@ -50,24 +50,6 @@
       ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 & r] v)))
 
 
-#?(:clj
-   (defmacro throw* [etype & args]
-     `(throw (new ~etype (smart-str ~@args)))))
-
-#?(
-   :clj
-   (defmacro throw-illegal [& args]
-     (let [platform (if (contains? &env :locals) :cljs :clj)]
-       (if (= platform :clj)
-         `(throw* IllegalArgumentException ~@args)
-         `(com.rpl.specter.impl/throw-illegal* ~@args)
-         )))
-
-   :cljs
-   (defn throw-illegal* [& args]
-     (throw (js/Error. (apply str args)))))
-
-
 ;; need to get the expansion function like this so that
 ;; this code compiles in a clojure environment where cljs.analyzer
 ;; namespace does not exist
@@ -89,7 +71,7 @@
 
    :cljs
    (defn clj-macroexpand-all [form]
-     (throw-illegal "not implemented")))
+     (throw (ex-info "not implemented" {}))))
 
 
 #?(
@@ -98,7 +80,7 @@
 
    :cljs
    (defn intern* [ns name val]
-     (throw-illegal "intern not supported in ClojureScript")))
+     (throw (ex-info "intern not supported in ClojureScript" {}))))
 
 #?(
    :clj
@@ -152,7 +134,9 @@
 (defn- coerce-object [this]
   (cond (rich-nav? this) this
         (satisfies? p/ImplicitNav this) (p/implicit-nav this)
-        :else (throw-illegal "Not a navigator: " this " " (pr-str (type this)))))
+        :else (throw (ex-info "Not a navigator"
+                              {:this this
+                               :type-str (pr-str (type this))}))))
 
 
 (defprotocol CoercePath
@@ -376,7 +360,8 @@
                     (let [curr (get-cell res)]
                       (if (identical? curr NONE)
                         (set-cell! res structure)
-                        (throw-illegal "More than one element found in structure: " structure))))]
+                        (throw (ex-info "More than one element found in structure"
+                                        {:structure structure})))))]
 
     (compiled-traverse* path result-fn structure)
     (let [ret (get-cell res)]
@@ -391,11 +376,12 @@
                     (let [curr (get-cell res)]
                       (if (identical? curr NONE)
                         (set-cell! res structure)
-                        (throw-illegal "More than one element found in structure: " structure))))]
+                        (throw (ex-info "More than one element found in structure"
+                                        {:structure structure})))))]
     (compiled-traverse* path result-fn structure)
     (let [ret (get-cell res)]
       (if (identical? NONE ret)
-        (throw-illegal "Found no elements for select-one! on " structure))
+        (throw (ex-info "Found no elements for select-one!" {:structure structure})))
       ret)))
 
 
@@ -813,7 +799,8 @@
    (defn dynamic-val-code [code possible-params]
      (let [[i] (keep-indexed (fn [i v] (if (= v code) i)) possible-params)]
        (if (nil? i)
-         (throw-illegal "Could not find " code " in possible params " possible-params))
+         (throw (ex-info "Could not find code in possible params"
+                         {:code code :possible-params possible-params})))
        (maybe-direct-nav
         (->LocalParam i)
         (direct-nav? code)))))
@@ -985,9 +972,9 @@
 
 
 (defn- multi-transform-error-fn [& nav]
-  (throw-illegal
-    "All navigation in multi-transform must end in 'terminal' "
-    "navigators. Instead navigated to: " nav))
+  (throw
+    (ex-info "All navigation in multi-transform must end in 'terminal' navigators"
+             {:nav nav})))
 
 (defn compiled-multi-transform* [path structure]
   (compiled-transform* path multi-transform-error-fn structure))

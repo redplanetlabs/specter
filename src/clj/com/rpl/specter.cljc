@@ -1308,7 +1308,7 @@
           ns (namespace structure)]
       (cond (keyword? structure) (keyword ns new-name)
             (symbol? structure) (symbol ns new-name)
-            :else (i/throw-illegal "NAME can only be used on symbols or keywords - " structure)
+            :else (throw (ex-info "NAME can only be used on symbols or keywords" {:structure structure}))
             ))))
 
 (defnav ^{:doc "Navigates to the namespace portion of the keyword or symbol"}
@@ -1321,7 +1321,8 @@
           new-ns (next-fn (namespace structure))]
       (cond (keyword? structure) (keyword new-ns name)
             (symbol? structure) (symbol new-ns name)
-            :else (i/throw-illegal "NAMESPACE can only be used on symbols or keywords - " structure)
+            :else (throw (ex-info "NAMESPACE can only be used on symbols or keywords"
+                                  {:structure structure}))
             ))))
 
 (defdynamicnav
