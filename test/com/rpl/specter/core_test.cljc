@@ -1320,9 +1320,13 @@
 (deftest traversed-test
   (is (= 10 (select-any (s/traversed s/ALL +) [1 2 3 4]))))
 
-(defn- predand= [pred ret v]
-  (and (pred ret)
-       (= ret v)))
+(defn- predand= [pred v1 v2]
+  (and (pred v1)
+       (pred v2)
+       (= v1 v2)))
+
+(defn listlike? [v]
+  (or (list? v) (seq? v)))
 
 (deftest nthpath-test
   (is (predand= vector? [1 2 -3 4] (transform (s/nthpath 2) - [1 2 3 4])))
@@ -1334,7 +1338,7 @@
 
 (deftest remove-with-NONE-test
   (is (predand= vector? [1 2 3] (setval [s/ALL nil?] s/NONE [1 2 nil 3 nil])))
-  (is (predand= list? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))
+  (is (predand= listlike? '(1 2 3) (setval [s/ALL nil?] s/NONE '(1 2 nil 3 nil))))
   (is (= {:b 2} (setval :a s/NONE {:a 1 :b 2})))
   (is (= {:b 2} (setval (s/must :a) s/NONE {:a 1 :b 2})))
   (is (predand= vector? [1 3] (setval (s/keypath 1) s/NONE [1 2 3])))
@@ -1454,11 +1458,11 @@
 
 (deftest single-value-none-navigators-test
   (is (predand= vector? [1 2 3] (setval s/AFTER-ELEM 3 [1 2])))
-  (is (predand= list? '(1 2 3) (setval s/AFTER-ELEM 3 '(1 2))))
-  (is (predand= list? '(1) (setval s/AFTER-ELEM 1 nil)))
+  (is (predand= listlike? '(1 2 3) (setval s/AFTER-ELEM 3 '(1 2))))
+  (is (predand= listlike? '(1) (setval s/AFTER-ELEM 1 nil)))
   (is (predand= vector? [3 1 2] (setval s/BEFORE-ELEM 3 [1 2])))
-  (is (predand= list? '(3 1 2) (setval s/BEFORE-ELEM 3 '(1 2))))
-  (is (predand= list? '(1) (setval s/BEFORE-ELEM 1 nil)))
+  (is (predand= listlike? '(3 1 2) (setval s/BEFORE-ELEM 3 '(1 2))))
+  (is (predand= listlike? '(1) (setval s/BEFORE-ELEM 1 nil)))
   (is (= #{1 2 3} (setval s/NONE-ELEM 3 #{1 2})))
   (is (= #{1} (setval s/NONE-ELEM 1 nil)))
   )
@@ -1502,7 +1506,7 @@
     [l (limit-size 10 (gen/not-empty (gen/list gen/int)))]
     (let [newl (setval s/FIRST s/NONE l)]
       (and (= newl (rest l))
-           (list? newl)
+           (listlike? newl)
            ))))
 
 (defspec remove-last-vector
@@ -1616,10 +1620,10 @@
     (is (predand= vector? [1 :a 2 3] (setval (s/before-index 1) :a data)))
     (is (predand= vector? [1 2 3 :a] (setval (s/before-index 3) :a data)))
     ; ensure inserting at index 0 in nil structure works, as in previous impl
-    (is (predand= vector? '[:a] (setval (s/before-index 0) :a nil)))
-    (is (predand= list? '(:a 1 2 3) (setval (s/before-index 0) :a datal)))
-    (is (predand= list? '(1 :a 2 3) (setval (s/before-index 1) :a datal)))
-    (is (predand= list? '(1 2 3 :a) (setval (s/before-index 3) :a datal)))
+    (is (predand= listlike? '(:a) (setval (s/before-index 0) :a nil)))
+    (is (predand= listlike? '(:a 1 2 3) (setval (s/before-index 0) :a datal)))
+    (is (predand= listlike? '(1 :a 2 3) (setval (s/before-index 1) :a datal)))
+    (is (predand= listlike? '(1 2 3 :a) (setval (s/before-index 3) :a datal)))
     (is (predand= string? "abcxdef" (setval (s/before-index 3) (char \x) data-str)))
     ))
 
@@ -1633,12 +1637,12 @@
     (is (predand= vector? [1 2 4 5 6 3] (setval (s/index-nav 2) 5 data)))
     (is (predand= vector? [6 1 2 3 4 5] (setval (s/index-nav 5) 0 data)))
 
-    (is (predand= list? '(3 1 2 4 5 6) (setval (s/index-nav 2) 0 datal)))
-    (is (predand= list? '(1 3 2 4 5 6) (setval (s/index-nav 2) 1 datal)))
-    (is (predand= list? '(1 2 3 4 5 6) (setval (s/index-nav 2) 2 datal)))
-    (is (predand= list? '(1 2 4 5 3 6) (setval (s/index-nav 2) 4 datal)))
-    (is (predand= list? '(1 2 4 5 6 3) (setval (s/index-nav 2) 5 datal)))
-    (is (predand= list? '(6 1 2 3 4 5) (setval (s/index-nav 5) 0 datal)))
+    (is (predand= listlike? '(3 1 2 4 5 6) (setval (s/index-nav 2) 0 datal)))
+    (is (predand= listlike? '(1 3 2 4 5 6) (setval (s/index-nav 2) 1 datal)))
+    (is (predand= listlike? '(1 2 3 4 5 6) (setval (s/index-nav 2) 2 datal)))
+    (is (predand= listlike? '(1 2 4 5 3 6) (setval (s/index-nav 2) 4 datal)))
+    (is (predand= listlike? '(1 2 4 5 6 3) (setval (s/index-nav 2) 5 datal)))
+    (is (predand= listlike? '(6 1 2 3 4 5) (setval (s/index-nav 5) 0 datal)))
     ))
 
 (deftest indexed-vals-test
