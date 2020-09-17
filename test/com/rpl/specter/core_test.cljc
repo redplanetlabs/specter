@@ -1609,14 +1609,18 @@
 
 (deftest before-index-test
   (let [data [1 2 3]
-        datal '(1 2 3)]
+        datal '(1 2 3)
+        data-str "abcdef"]
     (is (predand= vector? [:a 1 2 3] (setval (s/before-index 0) :a data)))
     (is (predand= vector? [1 2 3] (setval (s/before-index 1) s/NONE data)))
     (is (predand= vector? [1 :a 2 3] (setval (s/before-index 1) :a data)))
     (is (predand= vector? [1 2 3 :a] (setval (s/before-index 3) :a data)))
+    ; ensure inserting at index 0 in nil structure works, as in previous impl
+    (is (predand= vector? '[:a] (setval (s/before-index 0) :a nil)))
     (is (predand= list? '(:a 1 2 3) (setval (s/before-index 0) :a datal)))
     (is (predand= list? '(1 :a 2 3) (setval (s/before-index 1) :a datal)))
     (is (predand= list? '(1 2 3 :a) (setval (s/before-index 3) :a datal)))
+    (is (predand= string? "abcxdef" (setval (s/before-index 3) (char \x) data-str)))
     ))
 
 (deftest index-nav-test

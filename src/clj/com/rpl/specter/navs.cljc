@@ -474,6 +474,9 @@
 (defprotocol FastEmpty
   (fast-empty? [s]))
 
+(defprotocol InsertBeforeIndex
+  (insert-before-idx [aseq idx val]))
+
 (defnav PosNavigator [getter updater]
   (select* [this structure next-fn]
     (if-not (fast-empty? structure)
@@ -691,3 +694,34 @@
     ((:end-fn end-fn) structure start)
     (end-fn structure)
     ))
+
+(defn- insert-before-index-list [lst idx val]
+  ;; an implementation that is most efficient for list style structures
+  (let [[front back] (split-at idx lst)]
+    (concat front (cons val back))))
+
+(extend-protocol InsertBeforeIndex
+  nil
+  (insert-before-idx [_ idx val]
+    (cond (= 0 idx) [val]
+          :else (i/throw-illegal "For a nil structure, can only insert before index 0, not at - " idx)))
+
+  #?(:clj java.lang.String :cljs string)
+  (insert-before-idx [aseq idx val]
+    (apply str (insert-before-index-list aseq idx val)))
+
+  #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)
+  (insert-before-idx [aseq idx val]
+    (insert-before-index-list aseq idx val))
+
+  #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
+  (insert-before-idx [aseq idx val]
+    (let [front (subvec aseq 0 idx)
+          back (subvec aseq idx)]
+      (into (conj front val) back)))
+
+  #?(:clj clojure.lang.IPersistentList :cljs cljs.core/List)
+  (insert-before-idx [aseq idx val]
+    (cond (= idx 0)
+      (cons val aseq)
+      :else (insert-before-index-list aseq idx val))))
