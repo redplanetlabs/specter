@@ -449,6 +449,24 @@
   (prepend-one [structure elem]
     (into [elem] structure))
 
+  #?(:cljs cljs.core/Subvec)
+  #?(:cljs
+  (append-all [structure elements]
+    (reduce conj structure elements)))
+  #?(:cljs
+  (prepend-all [structure elements]
+    (let [ret (transient [])]
+      (as-> ret <>
+            (reduce conj! <> elements)
+            (reduce conj! <> structure)
+            (persistent! <>)))))
+  #?(:cljs
+  (append-one [structure elem]
+    (conj structure elem)))
+  #?(:cljs
+  (prepend-one [structure elem]
+    (into [elem] structure)))
+
 
   #?(:clj Object :cljs default)
   (append-all [structure elements]
@@ -487,6 +505,14 @@
       structure
       (updater structure next-fn))))
 
+#?(
+   :clj
+   (defn vec-count [^clojure.lang.IPersistentVector v]
+     (.length v))
+
+   :cljs
+   (defn vec-count [v]
+     (count v)))
 
 (defn- update-first-list [l afn]
   (let [newf (afn (first l))
@@ -502,14 +528,33 @@
       (if (nil? bl) '() bl)
       (concat bl [lastl]))))
 
-#?(
-   :clj
-   (defn vec-count [^clojure.lang.IPersistentVector v]
-     (.length v))
+(defn- update-first-vector [v afn]
+  (let [val (nth v 0)
+        newv (afn val)]
+    (if (identical? i/NONE newv)
+      (subvec v 1)
+      (assoc v 0 newv)
+      )))
 
-   :cljs
-   (defn vec-count [v]
-     (count v)))
+(defn- update-last-vector [v afn]
+  ;; type-hinting vec-count to ^int caused weird errors with case
+  (let [c (int (vec-count v))]
+    (case c
+      1 (let [[e] v
+              newe (afn e)]
+              (if (identical? i/NONE newe)
+                []
+                [newe]))
+      2 (let [[e1 e2] v
+               newe (afn e2)]
+          (if (identical? i/NONE newe)
+            [e1]
+            [e1 newe]))
+      (let [i (dec c)
+            newe (afn (nth v i))]
+        (if (identical? i/NONE newe)
+          (pop v)
+          (assoc v i newe))))))
 
 
 #?(
@@ -525,32 +570,18 @@
 (extend-protocol UpdateExtremes
   #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (update-first [v afn]
-    (let [val (nth v 0)
-          newv (afn val)]
-      (if (identical? i/NONE newv)
-        (subvec v 1)
-        (assoc v 0 newv)
-        )))
+    (update-first-vector v afn))
 
   (update-last [v afn]
-    ;; type-hinting vec-count to ^int caused weird errors with case
-    (let [c (int (vec-count v))]
-      (case c
-        1 (let [[e] v
-                newe (afn e)]
-                (if (identical? i/NONE newe)
-                  []
-                  [newe]))
-        2 (let [[e1 e2] v
-                 newe (afn e2)]
-            (if (identical? i/NONE newe)
-              [e1]
-              [e1 newe]))
-        (let [i (dec c)
-              newe (afn (nth v i))]
-          (if (identical? i/NONE newe)
-            (pop v)
-            (assoc v i newe))))))
+    (update-last-vector v afn))
+
+  #?(:cljs cljs.core/Subvec)
+  #?(:cljs
+    (update-first [v afn]
+      (update-first-vector v afn)))
+  #?(:cljs
+    (update-last [v afn]
+      (update-last-vector v afn)))
 
   #?(:clj String :cljs string)
   (update-first [s afn]

@@ -2,6 +2,7 @@
 
 * Add arglist metadata to navs (thanks @phronmophobic)
 * Improve before-index performance by 150x on lists and 5x on vectors (thanks @jeff303)
+* Bug fix: BEFORE-ELEM, AFTER-ELEM, FIRST, LAST, BEGINNING, and END on subvecs now produce vector type in cljs
 
 ## 1.1.3 - 2019-10-13
 
