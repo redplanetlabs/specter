@@ -758,3 +758,21 @@
     (cond (= idx 0)
       (cons val aseq)
       :else (insert-before-index-list aseq idx val))))
+
+(defn- maintain-sorted-submap [structure m-keys]
+  (into (empty structure) (select-keys structure m-keys)))
+
+(defprotocol SubMap
+  (select-submap [structure m-keys]))
+
+(extend-protocol SubMap
+  nil
+  (select-submap [_ _] nil)
+
+  #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap)
+  (select-submap [structure m-keys]
+    (maintain-sorted-submap structure m-keys))
+
+  #?(:clj Object :cljs default)
+  (select-submap [structure m-keys]
+    (select-keys structure m-keys)))
