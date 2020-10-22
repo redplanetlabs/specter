@@ -1,7 +1,5 @@
 (ns com.rpl.specter.zipper-test
   #?(:cljs (:require-macros
-            [cljs.test :refer [is deftest]]
-            [clojure.test.check.clojure-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter
               :refer [declarepath providepath select select-one select-one!
@@ -20,6 +18,8 @@
             #?(:cljs [clojure.test.check :as tc])
             #?(:cljs [clojure.test.check.generators :as gen])
             #?(:cljs [clojure.test.check.properties :as prop :include-macros true])
+            #?(:cljs [cljs.test :refer-macros [deftest is]])
+            #?(:cljs [clojure.test.check.clojure-test :refer-macros [defspec]])
             [com.rpl.specter :as s]
             [com.rpl.specter.zipper :as z]))
 

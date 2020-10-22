@@ -1,6 +1,6 @@
 (ns com.rpl.specter.navs
   #?(:cljs (:require-macros
-            [com.rpl.specter
+            [com.rpl.specter.macros
               :refer
               [defnav defrichnav]]
             [com.rpl.specter.util-macros :refer

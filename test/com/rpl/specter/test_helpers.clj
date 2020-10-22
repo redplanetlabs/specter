@@ -1,11 +1,8 @@
 (ns com.rpl.specter.test-helpers
-  (:require [clojure.test.check
-             [generators :as gen]
-             [properties :as prop]]
-            [clojure.test])
-
-  (:use [com.rpl.specter :only [select transform]]
-        [com.rpl.specter :only [select* transform*]]))
+  (:require [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
+            [clojure.test]
+            [com.rpl.specter :as s]))
 
 
 ;; it seems like gen/bind and gen/return are a monad (hence the names)
@@ -25,10 +22,10 @@
 (defmacro ic-test [params-decl apath transform-fn data params]
   (let [platform (if (contains? &env :locals) :cljs :clj)
         is-sym (if (= platform :clj) 'clojure.test/is 'cljs.test/is)]
-    `(let [icfnsel# (fn [~@params-decl] (select ~apath ~data))
-           icfntran# (fn [~@params-decl] (transform ~apath ~transform-fn ~data))
-           regfnsel# (fn [~@params-decl] (select* ~apath ~data))
-           regfntran# (fn [~@params-decl] (transform* ~apath ~transform-fn ~data))
+    `(let [icfnsel# (fn [~@params-decl] (s/select ~apath ~data))
+           icfntran# (fn [~@params-decl] (s/transform ~apath ~transform-fn ~data))
+           regfnsel# (fn [~@params-decl] (s/select* ~apath ~data))
+           regfntran# (fn [~@params-decl] (s/transform* ~apath ~transform-fn ~data))
            params# (if (empty? ~params) [[]] ~params)]
       (dotimes [_# 3]
         (doseq [ps# params#]
