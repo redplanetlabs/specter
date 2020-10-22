@@ -19,11 +19,14 @@
       (println (pretty-float3 t) "\t\t" (pretty-float3 (/ t best-time 1.0)) "\t\t" k))))
 
 (defmacro run-benchmark [name & exprs]
-  (let [afn-map (->> exprs shuffle (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
-    `(do
-       (println "Benchmark:" ~name)
-       (compare-benchmark ~afn-map)
-       (println "\n********************************\n"))))
+  (let [only-benchmarks (set (filter some? *command-line-args*))
+        all-benchmarks? (empty? only-benchmarks)]
+    (if (or all-benchmarks? (contains? only-benchmarks name))
+      (let [afn-map (->> exprs shuffle (map (fn [e] [`(quote ~e) `(fn [] ~e)])) (into {}))]
+        `(do
+           (println "Benchmark:" ~name)
+           (compare-benchmark ~afn-map)
+           (println "\n********************************\n"))))))
 
 (defn specter-dynamic-nested-get [data a b c]
   (select-any (keypath a b c) data))

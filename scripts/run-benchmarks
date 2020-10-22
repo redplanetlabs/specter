@@ -5,4 +5,4 @@ lein version
 echo
 lein show-profiles bench
 echo
-java -server -XX:MaxInlineSize=100 -cp "$(lein with-profile bench classpath)" clojure.main scripts/benchmarks.clj
+java -server -XX:MaxInlineSize=100 -cp "$(lein with-profile bench classpath)" clojure.main scripts/benchmarks.clj "$@"
