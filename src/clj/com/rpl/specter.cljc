@@ -1,5 +1,6 @@
 (ns com.rpl.specter
   #?(:cljs (:require-macros
+            [net.cgrand.macrovich :as mvch]
             [com.rpl.specter
               :refer
               [late-bound-nav
@@ -28,8 +29,9 @@
     #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [com.rpl.specter.navs :as n]
-            #?(:clj [clojure.walk :as cljwalk])
-            #?(:clj [com.rpl.specter.macros :as macros])
+            #?(:clj [net.cgrand.macrovich :as mvch])
+            [clojure.walk :as cljwalk]
+            [com.rpl.specter.macros :as macros]
             [clojure.set :as set]))
 
 (defn- static-path? [path]
@@ -51,18 +53,23 @@
             ret
             ))))
 
-#?(:clj
-   (do
-
+(mvch/deftime
      (defmacro defmacroalias [name target]
        `(do
           (def ~name (var ~target))
           (alter-meta! (var ~name) merge {:macro true})))
 
-     (defmacroalias richnav macros/richnav)
-     (defmacroalias nav macros/nav)
-     (defmacroalias defnav macros/defnav)
-     (defmacroalias defrichnav macros/defrichnav)
+  ; defmacroalias doesn't seem to work in self-hosted (tach): "Can't take value of macro com.rpl.specter.macros/..."
+  ; wrapping the second param in (quote ...) makes that warning go away in self-hosted, but breaks other environments
+  ; therefore, using an alternative approach to aliasing these macros
+  ;(defmacroalias richnav macros/richnav)
+  ;(defmacroalias nav macros/nav)
+  ;(defmacroalias defnav macros/defnav)
+  ;(defmacroalias defrichnav macros/defrichnav)
+  (defmacro richnav [& args] `(macros/richnav ~@args))
+  (defmacro nav [& args] `(macros/nav ~@args))
+  (defmacro defnav [& args] `(macros/defnav ~@args))
+  (defmacro defrichnav [& args] `(macros/defrichnav ~@args))
 
      (defmacro collector [params [_ [_ structure-sym] & body]]
        `(richnav ~params
@@ -73,6 +80,7 @@
 
      (defmacro defcollector [name & body]
        `(def ~name (collector ~@body)))
+) ; end mvch/deftime
 
 
      (defn- late-bound-operation [bindings builder-op impls]
@@ -85,6 +93,7 @@
               (apply builder# curr-params#)
               (com.rpl.specter.impl/->DynamicFunction builder# curr-params# nil)))))
 
+(mvch/deftime
      (defmacro late-bound-nav [bindings & impls]
        (late-bound-operation bindings `nav impls))
 
@@ -114,6 +123,7 @@
               (let [~self-sym (i/local-declarepath)]
                 (providepath ~self-sym ~path)
                 ~self-sym)))))
+  ) ; end mvch/deftime
 
      ;; copied from clojure.core
      (def
@@ -177,6 +187,7 @@
              m (conj {:arglists (list 'quote (sigs fdecl))} m)]
          [(with-meta name m) fdecl]))
 
+(mvch/deftime
      (defmacro dynamicnav [& args]
        `(vary-meta (wrap-dynamic-nav (fn ~@args)) assoc :dynamicnav true))
 
@@ -189,7 +200,6 @@
        [name & args]
        (let [[name args] (name-with-attributes name args)]
          `(def ~name (dynamicnav ~@args))))
-
 
      (defn- ic-prepare-path [locals-set path]
        (cond
@@ -204,7 +214,7 @@
            ;; var-get doesn't work in cljs, so capture the val in the macro instead
            `(com.rpl.specter.impl/->VarUse
               ~path
-              ~(if-not (instance? Class (resolve path)) `(var ~path))
+              ~(if-not (mvch/case :clj (instance? Class (resolve path)) :cljs false) `(var ~path))
               (quote ~path)))
 
 
@@ -244,6 +254,7 @@
 
           path)))
 
+) ; end mvch/deftime
 
      (defn- cljs-macroexpand [env form]
        (let [expand-fn (i/cljs-analyzer-macroexpand-1)
@@ -265,6 +276,7 @@
          ret))
 
 
+(mvch/deftime
      (defmacro path
        "Same as calling comp-paths, except it caches the composition of the static parts
        of the path for later re-use (when possible). For almost all idiomatic uses
@@ -439,7 +451,7 @@
        to capture all the collected values as a single vector."
        [params & body]
        `(i/collected?* (~'fn [~params] ~@body)))
-
+) ; end mvch/deftime
 
      (defn- protpath-sym [name]
        (-> name (str "-prot") symbol))
@@ -448,6 +460,7 @@
        (-> name (str "-retrieve") symbol))
 
 
+(mvch/deftime
      (defmacro defprotocolpath
        "Defines a navigator that chooses the path to take based on the type
        of the value at the current point. May be specified with parameters to
@@ -487,31 +500,24 @@
      (defmacro satisfies-protpath? [protpath o]
        `(satisfies? ~(protpath-sym protpath) ~o))
 
-     (defn extend-protocolpath* [protpath-prot extensions]
-       (let [m (-> protpath-prot :sigs keys first)
-             params (-> protpath-prot :sigs first last :arglists first)]
-         (doseq [[atype path-code] extensions]
-            (extend atype protpath-prot
-              {m (binding [*compile-files* false]
-                   (eval `(fn ~params (path ~path-code))))}))))
-
      (defmacro extend-protocolpath
        "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
        [protpath & extensions]
        (let [extensions (partition 2 extensions)
-             embed (vec (for [[t p] extensions] [t `(quote ~p)]))]
-         `(extend-protocolpath*
-           ~(protpath-sym protpath)
-           ~embed)))
+             embed (vec (for [[t p] extensions] [t p]))
+             prot-sym (protpath-sym protpath)
+             prot (mvch/case :clj  (-> prot-sym resolve deref) :cljs prot-sym)
+             m (-> prot :sigs keys first)
+             params (-> prot :sigs first last :arglists first)]
+         `(do ~@(for [[atype paths-expr] embed]
+           `(extend-protocol ~prot-sym ~atype
+             (~m ~params (path ~paths-expr)))))))
 
     (defmacro end-fn [& args]
       `(n/->SrangeEndFunction (fn ~@args)))
+) ; end mvch/deftime
 
-    ))
-
-
-
-(defn comp-paths
+  (defn comp-paths
   "Returns a compiled version of the given path for use with
    compiled-{select/transform/setval/etc.} functions."
   [& apath]
@@ -648,6 +654,7 @@
 (def late-resolved-fn i/late-resolved-fn)
 
 
+(mvch/usetime
 (defdynamicnav
   ^{:doc "Turns a navigator that takes one argument into a navigator that takes
           many arguments and uses the same navigator with each argument. There
@@ -657,7 +664,6 @@
   (let [latenavfn (late-resolved-fn navfn)]
     (dynamicnav [& args]
       (map latenavfn args))))
-
 
 ;; Helpers for making recursive or mutually recursive navs
 
@@ -674,8 +680,6 @@
     NONE)
   (transform* [this structure next-fn]
     structure))
-
-
 
 (def
   ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
@@ -761,7 +765,6 @@
 (defcollector VAL []
   (collect-val [this structure]
     structure))
-
 (def
   ^{:doc "Navigate to the last element of the collection. If the collection is
           empty navigation is stopped at this point."}
@@ -984,7 +987,6 @@
           ))
       structure
       )))
-
 (def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,
              that element is removed from the map or vector."}
   keypath
@@ -1089,7 +1091,6 @@
        structure
        structure
        ))))
-
 (def
   ^{:doc "`indexed-vals` with a starting index of 0."}
   INDEXED-VALS
@@ -1206,7 +1207,6 @@
     (transform* [this structure next-fn]
       (next-fn (reduce late-fn (compiled-traverse late structure)))
       )))
-
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. Functions in paths
           implicitly convert to this navigator."
@@ -1270,7 +1270,6 @@
     (next-fn (if (nil? structure) v structure)))
   (transform* [this structure next-fn]
     (next-fn (if (nil? structure) v structure))))
-
 (def
   ^{:doc "Navigates to #{} if the value is nil. Otherwise it stays
           navigated at the current value."}
@@ -1477,7 +1476,6 @@
    to implement post-order traversal."
   [& path]
   (multi-path path STAY))
-
 (def
   ^{:doc "Navigate the data structure until reaching
           a value for which `afn` returns truthy. Has
@@ -1487,7 +1485,6 @@
     (cond-path (pred afn) STAY
                coll? [ALL p]
                )))
-
 (def
   ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
@@ -1504,3 +1501,4 @@
    [& path]
    (map compact* path)
    ))
+) ; end mvch/usetime
