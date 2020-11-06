@@ -470,7 +470,6 @@
        ([name params]
         (let [prot-name (protpath-sym name)
               m (protpath-meth-sym name)
-              num-params (count params)
               ssym (gensym "structure")
               rargs [(gensym "vals") ssym (gensym "next-fn")]
               retrieve `(~m ~ssym ~@params)]
