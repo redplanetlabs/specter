@@ -246,6 +246,19 @@
     empty-map
     structure))
 
+;; adapted from https://stackoverflow.com/a/45447810/375670
+(defn- empty-record
+  "Creates a new instance of the given record, with all values nil"
+  [record]
+  (reduce
+    (fn [record k]
+      (let [without (dissoc record k)]
+        (if (= (type record) (type without))
+          without
+          (assoc record k nil))))
+    record
+    (keys record)))
+
 (extend-protocol MapTransformProtocol
   nil
   (map-vals-transform [structure next-fn]
@@ -370,7 +383,21 @@
             m
             (assoc m newk v))))
       (empty structure)
-      structure)))
+      structure))
+
+  #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)
+  (map-vals-transform [structure next-fn]
+    (reduce-kv
+      (fn [m k v]
+        (let [newv (next-fn v)]
+          (if (identical? newv i/NONE)
+            m
+            (assoc m k newv))))
+      (empty-record structure)
+      structure))
+  (map-keys-transform [structure _]
+    (throw (ex-info "Can't transform keys of a record"
+                    {:record structure}))))
 
 (defn srange-select [structure start end next-fn]
   (next-fn
