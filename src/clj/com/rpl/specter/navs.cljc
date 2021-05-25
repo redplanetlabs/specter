@@ -492,9 +492,6 @@
 (defprotocol FastEmpty
   (fast-empty? [s]))
 
-(defprotocol InsertBeforeIndex
-  (insert-before-idx [aseq idx val]))
-
 (defnav PosNavigator [getter updater]
   (select* [this structure next-fn]
     (if-not (fast-empty? structure)
@@ -643,7 +640,29 @@
     (nth s (-> s count dec))
     ))
 
+(defprotocol IndexedOps
+  "Fast indexed operations on sequential types"
+  (insert-before-idx [aseq idx val])
+  (remove-at-idx [aseq idx]))
 
+;; helper fns for indexed operations
+(defn- insert-before-index-list [lst idx v]
+  ;; an implementation that is most efficient for list style structures
+  (let [[front back] (split-at idx lst)]
+    (concat front (cons v back))))
+
+(defn- remove-at-index-vec [aseq idx]
+  (condp = idx
+    0 (subvec aseq 1)
+    (vec-count aseq) (subvec aseq 0 (vec-count aseq))
+    (into (subvec aseq 0 idx) (subvec aseq (inc idx)))))
+
+(defn- remove-at-index-list [lst idx]
+  ;; an implementation that is most efficient for list style structures
+  (condp = idx
+    0 (rest lst)
+    (let [[front back] (split-at idx lst)]
+      (concat front (rest back)))))
 
 (extend-protocol FastEmpty
   nil
@@ -664,7 +683,7 @@
   (let [newv (next-fn vals (get structure key))]
     (if (identical? newv i/NONE)
       (if (sequential? structure)
-        (i/srange-transform* structure key (inc key) (fn [_] []))
+        (remove-at-idx structure key)
         (dissoc structure key))
       (assoc structure key newv))))
 
@@ -704,8 +723,8 @@
     (if (vector? structure)
       (let [newv (next-fn vals (nth structure i))]
         (if (identical? newv i/NONE)
-          (i/srange-transform* structure i (inc i) (fn [_] []))
-            (assoc structure i newv)))
+          (remove-at-index-vec structure i)
+          (assoc structure i newv)))
       (i/srange-transform* ; can make this much more efficient with alternate impl
         structure
         i
@@ -726,35 +745,60 @@
     (end-fn structure)
     ))
 
-(defn- insert-before-index-list [lst idx val]
-  ;; an implementation that is most efficient for list style structures
-  (let [[front back] (split-at idx lst)]
-    (concat front (cons val back))))
-
-(extend-protocol InsertBeforeIndex
+(extend-protocol IndexedOps
   nil
   (insert-before-idx [_ idx val]
     (if (= 0 idx)
       (list val)
       (throw (ex-info "For a nil structure, can only insert before index 0"
                       {:insertion-index idx}))))
+  (remove-at-idx [_ _]
+    ;; removing from nil structure at any index should just be nil?
+    nil)
 
   #?(:clj java.lang.String :cljs string)
-  (insert-before-idx [aseq idx val]
-    (apply str (insert-before-index-list aseq idx val)))
+  (insert-before-idx [aseq idx v]
+    (apply str (insert-before-index-list aseq idx v)))
+  (remove-at-idx [s idx]
+    (str (subs s 0 idx) (subs s idx)))
 
   #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)
-  (insert-before-idx [aseq idx val]
-    (insert-before-index-list aseq idx val))
+  (insert-before-idx [aseq idx v]
+    (insert-before-index-list aseq idx v))
+  (remove-at-idx [aseq idx]
+    (remove-at-index-list aseq idx))
 
   #?(:clj clojure.lang.IPersistentVector :cljs cljs.core/PersistentVector)
   (insert-before-idx [aseq idx val]
     (let [front (subvec aseq 0 idx)
           back (subvec aseq idx)]
       (into (conj front val) back)))
+  (remove-at-idx [aseq idx]
+    (remove-at-index-vec aseq idx))
+
+  ;; TODO: incorporate this into the transients namespace instead/in addition to?
+  #?(:clj clojure.lang.ITransientVector :cljs cljs.core/TransientVector)
+  (insert-before-idx [aseq idx val]
+    (loop [v aseq prev-val val curr-idx idx]
+      (if
+        (= curr-idx (transient-vec-count v))
+        (assoc! v curr-idx prev-val)
+        (let [curr-val (nth v curr-idx)]
+          (recur (assoc! v curr-idx prev-val) curr-val (inc curr-idx))))))
+  (remove-at-idx [aseq idx]
+    (loop [v aseq curr-idx idx]
+      (if
+        (< curr-idx (dec (transient-vec-count v)))
+        (let [next-val (nth v (inc curr-idx))]
+          (recur (assoc! v curr-idx next-val) (inc curr-idx)))
+        (pop! v))))
 
   #?(:clj clojure.lang.IPersistentList :cljs cljs.core/List)
   (insert-before-idx [aseq idx val]
-    (cond (= idx 0)
+    (if (= idx 0)
       (cons val aseq)
-      :else (insert-before-index-list aseq idx val))))
+      (insert-before-index-list aseq idx val)))
+  (remove-at-idx [aseq idx]
+    (if (= idx 0)
+      (rest aseq)
+      (remove-at-index-list aseq idx))))

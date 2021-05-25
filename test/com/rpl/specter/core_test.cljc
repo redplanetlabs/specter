@@ -1,6 +1,6 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
-            [cljs.test :refer [is deftest]]
+            [cljs.test :refer [is deftest testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter.test-helpers :refer [ic-test]]
@@ -13,7 +13,7 @@
                       defdynamicnav traverse-all satisfies-protpath? end-fn
                       vtransform]]))
   (:use
-    #?(:clj [clojure.test :only [deftest is]])
+    #?(:clj [clojure.test :only [deftest is testing]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
     #?(:clj [com.rpl.specter.test-helpers :only [for-all+ ic-test]])
     #?(:clj [com.rpl.specter
@@ -33,6 +33,7 @@
             #?(:cljs [clojure.test.check.generators :as gen])
             #?(:cljs [clojure.test.check.properties :as prop :include-macros true])
             [com.rpl.specter :as s]
+            [com.rpl.specter.navs :as n]
             [com.rpl.specter.transients :as t]
             [clojure.set :as set]))
 
@@ -1331,6 +1332,7 @@
 (deftest nthpath-test
   (is (predand= vector? [1 2 -3 4] (transform (s/nthpath 2) - [1 2 3 4])))
   (is (predand= vector? [1 2 4] (setval (s/nthpath 2) s/NONE [1 2 3 4])))
+  (is (predand= vector? [1 2 3] (setval (s/nthpath 3) s/NONE [1 2 3 4])))
   (is (predand= (complement vector?) '(1 -2 3 4) (transform (s/nthpath 1) - '(1 2 3 4))))
   (is (predand= (complement vector?) '(1 2 4) (setval (s/nthpath 2) s/NONE '(1 2 3 4))))
   (is (= [0 1 [2 4 4]] (transform (s/nthpath 2 1) inc [0 1 [2 3 4]])))
@@ -1702,3 +1704,16 @@
       (is (satisfies-protpath? FooPP "a"))
       (is (not (satisfies-protpath? FooPP 1)))
       )))
+
+;; adding a separate test because these are not yet exercised by the rest of the suite
+(deftest indexed-opts-transient-vectors-test
+  (testing "IndexedOps fns work properly for transient vectors"
+    (let [v (vec (range 10))]
+      (doseq [[f args exp] [[n/remove-at-idx [0] (vec (range 1 10))]
+                            [n/remove-at-idx [5] [0 1 2 3 4 6 7 8 9]]
+                            [n/remove-at-idx [9] (vec (range 9))]
+                            [n/insert-before-idx [0 -1] (vec (range -1 10))]
+                            [n/insert-before-idx [7 -1] [0 1 2 3 4 5 6 -1 7 8 9]]
+                            [n/insert-before-idx [10 10] (vec (range 11))]]]
+        (is (= exp (-> (apply f (cons (transient v) args))
+                       persistent!)))))))
