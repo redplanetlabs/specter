@@ -322,6 +322,18 @@ Specter supports ClojureScript! However, some of the differences between Clojure
 # Future work
 - Integrate Specter with other kinds of data structures, such as graphs. Desired navigations include: reduction in topological order, navigate to outgoing/incoming nodes, to a subgraph (with metadata indicating how to attach external edges on transformation), to node attributes, to node values, to specific nodes.
 
+# clj-kondo
+
+When using Specter in a project with [clj-kondo](https://github.com/clj-kondo/clj-kondo), a lot of the vars will be considered unresolved because internally Specter defines them with macros. The following configuration snippet will resolve these issues if you include it in your `.clj-kondo/config.edn` file.
+
+```clojure
+{:lint-as {com.rpl.specter/defcollector clojure.core/defn
+           com.rpl.specter/defdynamicnav clojure.core/defn
+           com.rpl.specter/defmacroalias clojure.core/def
+           com.rpl.specter/defnav clojure.core/defn
+           com.rpl.specter/defrichnav clojure.core/defn}}
+```
+
 # License
 
 Copyright 2015-2020 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.
