@@ -1,5 +1,6 @@
 ## 1.1.4-SNAPSHOT
 
+* Add SORTED, sorted, and sorted-by navs (thanks @IGJoshua)
 * Add arglist metadata to navs (thanks @phronmophobic)
 * Improve before-index performance by 150x on lists and 5x on vectors (thanks @jeff303)
 * Bug fix: BEFORE-ELEM, AFTER-ELEM, FIRST, LAST, BEGINNING, and END on subvecs now produce vector type in cljs
