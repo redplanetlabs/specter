@@ -546,6 +546,16 @@
         res
         ))))
 
+(defn sorted-transform*
+  [structure keyfn comparator next-fn]
+  (let [sorted (sort-by (comp keyfn second) comparator (map-indexed vector structure))
+        indices (map first sorted)
+        result (next-fn (map second sorted))
+        unsorted (sort-by first compare (map vector (concat indices (repeat ##Inf)) result))]
+    (into (empty structure)
+          (map second)
+          unsorted)))
+
 (defn- matching-indices [aseq p]
   (keep-indexed (fn [i e] (if (p e) i)) aseq))
 
