@@ -1,6 +1,6 @@
 (ns com.rpl.specter.core-test
   #?(:cljs (:require-macros
-            [cljs.test :refer [is deftest]]
+            [cljs.test :refer [is deftest testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [com.rpl.specter.cljs-test-helpers :refer [for-all+]]
             [com.rpl.specter.test-helpers :refer [ic-test]]
@@ -13,7 +13,7 @@
                       defdynamicnav traverse-all satisfies-protpath? end-fn
                       vtransform]]))
   (:use
-    #?(:clj [clojure.test :only [deftest is]])
+    #?(:clj [clojure.test :only [deftest is testing]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
     #?(:clj [com.rpl.specter.test-helpers :only [for-all+ ic-test]])
     #?(:clj [com.rpl.specter
@@ -1702,3 +1702,21 @@
       (is (satisfies-protpath? FooPP "a"))
       (is (not (satisfies-protpath? FooPP 1)))
       )))
+
+(deftest sorted-test
+  (let [initial-list [3 4 2 1]]
+    (testing "the SORTED navigator"
+      (is (= (sort initial-list) (select-one s/SORTED initial-list)))
+      (is (= [2 1 3 4] (transform s/SORTED reverse initial-list)))
+      (is (= [3 2 1] (transform s/SORTED butlast initial-list)))
+      (is (= [3 5 2 1] (setval [s/SORTED s/LAST] 5 initial-list))))
+    (testing "the sorted navigator with comparator"
+      (let [reverse-comparator (comp - compare)]
+        (is (= (sort reverse-comparator initial-list)
+               (select-one (s/sorted reverse-comparator) initial-list)))
+        (is (= 4 (select-one [(s/sorted reverse-comparator) s/FIRST] initial-list))))))
+  (testing "the sorted-by navigator with keypath"
+    (let [initial-list [{:a 3} {:a 4} {:a 2} {:a 1}]]
+      (is (= (sort-by :a initial-list)
+             (select-one (s/sorted-by :a) initial-list)))
+      (is (= {:a 4} (select-one [(s/sorted-by :a (comp - compare)) s/FIRST] initial-list))))))
