@@ -1709,7 +1709,8 @@
       (is (= (sort initial-list) (select-one s/SORTED initial-list)))
       (is (= [2 1 3 4] (transform s/SORTED reverse initial-list)))
       (is (= [3 2 1] (transform s/SORTED butlast initial-list)))
-      (is (= [3 5 2 1] (setval [s/SORTED s/LAST] 5 initial-list))))
+      (is (= [3 5 2 1] (setval [s/SORTED s/LAST] 5 initial-list)))
+      (is (= (list 1 2 3 4 5) (transform [s/SORTED s/ALL] inc (range 5)))))
     (testing "the sorted navigator with comparator"
       (let [reverse-comparator (comp - compare)]
         (is (= (sort reverse-comparator initial-list)
