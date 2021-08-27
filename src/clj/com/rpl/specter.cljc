@@ -1559,6 +1559,6 @@
    (late-bound-nav [late (late-path keypath)
                     late-fn comparator]
      (select* [this structure next-fn]
-       (n/sorted-select structure #(compiled-select late %) late-fn next-fn))
+       (n/sorted-select structure #(compiled-select-one! late %) late-fn next-fn))
      (transform* [this structure next-fn]
-       (n/sorted-transform structure #(compiled-select late %) late-fn next-fn)))))
+       (n/sorted-transform structure #(compiled-select-one! late %) late-fn next-fn)))))
