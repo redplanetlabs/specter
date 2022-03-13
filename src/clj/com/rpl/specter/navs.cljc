@@ -8,7 +8,8 @@
   #?(:clj (:use [com.rpl.specter.macros :only [defnav defrichnav]]
                 [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
-            #?(:clj [clojure.core.reducers :as r])))
+            #?@(:bb []
+                :clj [[clojure.core.reducers :as r]])))
 
 
 (defn not-selected?*
@@ -103,7 +104,10 @@
       structure))
 
   #?(:clj clojure.lang.PersistentArrayMap)
-  #?(:clj
+  #?(:bb
+     (all-transform [structure next-fn]
+                    (non-transient-map-all-transform structure next-fn {}))
+     :clj
      (all-transform [structure next-fn]
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
@@ -185,10 +189,13 @@
 
 
                :else
-               (->> structure
-                    (r/map next-fn)
-                    (r/filter not-NONE?)
-                    (into empty-structure))))))
+               #?(:bb (into empty-structure
+                            (comp (map next-fn) (filter not-NONE?))
+                            structure)
+                  :clj (->> structure
+                            (r/map next-fn)
+                            (r/filter not-NONE?)
+                            (into empty-structure)))))))
 
 
   #?(:cljs default)
@@ -255,7 +262,10 @@
 
 
   #?(:clj clojure.lang.PersistentArrayMap)
-  #?(:clj
+  #?(:bb
+     (map-vals-transform [structure next-fn]
+                         (map-vals-non-transient-transform structure {} next-fn))
+     :clj
      (map-vals-transform [structure next-fn]
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
@@ -282,7 +292,10 @@
                         array
                         )]
           (clojure.lang.PersistentArrayMap. array)))))
-  #?(:clj
+  #?(:bb
+     (map-keys-transform [structure next-fn]
+                         (map-keys-non-transient-transform structure {} next-fn))
+     :clj
      (map-keys-transform [structure next-fn]
        (let [k-it (.keyIterator structure)
              v-it (.valIterator structure)
@@ -505,7 +518,10 @@
       structure
       (updater structure next-fn))))
 
-#?(
+#?(:bb
+   (defn vec-count [v]
+     (count v))
+
    :clj
    (defn vec-count [^clojure.lang.IPersistentVector v]
      (.length v))
@@ -557,7 +573,10 @@
           (assoc v i newe))))))
 
 
-#?(
+#?(:bb
+   (defn transient-vec-count [v]
+     (count v))
+
    :clj
    (defn transient-vec-count [^clojure.lang.ITransientVector v]
      (.count v))

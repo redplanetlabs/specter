@@ -1,4 +1,4 @@
-# Specter [![Build Status](https://secure.travis-ci.org/redplanetlabs/specter.png?branch=master)](http://travis-ci.org/redplanetlabs/specter)
+# Specter
 
 Specter rejects Clojure's restrictive approach to immutable data structure manipulation, instead exposing an elegant API to allow any sort of manipulation imaginable. Specter especially excels at querying and transforming nested and recursive data, important use cases that are very complex to handle with vanilla Clojure.
 
@@ -333,6 +333,10 @@ When using Specter in a project with [clj-kondo](https://github.com/clj-kondo/cl
            com.rpl.specter/defnav clojure.core/defn
            com.rpl.specter/defrichnav clojure.core/defn}}
 ```
+
+# Babashka
+
+This library is compatible with [babashka](https://babashka.org/) as of specter 1.1.4 and babashka 0.7.8.
 
 # License
 

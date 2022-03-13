@@ -15,10 +15,11 @@
             #?(:clj [clojure.pprint :as pp])
             [clojure.string :as s]
             [clojure.walk :as walk]
-            #?(:clj [riddley.walk :as riddley]))
+            #?(:bb [clojure.walk :as riddley]
+               :clj [riddley.walk :as riddley]))
 
-  #?(:clj (:import [com.rpl.specter Util MutableCell])))
-
+  #?@(:bb []
+      :clj [(:import [com.rpl.specter Util MutableCell])]))
 
 (def NONE ::NONE)
 
@@ -82,7 +83,9 @@
    (defn intern* [ns name val]
      (throw (ex-info "intern not supported in ClojureScript" {}))))
 
-#?(
+#?(:bb
+   (defmacro fast-object-array [i]
+     `(object-array ~i))
    :clj
    (defmacro fast-object-array [i]
      `(com.rpl.specter.Util/makeObjectArray ~i)))
@@ -101,7 +104,8 @@
        (if (= platform :cljs)
          `(p/select* ~this ~@args)
          `(let [~hinted ~this]
-            (.select* ~hinted ~@args)))))
+            (#?(:bb p/select*
+                :clj .select*) ~hinted ~@args)))))
    :cljs
    (defn exec-select* [this vals structure next-fn]
      (p/select* ^not-native this vals structure next-fn)))
@@ -115,7 +119,8 @@
        (if (= platform :cljs)
          `(p/transform* ~this ~@args)
          `(let [~hinted ~this]
-            (.transform* ~hinted ~@args)))))
+            (#?(:bb p/transform*
+                :clj .transform*) ~hinted ~@args)))))
 
    :cljs
    (defn exec-transform* [this vals structure next-fn]
@@ -214,13 +219,19 @@
      (set_cell [cell x])))
 
 
-#?(:cljs
+#?(:bb
+   (defrecord MutableCell [x])
+   :cljs
    (deftype MutableCell [^:volatile-mutable q]
      PMutableCell
      (set_cell [this x] (set! q x))))
 
 
-#?(
+#?(:bb
+   (defn mutable-cell
+     ([] (mutable-cell nil))
+     ([v] (MutableCell. (volatile! v))))
+
    :clj
    (defn mutable-cell
      ([] (mutable-cell nil))
@@ -232,7 +243,10 @@
      ([init] (MutableCell. init))))
 
 
-#?(
+#?(:bb
+   (defn set-cell! [^MutableCell c v]
+     (vreset! (:x c) v))
+
    :clj
    (defn set-cell! [^MutableCell c v]
      (.set c v))
@@ -242,7 +256,10 @@
      (set_cell cell val)))
 
 
-#?(
+#?(:bb
+   (defn get-cell [^MutableCell c]
+     @(:x c))
+
    :clj
    (defn get-cell [^MutableCell c]
      (.get c))
@@ -290,8 +307,10 @@
 (defn do-compiled-traverse* [apath structure]
   (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
     (#?(:clj reduce :cljs -reduce)
-      [this afn]
-      (#?(:clj .reduce :cljs -reduce) this afn (afn)))
+        [this afn]
+      #?(:bb (reduce afn (afn) this)
+         :default
+         (#?(:clj .reduce :cljs -reduce) this afn (afn))))
     (#?(:clj reduce :cljs -reduce)
       [this afn start]
       (let [cell (mutable-cell start)]
@@ -308,6 +327,9 @@
         ))))
 
 #?(
+:bb
+(defn- call-reduce-interface [^clojure.lang.IReduce traverser afn start]
+  (reduce afn start traverser))
 :clj
 (defn- call-reduce-interface [^clojure.lang.IReduce traverser afn start]
   (.reduce traverser afn start)
@@ -322,8 +344,10 @@
   (let [traverser (do-compiled-traverse* apath structure)]
     (reify #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
       (#?(:clj reduce :cljs -reduce)
-        [this afn]
-        (#?(:clj .reduce :cljs -reduce) this afn (afn)))
+          [this afn]
+        #?(:bb (reduce afn (afn) this)
+           :default
+           (#?(:clj .reduce :cljs -reduce) this afn (afn))))
       (#?(:clj reduce :cljs -reduce)
         [this afn start]
         (let [res (call-reduce-interface traverser afn start)]
