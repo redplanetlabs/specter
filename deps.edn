@@ -1,0 +1,3 @@
+;; deps.edn to use this library as a git dependency for babashka
+{:paths ["src/clj"]
+ :deps {riddley/riddley {:mvn/version "0.1.12"}}}
