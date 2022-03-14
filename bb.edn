@@ -1,0 +1,19 @@
+{:paths ["src/clj"]
+ :tasks
+ {test:clj  {:doc "Run clj tests with leiningen"
+             :task (shell "lein test")}
+
+  test:cljs {:doc "Run cljs tests with leiningen"
+             :task (shell "lein doo node test-build once")}
+
+  test:bb   {:doc "Run bb tests"
+             :extra-paths ["test"]
+             :extra-deps {org.clojure/test.check {:mvn/version "0.9.0"}
+                          io.github.cognitect-labs/test-runner
+                          {:git/tag "v0.5.0" :git/sha "b3fd0d2"}
+                          org.clojure/tools.namespace {:git/url "https://github.com/babashka/tools.namespace"
+                                                       :git/sha "3625153ee66dfcec2ba600851b5b2cbdab8fae6c"}}
+             :requires ([cognitect.test-runner :as tr])
+             :task (apply tr/-main
+                          "-d" "test"
+                          *command-line-args*)}}}

@@ -1,0 +1,37 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch_depth: 0
+
+      - name: Setup Babashka
+        uses: turtlequeue/setup-babashka@v1.3.0
+        with:
+          babashka-version: 0.7.8
+
+      - name: Prepare java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@4.0
+        with:
+          lein: 2.9.1
+
+      - name: Run clj tests
+        run: bb test:clj
+
+      - name: Run cljs tests
+        run: bb test:cljs
+
+      - name: Run babashka tests
+        run: bb test:bb

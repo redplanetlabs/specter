@@ -1,8 +1,0 @@
-language: clojure
-lein: 2.9.1
-cache:
-  directories:
-  - $HOME/.m2
-script:
-  - lein test
-  - lein doo node test-build once

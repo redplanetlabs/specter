@@ -11,3 +11,5 @@ pom.xml.asc
 .lein-failures
 .cljs_node_repl
 out/
+.cpcache
+.cache
