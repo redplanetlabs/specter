@@ -334,6 +334,10 @@ When using Specter in a project with [clj-kondo](https://github.com/clj-kondo/cl
            com.rpl.specter/defrichnav clojure.core/defn}}
 ```
 
+# Babashka
+
+This library is compatible with [babashka](https://babashka.org/) as of specter 1.1.4 and babashka 0.7.8.
+
 # License
 
 Copyright 2015-2020 Red Planet Labs, Inc. Specter is licensed under Apache License v2.0.

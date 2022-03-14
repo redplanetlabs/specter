@@ -6,3 +6,5 @@ cache:
 script:
   - lein test
   - lein doo node test-build once
+  - bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --version 0.7.8 --dir .
+  - bb test:bb
