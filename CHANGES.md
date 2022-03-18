@@ -1,4 +1,4 @@
-## 1.1.4-SNAPSHOT
+## 1.1.4
 
 * Add arglist metadata to navs (thanks @phronmophobic)
 * Improve before-index performance by 150x on lists and 5x on vectors (thanks @jeff303)
