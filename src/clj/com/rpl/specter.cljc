@@ -1504,3 +1504,61 @@
    [& path]
    (map compact* path)
    ))
+
+(defnav
+  ^{:doc "Navigates to a sequence resulting from (sort ...), but is a
+         view to the original structure that can be transformed.
+
+         If the transformed sequence is smaller than the input sequence, values
+         which are included are sorted by the same indices as the input value's
+         index in the input sequence.
+
+         If the transformed sequence is larger than the input sequence, values
+         added to the end of the sequence will be appended to the end of the
+         original sequence."}
+  SORTED
+  []
+  (select* [this structure next-fn]
+    (n/sorted-select structure identity compare next-fn))
+  (transform* [this structure next-fn]
+    (n/sorted-transform structure identity compare next-fn)))
+
+(defnav
+  ^{:doc "Navigates to a sequence resulting from (sort comparator ...), but
+         is a view to the original structure that can be transformed.
+
+         If the transformed sequence is smaller than the input sequence, values
+         which are included are sorted by the same indices as the input value's
+         index in the input sequence.
+
+         If the transformed sequence is larger than the input sequence, values
+         added to the end of the sequence will be appended to the end of the
+         original sequence."}
+  sorted
+  [comparator]
+  (select* [this structure next-fn]
+    (n/sorted-select structure identity comparator next-fn))
+  (transform* [this structure next-fn]
+    (n/sorted-transform structure identity comparator next-fn)))
+
+(defdynamicnav sorted-by
+  "Navigates to a sequence sorted by the value stored in the keypath, by the
+  comparator, if one is provided.
+
+  This sequence is a view to the original structure that can be transformed. If
+  the transformed sequence is smaller than the input sequence, values which are
+  included are sorted by the same indices as the input value's index in the
+  input sequence.
+
+  If the transformed sequence is larger than the input sequence, values added to
+  the end of the sequence will be appended to the end of the original sequence.
+
+  Value collection (e.g. collect, collect-one) may not be used in the keypath."
+  ([keypath] (sorted-by keypath compare))
+  ([keypath comparator]
+   (late-bound-nav [late (late-path keypath)
+                    late-fn comparator]
+     (select* [this structure next-fn]
+       (n/sorted-select structure #(compiled-select-one! late %) late-fn next-fn))
+     (transform* [this structure next-fn]
+       (n/sorted-transform structure #(compiled-select-one! late %) late-fn next-fn)))))
