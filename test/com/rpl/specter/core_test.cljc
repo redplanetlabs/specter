@@ -1693,6 +1693,16 @@
            (multi-transform (s/terminal (f #?(:clj String :cljs js/String))) 1)))
     ))
 
+(defrecord TestRecord [a b c])
+
+(deftest map-navs-on-records-test
+  (let [r (TestRecord. 8 -12 91)]
+    (is (= {:a 9 :b -11 :c 92} (into {} (transform [s/MAP-VALS] inc r))))
+    (is (thrown-with-msg?
+          Exception
+          #"Can't transform keys of a record"
+          (transform [s/MAP-KEYS] #(case % :a :x :b :y :c :z) r)))))
+
 #?(:clj
   (do
     (defprotocolpath FooPP)
