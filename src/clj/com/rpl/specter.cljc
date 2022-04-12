@@ -905,10 +905,10 @@
   submap
   [m-keys]
   (select* [this structure next-fn]
-    (next-fn (select-keys structure m-keys)))
+           (next-fn (n/select-submap structure m-keys)))
 
   (transform* [this structure next-fn]
-    (let [submap (select-keys structure m-keys)
+    (let [submap (n/select-submap structure m-keys)
           newmap (next-fn submap)]
       (merge (reduce dissoc structure m-keys)
              newmap))))

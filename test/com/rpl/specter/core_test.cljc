@@ -611,7 +611,8 @@
         (= (transform (s/subset s3) identity combined) combined)
         (= (setval (s/subset s3) #{} combined) (set/difference combined s2))
         (= (setval (s/subset s3) s4 combined) (-> combined (set/difference s2) (set/union s4)))))))
-
+#?(:clj
+  (defstruct test-struct :x :y :z))
 
 (deftest submap-test
   (is (= [{:foo 1}]
@@ -623,7 +624,29 @@
   (is (= {:a {:new 1}
           :c {:new 1
               :old 1}}
-         (setval [s/ALL s/LAST (s/submap [])] {:new 1} {:a nil, :c {:old 1}}))))
+         (setval [s/ALL s/LAST (s/submap [])] {:new 1} {:a nil, :c {:old 1}})))
+  #?(:clj
+    ; make sure struct-map works
+    (is (= [{:z 3, :y 2}]
+           (select (s/submap [:z :y]) (into (struct-map test-struct) {:x 1 :y 2 :z 3})))))
+  ; ensure order is preserved for larger sorted map (i.e. TreeMap)
+  (let [range50 (range 50)]
+    (is (= (take-nth 2 range50)
+           (select [(s/submap (shuffle (take-nth 2 range50))) s/MAP-KEYS] (apply sorted-map (interleave range50 range50))))))
+
+  ; ensure order is preserved for TreeMap with custom comparator
+  (let [all-keys ["a" "ab" "abc" "abcd" "abcde" "abcdef" "abcdefg"]
+        cmp (fn [key1 key2] (> (count key1) (count key2)))
+        input (apply sorted-map-by cmp (interleave all-keys (range (count all-keys))))
+        result (select (s/submap (shuffle (take-nth 2 all-keys))) input)
+        result-submap (first result)]
+    ; the comparator sorts by decreasing length of string key (which is opposite of alpha order)
+    ; selecting the desired keys in random order should still result in a TreeMap adhering to the comparator
+    (is (= (map first result-submap) (take-nth 2 (reverse all-keys))))
+    #?(:clj
+       ; check the actual comparator is maintained (doesn't work in cljs)
+       (is (identical? (.comparator result-submap) cmp)))
+    ))
 
 (deftest nil->val-test
   (is (= {:a #{:b}}
