@@ -112,8 +112,8 @@
   (run-benchmark "transform values of a list"
     (transform ALL inc data)
     (doall (sequence (map inc) data))
-    (reverse (into '() (map inc) data))
-    ))
+    (reverse (into '() (map inc) data))))
+
 
 (let [data {:a 1 :b 2 :c 3 :d 4}]
   (run-benchmark "transform values of a small map"
@@ -127,8 +127,8 @@
     (into {} (map (fn [e] [(key e) (inc (val e))]) data))
     (into {} (map (fn [e] [(key e) (inc (val e))])) data)
     (map-vals-map-iterable data inc)
-    (map-vals-map-iterable-transient data inc)
-    ))
+    (map-vals-map-iterable-transient data inc)))
+
 
 
 (let [data (->> (for [i (range 1000)] [i i]) (into {}))]
@@ -152,8 +152,8 @@
     (first data)
     (select-any ALL data)
     (select-any FIRST data)
-    (select-first ALL data)
-    ))
+    (select-first ALL data)))
+
 
 (let [data [1 2 3 4 5]]
   (run-benchmark "map a function over a vector"
@@ -192,8 +192,8 @@
   (run-benchmark "prepend to a vector"
     (vec (cons 0 data))
     (setval BEFORE-ELEM 0 data)
-    (into [0] data)
-    ))
+    (into [0] data)))
+
 
 (declarepath TreeValues)
 
@@ -314,8 +314,8 @@
       (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
       data)
     (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
-    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
-    ))
+    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)))
+
 
 
 (let [data (->> (for [i (range 1000)] [(keyword (str i)) i]) (into {}))]
@@ -324,8 +324,8 @@
       (map (fn [[k v]] [(keyword (str *ns*) (name k)) v]))
       data)
     (reduce-kv (fn [m k v] (assoc m (keyword (str *ns*) (name k)) v)) {} data)
-    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)
-    ))
+    (setval [MAP-KEYS NAMESPACE] (str *ns*) data)))
+
 
 (defnav walker-old [afn]
   (select* [this structure next-fn]
@@ -336,8 +336,8 @@
 (let [data {:a [1 2 {:c '(3 4) :d {:e [1 2 3] 7 8 9 10}}]}]
   (run-benchmark "walker vs. clojure.walk version"
     (transform (walker number?) inc data)
-    (transform (walker-old number?) inc data)
-    ))
+    (transform (walker-old number?) inc data)))
+
 
 (let [size 1000
       middle-idx (/ size 2)
@@ -354,4 +354,29 @@
   (run-benchmark "before-index at 0 vs. srange vs. cons (list)"
     (setval (before-index 0) v data-lst)
     (setval (srange 0 0) [v] data-lst)
-    (cons v data-lst)))
+    (cons v data-lst))
+  (run-benchmark "set keypath and nthpath at index to NONE versus srange in middle (vector)"
+    (setval (nthpath middle-idx) NONE data-vec)
+    (setval (keypath middle-idx) NONE data-vec)
+    (setval (srange middle-idx (inc middle-idx)) [] data-vec))
+  (run-benchmark "set keypath and nthpath at index to NONE versus srange in middle (list)"
+    ;; this case still needs to be optimized in nthpath*
+    (setval (nthpath middle-idx) NONE data-lst)
+    (setval (keypath middle-idx) NONE data-lst)
+    (setval (srange middle-idx (inc middle-idx)) [] data-lst))
+  (run-benchmark "set keypath and nthpath at beginning to NONE versus srange and subvec (vector)"
+    (setval (nthpath 0) NONE data-vec)
+    (setval (keypath 0) NONE data-vec)
+    (setval (srange 0 1) [] data-vec)
+    (subvec data-vec 1))
+  (run-benchmark "set keypath and nthpath at beginning to NONE versus srange and rest (list)"
+    ;; this case still needs to be optimized in nthpath*
+    (setval (nthpath 0) NONE data-lst)
+    (setval (keypath 0) NONE data-lst)
+    (setval (srange 0 1) [] data-lst)
+    (rest data-lst))
+  (run-benchmark "set keypath and nthpath at end to NONE versus srange and subvec (vector)"
+    (setval (nthpath (dec size)) NONE data-vec)
+    (setval (keypath (dec size)) NONE data-vec)
+    (setval (srange (dec size) size) [] data-vec)
+    (subvec data-vec 0 (dec size))))
