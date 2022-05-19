@@ -11,7 +11,7 @@
                       select-any selected-any? collected? traverse
                       multi-transform path dynamicnav recursive-path
                       defdynamicnav traverse-all satisfies-protpath? end-fn
-                      vtransform]]))
+                      subseq-pred-fn vtransform]]))
   (:use
     #?(:clj [clojure.test :only [deftest is]])
     #?(:clj [clojure.test.check.clojure-test :only [defspec]])
@@ -23,7 +23,7 @@
                     select-any selected-any? collected? traverse
                     multi-transform path dynamicnav recursive-path
                     defdynamicnav traverse-all satisfies-protpath? end-fn
-                    vtransform]]))
+                    subseq-pred-fn vtransform]]))
 
 
 
@@ -949,6 +949,23 @@
     (= (setval (s/continuous-subseqs pred) nil aseq)
        (filter (complement pred) aseq))))
 
+(defn- make-bounds-pred-fn-vecs [start end]
+  (s/subseq-pred-fn first [elem prev]
+                    (let [[included last] prev]
+                    (cond
+                      (= start elem) [false start]
+                      (= end elem) [false end]
+                      (= end last) [false elem]
+                      :else [(or (= start last) included) elem]))))
+
+(defn- make-bounds-pred-fn-maps [start end]
+  (s/subseq-pred-fn :include [elem prev]
+                    (let [{include :include last :last} prev]
+                      (cond
+                        (= start elem) {:include false :last start}
+                        (= end elem) {:include false :last end}
+                        (= end last) {:include false :last elem}
+                        :else {:include (or (= start last) include) :last elem}))))
 
 (deftest continuous-subseqs-test
   (is (= [1 "ab" 2 3 "c" 4 "def"]
@@ -960,7 +977,19 @@
   (is (= [[] [2] [4 6]]
          (select
            [(s/continuous-subseqs number?) (s/filterer even?)]
-           [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"]))))
+           [1 "a" "b" 2 3 "c" 4 5 6 "d" "e" "f"])))
+  (is (= [[1 2 3] [8 9]]
+         (select
+           [(s/continuous-subseqs (make-bounds-pred-fn-vecs :START :END))]
+           [:START 1 2 3 :END 5 6 7 :START 8 9 :END])))
+
+  (is (= [1 2 3 :START-SUM 15 :END-SUM 7 8 9 :START-SUM 21 :END-SUM 12 :START-SUM 27 :END-SUM]
+         (transform
+           (s/continuous-subseqs (make-bounds-pred-fn-maps :START-SUM :END-SUM))
+           (fn [vals] [(apply + vals)])
+           [1 2 3 :START-SUM 4 5 6 :END-SUM 7 8 9 :START-SUM 10 11 :END-SUM 12 :START-SUM 13 14 :END-SUM])))
+  )
+
 
 
 
@@ -1589,7 +1618,7 @@
   (s/comp-paths
     (s/srange-dynamic
       (fn [aseq] (long (/ (count aseq) 2)))
-      (end-fn [aseq s] (if (empty? aseq) 0 (inc s))))
+      (s/end-fn [aseq s] (if (empty? aseq) 0 (inc s))))
     s/FIRST
     ))
 

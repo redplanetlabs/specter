@@ -40,4 +40,5 @@
          [["clojars" {:url "https://repo.clojars.org"
                       :sign-releases false}]]
 
-  :aliases {"deploy" ["do" "clean," "deploy" "clojars"]})
+  :aliases {"deploy" ["do" "clean," "deploy" "clojars"]
+            "test-cljs" ["do" "doo" "node" "test-build" "once"]})
