@@ -18,7 +18,8 @@ Consider these examples:
            :b [{:dd 4}]})
 
 ;; Manual Clojure
-(update-vals data (fn [vals] (map #(update-vals % inc) vals)))
+(let [update-even #(update-vals % (fn [v] (cond-> v (even? v) inc)))]
+  (update-vals data #(mapv update-even %)))
 
 ;; Specter
 (transform [MAP-VALS ALL MAP-VALS even?] inc data)
