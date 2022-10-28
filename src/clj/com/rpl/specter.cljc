@@ -697,7 +697,7 @@
   ^{:doc "Defines an endpoint in the navigation the transform function run.The transform
           function works differently than it does in `transform`. Rather than receive
           collected vals spliced in as the first arguments to the function, this function
-          always takes two arguemnts. The first is all collected vals in a vector, and
+          always takes two arguments. The first is all collected vals in a vector, and
           the second is the navigated value."}
   vterminal
   (richnav [afn]
