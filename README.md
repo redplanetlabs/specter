@@ -334,6 +334,21 @@ When using Specter in a project with [clj-kondo](https://github.com/clj-kondo/cl
            com.rpl.specter/defrichnav clojure.core/defn}}
 ```
 
+The config is included in the repo and can be [imported as indicated in
+the clj-kondo
+documentation](https://github.com/clj-kondo/clj-kondo/blob/master/doc/config.md#importing):
+
+```sh
+clj-kondo --lint "$(clojure -Spath)" --copy-configs --skip-lint
+```
+
+or, if using lein,
+
+```sh
+clj-kondo --lint "$(lein classpath)" --copy-configs --skip-lint
+```
+
+
 # Babashka
 
 This library is compatible with [babashka](https://babashka.org/) as of specter 1.1.4 and babashka 0.7.8.

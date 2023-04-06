@@ -1,0 +1,12 @@
+(ns hooks.specter
+  (:require [clj-kondo.hooks-api :as api]))
+
+;; (sp/recursive-path [x y] p ...) ≈ (fn [x y p] ...)
+(defn recursive-path [{:keys [:node]}]
+  (let [[args self-sym & body] (rest (:children node))
+        new-args (update args :children #(conj % self-sym))
+        new-node (api/list-node
+                  (list* (api/token-node 'fn)
+                         new-args
+                         body))]
+    {:node new-node}))
