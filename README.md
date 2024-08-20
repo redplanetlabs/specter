@@ -64,7 +64,8 @@ Consider these examples:
 ```clojure
 ;; Manual Clojure
 (map inc data) ;; doesn't work, becomes a lazy sequence
-(into (empty data) (map inc data)) ;; doesn't work, reverses the order of lists
+
+(into (empty data) (map inc data)) ;; works correctly
 
 ;; Specter
 (transform ALL inc data) ;; works for all Clojure datatypes with near-optimal efficiency
