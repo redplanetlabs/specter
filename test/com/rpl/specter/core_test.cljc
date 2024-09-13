@@ -1440,6 +1440,11 @@
   (is (= "abq" (setval s/LAST "q" "abc")))
   )
 
+(deftest string-transform-test
+  (is (= "123" (transform s/ALL identity "123")))
+  (is (= "123" (setval [s/ALL #(Character/isWhitespace %)] s/NONE "1 2 3")))
+  (is (= "123" (transform [(s/filterer #(Character/isWhitespace %))] s/NONE "1 2 3"))))
+
 (deftest regex-navigation-test
   ;; also test regexes as implicit navs
   (is (= (select #"t" "test") ["t" "t"]))
