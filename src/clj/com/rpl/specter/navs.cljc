@@ -95,6 +95,13 @@
       (comp (map next-fn)
             (filter not-NONE?))
       structure))
+  
+  #?(:clj String :cljs string)
+  (all-transform [structure next-fn]
+    (apply str (into []
+                     (comp (map next-fn)
+                           (filter not-NONE?))
+                     structure)))
 
   #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)
   (all-transform [structure next-fn]
