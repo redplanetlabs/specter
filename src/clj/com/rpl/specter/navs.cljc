@@ -401,6 +401,11 @@
 
 (def srange-transform i/srange-transform*)
 
+(defn sorted-select
+  [structure keyfn comparator next-fn]
+  (next-fn (sort-by keyfn comparator structure)))
+
+(def sorted-transform i/sorted-transform*)
 
 (defn extract-basic-filter-fn [path]
   (cond (fn? path)
