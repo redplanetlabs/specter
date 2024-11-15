@@ -1,31 +1,31 @@
 (ns com.rpl.specter
   #?(:cljs (:require-macros
             [com.rpl.specter
-              :refer
-              [late-bound-nav
-               late-bound-richnav
-               late-bound-collector
-               defcollector
-               defnav
-               defdynamicnav
-               dynamicnav
-               richnav
-               defrichnav
-               recursive-path
-               select
-               transform
-               setval
-               select-any]]
+             :refer
+             [late-bound-nav
+              late-bound-richnav
+              late-bound-collector
+              defcollector
+              defnav
+              defdynamicnav
+              dynamicnav
+              richnav
+              defrichnav
+              recursive-path
+              select
+              transform
+              setval
+              select-any]]
 
             [com.rpl.specter.util-macros :refer
-              [doseqres]]))
+             [doseqres]]))
   ;; workaround for cljs bug that emits warnings for vars named the same as a
   ;; private var in cljs.core (in this case `NONE`, added as private var to
   ;; cljs.core with 1.9.562)
   #?(:cljs (:refer-clojure :exclude [NONE]))
 
   (:use [com.rpl.specter.protocols :only [ImplicitNav RichNavigator]]
-    #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
+        #?(:clj [com.rpl.specter.util-macros :only [doseqres]]))
   (:require [com.rpl.specter.impl :as i]
             [com.rpl.specter.navs :as n]
             #?(:clj [clojure.walk :as cljwalk])
@@ -34,9 +34,8 @@
 
 (defn- static-path? [path]
   (if (sequential? path)
-   (every? static-path? path)
-   (-> path i/dynamic-param? not)
-   ))
+    (every? static-path? path)
+    (-> path i/dynamic-param? not)))
 
 (defn wrap-dynamic-nav [f]
   (fn [& args]
@@ -48,8 +47,7 @@
             (first ret)
 
             :else
-            ret
-            ))))
+            ret))))
 
 #?(:clj
    (do
@@ -66,14 +64,13 @@
 
      (defmacro collector [params [_ [_ structure-sym] & body]]
        `(richnav ~params
-          (~'select* [this# vals# ~structure-sym next-fn#]
-           (next-fn# (conj vals# (do ~@body)) ~structure-sym))
-          (~'transform* [this# vals# ~structure-sym next-fn#]
-            (next-fn# (conj vals# (do ~@body)) ~structure-sym))))
+                 (~'select* [this# vals# ~structure-sym next-fn#]
+                            (next-fn# (conj vals# (do ~@body)) ~structure-sym))
+                 (~'transform* [this# vals# ~structure-sym next-fn#]
+                               (next-fn# (conj vals# (do ~@body)) ~structure-sym))))
 
      (defmacro defcollector [name & body]
        `(def ~name (collector ~@body)))
-
 
      (defn- late-bound-operation [bindings builder-op impls]
        (let [bindings (partition 2 bindings)
@@ -110,10 +107,10 @@
             (providepath ~self-sym ~path)
             ~self-sym)
          `(i/direct-nav-obj
-            (fn ~params
-              (let [~self-sym (i/local-declarepath)]
-                (providepath ~self-sym ~path)
-                ~self-sym)))))
+           (fn ~params
+             (let [~self-sym (i/local-declarepath)]
+               (providepath ~self-sym ~path)
+               ~self-sym)))))
 
      ;; copied from clojure.core
      (def
@@ -190,7 +187,6 @@
        (let [[name args] (name-with-attributes name args)]
          `(def ~name (dynamicnav ~@args))))
 
-
      (defn- ic-prepare-path [locals-set path]
        (cond
          (vector? path)
@@ -203,10 +199,9 @@
              `(com.rpl.specter.impl/->LocalSym ~path (quote ~embed)))
            ;; var-get doesn't work in cljs, so capture the val in the macro instead
            `(com.rpl.specter.impl/->VarUse
-              ~path
-              ~(if-not (instance? Class (resolve path)) `(var ~path))
-              (quote ~path)))
-
+             ~path
+             ~(if-not (instance? Class (resolve path)) `(var ~path))
+             (quote ~path)))
 
          (i/fn-invocation? path)
          (let [[op & params] path]
@@ -219,12 +214,10 @@
                ~(mapv #(ic-prepare-path locals-set %) params)
                (quote ~path))))
 
-
          :else
          (if (empty? (i/used-locals locals-set path))
            path
            `(com.rpl.specter.impl/->DynamicVal (quote ~path)))))
-
 
      (defn- ic-possible-params [path]
        (do
@@ -241,9 +234,7 @@
                   (sequential? e)
                   (concat (if (vector? e) [e]) (ic-possible-params e))))
 
-
           path)))
-
 
      (defn- cljs-macroexpand [env form]
        (let [expand-fn (i/cljs-analyzer-macroexpand-1)
@@ -259,11 +250,9 @@
          (let [expanded (if (seq? form) (cljs-macroexpand env form) form)]
            (cljwalk/walk #(cljs-macroexpand-all* env %) identity expanded))))
 
-
      (defn- cljs-macroexpand-all [env form]
        (let [ret (cljs-macroexpand-all* env form)]
          ret))
-
 
      (defmacro path
        "Same as calling comp-paths, except it caches the composition of the static parts
@@ -343,7 +332,6 @@
               ~handle-params-code
               ~precompiled-sym))))
 
-
      (defmacro select
        "Navigates to and returns a sequence of all the elements specified by the path.
        This macro will do inline caching of the path."
@@ -403,7 +391,6 @@
        [apath structure]
        `(i/compiled-multi-transform* (path ~apath) ~structure))
 
-
      (defmacro setval
        "Navigates to each value specified by the path and replaces it by `aval`.
        This macro will do inline caching of the path."
@@ -440,13 +427,11 @@
        [params & body]
        `(i/collected?* (~'fn [~params] ~@body)))
 
-
      (defn- protpath-sym [name]
        (-> name (str "-prot") symbol))
 
      (defn- protpath-meth-sym [name]
        (-> name (str "-retrieve") symbol))
-
 
      (defmacro defprotocolpath
        "Defines a navigator that chooses the path to take based on the type
@@ -477,12 +462,12 @@
           `(do
              (defprotocol ~prot-name (~m [structure# ~@params]))
              (defrichnav ~name ~params
-                (~'select* [this# ~@rargs]
-                  (let [inav# ~retrieve]
-                    (i/exec-select* inav# ~@rargs)))
-                (~'transform* [this# ~@rargs]
-                  (let [inav# ~retrieve]
-                    (i/exec-transform* inav# ~@rargs))))))))
+               (~'select* [this# ~@rargs]
+                          (let [inav# ~retrieve]
+                            (i/exec-select* inav# ~@rargs)))
+               (~'transform* [this# ~@rargs]
+                             (let [inav# ~retrieve]
+                               (i/exec-transform* inav# ~@rargs))))))))
 
      (defmacro satisfies-protpath? [protpath o]
        `(satisfies? ~(protpath-sym protpath) ~o))
@@ -491,9 +476,9 @@
        (let [m (-> protpath-prot :sigs keys first)
              params (-> protpath-prot :sigs first last :arglists first)]
          (doseq [[atype path-code] extensions]
-            (extend atype protpath-prot
-              {m (binding [*compile-files* false]
-                   (eval `(fn ~params (path ~path-code))))}))))
+           (extend atype protpath-prot
+                   {m (binding [*compile-files* false]
+                        (eval `(fn ~params (path ~path-code))))}))))
 
      (defmacro extend-protocolpath
        "Used in conjunction with `defprotocolpath`. See [[defprotocolpath]]."
@@ -504,12 +489,8 @@
            ~(protpath-sym protpath)
            ~embed)))
 
-    (defmacro end-fn [& args]
-      `(n/->SrangeEndFunction (fn ~@args)))
-
-    ))
-
-
+     (defmacro end-fn [& args]
+       `(n/->SrangeEndFunction (fn ~@args)))))
 
 (defn comp-paths
   "Returns a compiled version of the given path for use with
@@ -546,7 +527,6 @@
 
 (def ^{:doc "Version of select-first that takes in a path precompiled with comp-paths"}
   compiled-select-first i/compiled-select-first*)
-
 
 (defn select-first*
   "Returns first element found."
@@ -601,7 +581,6 @@
 (def ^{:doc "Version of vtransform that takes in a path precompiled with comp-paths"}
   compiled-vtransform i/compiled-vtransform*)
 
-
 (defn transform*
   "Navigates to each value specified by the path and replaces it by the result of running
   the transform-fn on it"
@@ -611,7 +590,6 @@
 (def ^{:doc "Version of `multi-transform` that takes in a path precompiled with `comp-paths`"}
   compiled-multi-transform i/compiled-multi-transform*)
 
-
 (defn multi-transform*
   "Just like `transform` but expects transform functions to be specified
    inline in the path using `terminal` or `vterminal`. Error is thrown if navigation finishes
@@ -619,7 +597,6 @@
    the `multi-transform` equivalent of `setval`."
   [path structure]
   (compiled-multi-transform (i/comp-paths* path) structure))
-
 
 (def ^{:doc "Version of setval that takes in a path precompiled with comp-paths"}
   compiled-setval i/compiled-setval*)
@@ -647,7 +624,6 @@
 (def dynamic-param? i/dynamic-param?)
 (def late-resolved-fn i/late-resolved-fn)
 
-
 (defdynamicnav
   ^{:doc "Turns a navigator that takes one argument into a navigator that takes
           many arguments and uses the same navigator with each argument. There
@@ -656,8 +632,7 @@
   [navfn]
   (let [latenavfn (late-resolved-fn navfn)]
     (dynamicnav [& args]
-      (map latenavfn args))))
-
+                (map latenavfn args))))
 
 ;; Helpers for making recursive or mutually recursive navs
 
@@ -671,11 +646,9 @@
   STOP
   []
   (select* [this structure next-fn]
-    NONE)
+           NONE)
   (transform* [this structure next-fn]
-    structure))
-
-
+              structure))
 
 (def
   ^{:doc "Stays navigated at the current point. Essentially a no-op navigator."}
@@ -688,23 +661,23 @@
           given as the first arguments"}
   terminal
   (richnav [afn]
-    (select* [this vals structure next-fn]
-       NONE)
-    (transform* [this vals structure next-fn]
-      (i/terminal* afn vals structure))))
+           (select* [this vals structure next-fn]
+                    NONE)
+           (transform* [this vals structure next-fn]
+                       (i/terminal* afn vals structure))))
 
 (def
   ^{:doc "Defines an endpoint in the navigation the transform function run.The transform
           function works differently than it does in `transform`. Rather than receive
           collected vals spliced in as the first arguments to the function, this function
-          always takes two arguemnts. The first is all collected vals in a vector, and
+          always takes two arguments. The first is all collected vals in a vector, and
           the second is the navigated value."}
   vterminal
   (richnav [afn]
-    (select* [this vals structure next-fn]
-      NONE)
-    (transform* [this vals structure next-fn]
-      (afn vals structure))))
+           (select* [this vals structure next-fn]
+                    NONE)
+           (transform* [this vals structure next-fn]
+                       (afn vals structure))))
 
 (defn ^:direct-nav terminal-val
   "Like `terminal` but specifies a val to set at the location regardless of
@@ -718,22 +691,21 @@
   ALL
   []
   (select* [this structure next-fn]
-    (n/all-select structure next-fn))
+           (n/all-select structure next-fn))
   (transform* [this structure next-fn]
-    (n/all-transform structure next-fn)))
+              (n/all-transform structure next-fn)))
 
 (defnav
   ^{:doc "Same as ALL, except maintains metadata on the structure."}
   ALL-WITH-META
   []
   (select* [this structure next-fn]
-    (n/all-select structure next-fn))
+           (n/all-select structure next-fn))
   (transform* [this structure next-fn]
-    (let [m (meta structure)
-          res (n/all-transform structure next-fn)]
-      (if (some? res)
-        (with-meta res m)
-        ))))
+              (let [m (meta structure)
+                    res (n/all-transform structure next-fn)]
+                (if (some? res)
+                  (with-meta res m)))))
 
 (defnav
   ^{:doc "Navigate to each value of the map. This is more efficient than
@@ -741,10 +713,10 @@
   MAP-VALS
   []
   (select* [this structure next-fn]
-    (doseqres NONE [v (vals structure)]
-      (next-fn v)))
+           (doseqres NONE [v (vals structure)]
+                     (next-fn v)))
   (transform* [this structure next-fn]
-    (n/map-vals-transform structure next-fn)))
+              (n/map-vals-transform structure next-fn)))
 
 (defnav
   ^{:doc "Navigate to each key of the map. This is more efficient than
@@ -752,15 +724,14 @@
   MAP-KEYS
   []
   (select* [this structure next-fn]
-    (doseqres NONE [k (keys structure)]
-      (next-fn k)))
+           (doseqres NONE [k (keys structure)]
+                     (next-fn k)))
   (transform* [this structure next-fn]
-    (n/map-keys-transform structure next-fn)))
-
+              (n/map-keys-transform structure next-fn)))
 
 (defcollector VAL []
   (collect-val [this structure]
-    structure))
+               structure))
 
 (def
   ^{:doc "Navigate to the last element of the collection. If the collection is
@@ -781,12 +752,11 @@
   srange-dynamic
   [start-index-fn end-index-fn]
   (select* [this structure next-fn]
-    (let [s (start-index-fn structure)]
-      (n/srange-select structure s (n/invoke-end-fn end-index-fn structure s) next-fn)))
+           (let [s (start-index-fn structure)]
+             (n/srange-select structure s (n/invoke-end-fn end-index-fn structure s) next-fn)))
   (transform* [this structure next-fn]
-    (let [s (start-index-fn structure)]
-      (n/srange-transform structure s (n/invoke-end-fn end-index-fn structure s) next-fn))))
-
+              (let [s (start-index-fn structure)]
+                (n/srange-transform structure s (n/invoke-end-fn end-index-fn structure s) next-fn))))
 
 (defnav
   ^{:doc "Navigates to the subsequence bound by the indexes start (inclusive)
@@ -794,46 +764,43 @@
   srange
   [start end]
   (select* [this structure next-fn]
-    (n/srange-select structure start end next-fn))
+           (n/srange-select structure start end next-fn))
   (transform* [this structure next-fn]
-    (n/srange-transform structure start end next-fn)))
-
+              (n/srange-transform structure start end next-fn)))
 
 (defnav
   ^{:doc "Navigates to every continuous subsequence of elements matching `pred`"}
   continuous-subseqs
   [pred]
   (select* [this structure next-fn]
-    (doseqres NONE [[s e] (i/matching-ranges structure pred)]
-      (n/srange-select structure s e next-fn)))
+           (doseqres NONE [[s e] (i/matching-ranges structure pred)]
+                     (n/srange-select structure s e next-fn)))
   (transform* [this structure next-fn]
-    (i/continuous-subseqs-transform* pred structure next-fn)))
-
+              (i/continuous-subseqs-transform* pred structure next-fn)))
 
 (defnav
   ^{:doc "Navigate to the empty subsequence before the first element of the collection."}
   BEGINNING
   []
   (select* [this structure next-fn]
-    (next-fn (if (string? structure) "" [])))
+           (next-fn (if (string? structure) "" [])))
   (transform* [this structure next-fn]
-    (if (string? structure)
-      (str (next-fn "") structure)
-      (let [to-prepend (next-fn [])]
-        (n/prepend-all structure to-prepend)))))
-
+              (if (string? structure)
+                (str (next-fn "") structure)
+                (let [to-prepend (next-fn [])]
+                  (n/prepend-all structure to-prepend)))))
 
 (defnav
- ^{:doc "Navigate to the empty subsequence after the last element of the collection."}
+  ^{:doc "Navigate to the empty subsequence after the last element of the collection."}
   END
   []
   (select* [this structure next-fn]
-    (next-fn (if (string? structure) "" [])))
+           (next-fn (if (string? structure) "" [])))
   (transform* [this structure next-fn]
-    (if (string? structure)
-      (str structure (next-fn ""))
-      (let [to-append (next-fn [])]
-        (n/append-all structure to-append)))))
+              (if (string? structure)
+                (str structure (next-fn ""))
+                (let [to-append (next-fn [])]
+                  (n/append-all structure to-append)))))
 
 (defnav
   ^{:doc "Navigate to 'void' elem in the set.
@@ -842,15 +809,14 @@
   NONE-ELEM
   []
   (select* [this structure next-fn]
-    (next-fn NONE))
+           (next-fn NONE))
   (transform* [this structure next-fn]
-    (let [newe (next-fn NONE)]
-      (if (identical? NONE newe)
-        structure
-        (if (nil? structure)
-          #{newe}
-          (conj structure newe)
-          )))))
+              (let [newe (next-fn NONE)]
+                (if (identical? NONE newe)
+                  structure
+                  (if (nil? structure)
+                    #{newe}
+                    (conj structure newe))))))
 
 (defnav
   ^{:doc "Navigate to 'void' element before the sequence.
@@ -859,13 +825,12 @@
   BEFORE-ELEM
   []
   (select* [this structure next-fn]
-    (next-fn NONE))
+           (next-fn NONE))
   (transform* [this structure next-fn]
-    (let [newe (next-fn NONE)]
-      (if (identical? NONE newe)
-        structure
-        (n/prepend-one structure newe)
-        ))))
+              (let [newe (next-fn NONE)]
+                (if (identical? NONE newe)
+                  structure
+                  (n/prepend-one structure newe)))))
 
 (defnav
   ^{:doc "Navigate to 'void' element after the sequence.
@@ -874,13 +839,12 @@
   AFTER-ELEM
   []
   (select* [this structure next-fn]
-    (next-fn NONE))
+           (next-fn NONE))
   (transform* [this structure next-fn]
-    (let [newe (next-fn NONE)]
-      (if (identical? NONE newe)
-        structure
-        (n/append-one structure newe)
-        ))))
+              (let [newe (next-fn NONE)]
+                (if (identical? NONE newe)
+                  structure
+                  (n/append-one structure newe)))))
 
 (defnav
   ^{:doc "Navigates to the specified subset (by taking an intersection).
@@ -889,14 +853,13 @@
   subset
   [aset]
   (select* [this structure next-fn]
-    (next-fn (set/intersection structure aset)))
+           (next-fn (set/intersection structure aset)))
   (transform* [this structure next-fn]
-    (let [subset (set/intersection structure aset)
-          newset (next-fn subset)]
-      (-> structure
-          (set/difference subset)
-          (set/union newset)))))
-
+              (let [subset (set/intersection structure aset)
+                    newset (next-fn subset)]
+                (-> structure
+                    (set/difference subset)
+                    (set/union newset)))))
 
 (defnav
   ^{:doc "Navigates to the specified submap (using select-keys).
@@ -905,13 +868,13 @@
   submap
   [m-keys]
   (select* [this structure next-fn]
-    (next-fn (select-keys structure m-keys)))
+           (next-fn (select-keys structure m-keys)))
 
   (transform* [this structure next-fn]
-    (let [submap (select-keys structure m-keys)
-          newmap (next-fn submap)]
-      (merge (reduce dissoc structure m-keys)
-             newmap))))
+              (let [submap (select-keys structure m-keys)
+                    newmap (next-fn submap)]
+                (merge (reduce dissoc structure m-keys)
+                       newmap))))
 
 (defdynamicnav subselect
   "Navigates to a sequence that contains the results of (select ...),
@@ -927,20 +890,19 @@
   Value collection (e.g. collect, collect-one) may not be used in the subpath."
   [& path]
   (late-bound-nav [late (late-path path)]
-    (select* [this structure next-fn]
-             (next-fn (compiled-select late structure)))
-    (transform* [this structure next-fn]
-      (let [select-result (compiled-select late structure)
-            transformed (next-fn select-result)
-            values-to-insert (i/mutable-cell (seq transformed))]
-        (compiled-transform late
-                            (fn [_] (let [vs (i/get-cell values-to-insert)]
-                                      (if vs
-                                        (do (i/update-cell! values-to-insert next)
-                                            (first vs))
-                                        NONE
-                                        )))
-                            structure)))))
+                  (select* [this structure next-fn]
+                           (next-fn (compiled-select late structure)))
+                  (transform* [this structure next-fn]
+                              (let [select-result (compiled-select late structure)
+                                    transformed (next-fn select-result)
+                                    values-to-insert (i/mutable-cell (seq transformed))]
+                                (compiled-transform late
+                                                    (fn [_] (let [vs (i/get-cell values-to-insert)]
+                                                              (if vs
+                                                                (do (i/update-cell! values-to-insert next)
+                                                                    (first vs))
+                                                                NONE)))
+                                                    structure)))))
 
 (defrichnav
   ^{:doc "Navigates to the given key in the map (not to the value). Navigates only if the
@@ -949,20 +911,17 @@
   map-key
   [key]
   (select* [this vals structure next-fn]
-    (if (contains? structure key)
-      (next-fn vals key)
-      NONE
-      ))
+           (if (contains? structure key)
+             (next-fn vals key)
+             NONE))
   (transform* [this vals structure next-fn]
-    (if (contains? structure key)
-      (let [newkey (next-fn vals key)
-            dissoced (dissoc structure key)]
-        (if (identical? NONE newkey)
-          dissoced
-          (assoc dissoced newkey (get structure key))
-          ))
-      structure
-      )))
+              (if (contains? structure key)
+                (let [newkey (next-fn vals key)
+                      dissoced (dissoc structure key)]
+                  (if (identical? NONE newkey)
+                    dissoced
+                    (assoc dissoced newkey (get structure key))))
+                structure)))
 
 (defrichnav
   ^{:doc "Navigates to the given element in the set only if it exists in the set.
@@ -970,20 +929,17 @@
   set-elem
   [elem]
   (select* [this vals structure next-fn]
-    (if (contains? structure elem)
-      (next-fn vals elem)
-      NONE
-      ))
+           (if (contains? structure elem)
+             (next-fn vals elem)
+             NONE))
   (transform* [this vals structure next-fn]
-    (if (contains? structure elem)
-      (let [newelem (next-fn vals elem)
-            removed (disj structure elem)]
-        (if (identical? NONE newelem)
-          removed
-          (conj removed newelem)
-          ))
-      structure
-      )))
+              (if (contains? structure elem)
+                (let [newelem (next-fn vals elem)
+                      removed (disj structure elem)]
+                  (if (identical? NONE newelem)
+                    removed
+                    (conj removed newelem)))
+                structure)))
 
 (def ^{:doc "Navigate to the specified keys one after another. If navigate to NONE,
              that element is removed from the map or vector."}
@@ -1007,13 +963,13 @@
   before-index
   [index]
   (select* [this vals structure next-fn]
-    NONE)
+           NONE)
   (transform* [this vals structure next-fn]
-    (let [v (next-fn vals NONE)]
-      (if
-        (identical? NONE v)
-          structure
-          (n/insert-before-idx structure index v)))))
+              (let [v (next-fn vals NONE)]
+                (if
+                 (identical? NONE v)
+                  structure
+                  (n/insert-before-idx structure index v)))))
 
 (defrichnav
   ^{:doc "Navigates to the index of the sequence if within 0 and size. Transforms move element
@@ -1021,38 +977,32 @@
   index-nav
   [i]
   (select* [this vals structure next-fn]
-    (if (and (>= i 0) (< i (count structure)))
-      (next-fn vals i)
-      NONE
-      ))
+           (if (and (>= i 0) (< i (count structure)))
+             (next-fn vals i)
+             NONE))
   (transform* [this vals structure next-fn]
-    (if (and (>= i 0) (< i (count structure)))
-      (let [newi (next-fn vals i)]
-        (if (= newi i)
-          structure
-          (let [v (nth structure i)]
-            (if (vector? structure)
-              (let [shifted (if (< newi i)
-                              (loop [j (dec i)
-                                     s structure]
-                                (if (< j newi)
-                                  s
-                                  (recur (dec j) (assoc s (inc j) (nth s j)))
-                                  ))
-                              (loop [j (inc i)
-                                     s structure]
-                                (if (> j newi)
-                                  s
-                                  (recur (inc j) (assoc s (dec j) (nth s j)))
-                                  )))]
-                (assoc shifted newi v)
-                )
-                (->> structure
-                     (setval (nthpath i) NONE)
-                     (setval (before-index newi) v)
-                     )))))
-      structure
-      )))
+              (if (and (>= i 0) (< i (count structure)))
+                (let [newi (next-fn vals i)]
+                  (if (= newi i)
+                    structure
+                    (let [v (nth structure i)]
+                      (if (vector? structure)
+                        (let [shifted (if (< newi i)
+                                        (loop [j (dec i)
+                                               s structure]
+                                          (if (< j newi)
+                                            s
+                                            (recur (dec j) (assoc s (inc j) (nth s j)))))
+                                        (loop [j (inc i)
+                                               s structure]
+                                          (if (> j newi)
+                                            s
+                                            (recur (inc j) (assoc s (dec j) (nth s j))))))]
+                          (assoc shifted newi v))
+                        (->> structure
+                             (setval (nthpath i) NONE)
+                             (setval (before-index newi) v))))))
+                structure)))
 
 (defnav
   ^{:doc "Navigate to [index elem] pairs for each element in a sequence. The sequence will be indexed
@@ -1062,33 +1012,29 @@
   [start]
   (select* [this structure next-fn]
     ;; could be more efficient with a primitive mutable field
-    (let [i (i/mutable-cell (dec start))]
-      (doseqres NONE [e structure]
-        (i/update-cell! i inc)
-        (next-fn [(i/get-cell i) e])
-        )))
+           (let [i (i/mutable-cell (dec start))]
+             (doseqres NONE [e structure]
+                       (i/update-cell! i inc)
+                       (next-fn [(i/get-cell i) e]))))
   (transform* [this structure next-fn]
-    (let [indices (i/mutable-cell (-> structure count range))]
-      (reduce
-       (fn [s e]
-         (let [curri (first (i/get-cell indices))
-               [newi* newe] (next-fn [(+ start curri) e])
-               newi (- newi* start)]
-           (i/update-cell!
-             indices
-             (fn [ii]
-               (let [ii2 (next ii)]
-                 (if (> newi curri)
-                   (transform [ALL #(>= % (inc curri)) #(<= % newi)] dec ii2)
-                   ii2
-                   ))))
-           (->> s
-                (setval (nthpath curri) newe)
-                (setval (index-nav curri) newi)
-                )))
-       structure
-       structure
-       ))))
+              (let [indices (i/mutable-cell (-> structure count range))]
+                (reduce
+                 (fn [s e]
+                   (let [curri (first (i/get-cell indices))
+                         [newi* newe] (next-fn [(+ start curri) e])
+                         newi (- newi* start)]
+                     (i/update-cell!
+                      indices
+                      (fn [ii]
+                        (let [ii2 (next ii)]
+                          (if (> newi curri)
+                            (transform [ALL #(>= % (inc curri)) #(<= % newi)] dec ii2)
+                            ii2))))
+                     (->> s
+                          (setval (nthpath curri) newe)
+                          (setval (index-nav curri) newi))))
+                 structure
+                 structure))))
 
 (def
   ^{:doc "`indexed-vals` with a starting index of 0."}
@@ -1100,10 +1046,9 @@
   view
   [afn]
   (select* [this vals structure next-fn]
-    (next-fn vals (afn structure)))
+           (next-fn vals (afn structure)))
   (transform* [this vals structure next-fn]
-    (next-fn vals (afn structure))))
-
+              (next-fn vals (afn structure))))
 
 (defnav
   ^{:doc "Navigate to the result of running `parse-fn` on the value. For
@@ -1112,28 +1057,27 @@
   parser
   [parse-fn unparse-fn]
   (select* [this structure next-fn]
-    (next-fn (parse-fn structure)))
+           (next-fn (parse-fn structure)))
   (transform* [this structure next-fn]
-    (unparse-fn (next-fn (parse-fn structure)))))
-
+              (unparse-fn (next-fn (parse-fn structure)))))
 
 (defnav
   ^{:doc "Navigates to atom value."}
   ATOM
   []
   (select* [this structure next-fn]
-    (next-fn @structure))
+           (next-fn @structure))
   (transform* [this structure next-fn]
-    (do
-      (swap! structure next-fn)
-      structure)))
+              (do
+                (swap! structure next-fn)
+                structure)))
 
 (defnav regex-nav [re]
   (select* [this structure next-fn]
-    (doseqres NONE [s (re-seq re structure)]
-      (next-fn s)))
+           (doseqres NONE [s (re-seq re structure)]
+                     (next-fn s)))
   (transform* [this structure next-fn]
-    (clojure.string/replace structure re next-fn)))
+              (clojure.string/replace structure re next-fn)))
 
 (defdynamicnav selected?
   "Filters the current value based on whether a path finds anything.
@@ -1143,35 +1087,35 @@
   (if-let [afn (n/extract-basic-filter-fn path)]
     afn
     (late-bound-richnav [late (late-path path)]
-      (select* [this vals structure next-fn]
-        (i/filter-select
-          #(n/selected?* late vals %)
-          vals
-          structure
-          next-fn))
-      (transform* [this vals structure next-fn]
-        (i/filter-transform
-          #(n/selected?* late vals %)
-          vals
-          structure
-          next-fn)))))
+                        (select* [this vals structure next-fn]
+                                 (i/filter-select
+                                  #(n/selected?* late vals %)
+                                  vals
+                                  structure
+                                  next-fn))
+                        (transform* [this vals structure next-fn]
+                                    (i/filter-transform
+                                     #(n/selected?* late vals %)
+                                     vals
+                                     structure
+                                     next-fn)))))
 
 (defdynamicnav not-selected? [& path]
   (if-let [afn (n/extract-basic-filter-fn path)]
     (fn [s] (not (afn s)))
     (late-bound-richnav [late (late-path path)]
-      (select* [this vals structure next-fn]
-        (i/filter-select
-          #(n/not-selected?* late vals %)
-          vals
-          structure
-          next-fn))
-      (transform* [this vals structure next-fn]
-        (i/filter-transform
-          #(n/not-selected?* late vals %)
-          vals
-          structure
-          next-fn)))))
+                        (select* [this vals structure next-fn]
+                                 (i/filter-select
+                                  #(n/not-selected?* late vals %)
+                                  vals
+                                  structure
+                                  next-fn))
+                        (transform* [this vals structure next-fn]
+                                    (i/filter-transform
+                                     #(n/not-selected?* late vals %)
+                                     vals
+                                     structure
+                                     next-fn)))))
 
 (defdynamicnav filterer
   "Navigates to a view of the current sequence that only contains elements that
@@ -1190,10 +1134,10 @@
   [path update-fn]
   (late-bound-nav [late (late-path path)
                    late-fn update-fn]
-    (select* [this structure next-fn]
-      (next-fn (compiled-transform late late-fn structure)))
-    (transform* [this structure next-fn]
-      (next-fn (compiled-transform late late-fn structure)))))
+                  (select* [this structure next-fn]
+                           (next-fn (compiled-transform late late-fn structure)))
+                  (transform* [this structure next-fn]
+                              (next-fn (compiled-transform late late-fn structure)))))
 
 (defdynamicnav traversed
   "Navigates to a view of the current value by transforming with a reduction over
@@ -1201,11 +1145,10 @@
   [path reduce-fn]
   (late-bound-nav [late (late-path path)
                    late-fn reduce-fn]
-    (select* [this structure next-fn]
-      (next-fn (reduce late-fn (compiled-traverse late structure))))
-    (transform* [this structure next-fn]
-      (next-fn (reduce late-fn (compiled-traverse late structure)))
-      )))
+                  (select* [this structure next-fn]
+                           (next-fn (reduce late-fn (compiled-traverse late structure))))
+                  (transform* [this structure next-fn]
+                              (next-fn (reduce late-fn (compiled-traverse late structure))))))
 
 (def
   ^{:doc "Keeps the element only if it matches the supplied predicate. Functions in paths
@@ -1213,7 +1156,6 @@
     :direct-nav true}
   pred
   i/pred*)
-
 
 (defn ^:direct-nav pred= [v] (pred #(= % v)))
 (defn ^:direct-nav pred< [v] (pred #(< % v)))
@@ -1267,9 +1209,9 @@
   nil->val
   [v]
   (select* [this structure next-fn]
-    (next-fn (if (nil? structure) v structure)))
+           (next-fn (if (nil? structure) v structure)))
   (transform* [this structure next-fn]
-    (next-fn (if (nil? structure) v structure))))
+              (next-fn (if (nil? structure) v structure))))
 
 (def
   ^{:doc "Navigates to #{} if the value is nil. Otherwise it stays
@@ -1294,36 +1236,34 @@
   META
   []
   (select* [this structure next-fn]
-    (next-fn (meta structure)))
+           (next-fn (meta structure)))
   (transform* [this structure next-fn]
-    (with-meta structure (next-fn (meta structure)))))
+              (with-meta structure (next-fn (meta structure)))))
 
 (defnav ^{:doc "Navigates to the name portion of the keyword or symbol"}
   NAME
   []
   (select* [this structure next-fn]
-    (next-fn (name structure)))
+           (next-fn (name structure)))
   (transform* [this structure next-fn]
-    (let [new-name (next-fn (name structure))
-          ns (namespace structure)]
-      (cond (keyword? structure) (keyword ns new-name)
-            (symbol? structure) (symbol ns new-name)
-            :else (throw (ex-info "NAME can only be used on symbols or keywords" {:structure structure}))
-            ))))
+              (let [new-name (next-fn (name structure))
+                    ns (namespace structure)]
+                (cond (keyword? structure) (keyword ns new-name)
+                      (symbol? structure) (symbol ns new-name)
+                      :else (throw (ex-info "NAME can only be used on symbols or keywords" {:structure structure}))))))
 
 (defnav ^{:doc "Navigates to the namespace portion of the keyword or symbol"}
   NAMESPACE
   []
   (select* [this structure next-fn]
-    (next-fn (namespace structure)))
+           (next-fn (namespace structure)))
   (transform* [this structure next-fn]
-    (let [name (name structure)
-          new-ns (next-fn (namespace structure))]
-      (cond (keyword? structure) (keyword new-ns name)
-            (symbol? structure) (symbol new-ns name)
-            :else (throw (ex-info "NAMESPACE can only be used on symbols or keywords"
-                                  {:structure structure}))
-            ))))
+              (let [name (name structure)
+                    new-ns (next-fn (namespace structure))]
+                (cond (keyword? structure) (keyword new-ns name)
+                      (symbol? structure) (symbol new-ns name)
+                      :else (throw (ex-info "NAMESPACE can only be used on symbols or keywords"
+                                            {:structure structure}))))))
 
 (defdynamicnav
   ^{:doc "Adds the result of running select with the given path on the
@@ -1331,9 +1271,8 @@
   collect
   [& path]
   (late-bound-collector [late (late-path path)]
-    (collect-val [this structure]
-      (compiled-select late structure))))
-
+                        (collect-val [this structure]
+                                     (compiled-select late structure))))
 
 (defdynamicnav
   ^{:doc "Adds the result of running select-one with the given path on the
@@ -1341,9 +1280,8 @@
   collect-one
   [& path]
   (late-bound-collector [late (late-path path)]
-    (collect-val [this structure]
-      (compiled-select-one late structure))))
-
+                        (collect-val [this structure]
+                                     (compiled-select-one late structure))))
 
 (defcollector
   ^{:doc
@@ -1356,7 +1294,7 @@
   putval
   [val]
   (collect-val [this structure]
-    val))
+               val))
 
 (defdynamicnav
   ^{:doc
@@ -1366,21 +1304,19 @@
   with-fresh-collected
   [& path]
   (late-bound-richnav [late (late-path path)]
-    (select* [this vals structure next-fn]
-      (i/exec-select* late [] structure (fn [_ structure] (next-fn vals structure)))
-      )
-    (transform* [this vals structure next-fn]
-      (i/exec-transform* late [] structure (fn [_ structure] (next-fn vals structure))))
-      ))
+                      (select* [this vals structure next-fn]
+                               (i/exec-select* late [] structure (fn [_ structure] (next-fn vals structure))))
+                      (transform* [this vals structure next-fn]
+                                  (i/exec-transform* late [] structure (fn [_ structure] (next-fn vals structure))))))
 
 (defrichnav
   ^{:doc "Drops all collected values for subsequent navigation."}
   DISPENSE
   []
   (select* [this vals structure next-fn]
-    (next-fn [] structure))
+           (next-fn [] structure))
   (transform* [this vals structure next-fn]
-    (next-fn [] structure)))
+              (next-fn [] structure)))
 
 (defdynamicnav if-path
   "Like cond-path, but with if semantics."
@@ -1388,44 +1324,43 @@
    (if-path cond-p then-path STOP))
   ([cond-p then-path else-path]
    (if-let [afn (n/extract-basic-filter-fn cond-p)]
-    (late-bound-richnav [late-then (late-path then-path)
-                         late-else (late-path else-path)]
-      (select* [this vals structure next-fn]
-        (n/if-select
-          vals
-          structure
-          next-fn
-          afn
-          late-then
-          late-else))
-      (transform* [this vals structure next-fn]
-        (n/if-transform
-          vals
-          structure
-          next-fn
-          afn
-          late-then
-          late-else)))
-    (late-bound-richnav [late-cond (late-path cond-p)
-                         late-then (late-path then-path)
-                         late-else (late-path else-path)]
-      (select* [this vals structure next-fn]
-         (n/if-select
-          vals
-          structure
-          next-fn
-          #(n/selected?* late-cond vals %)
-          late-then
-          late-else))
-      (transform* [this vals structure next-fn]
-         (n/if-transform
-          vals
-          structure
-          next-fn
-          #(n/selected?* late-cond vals %)
-          late-then
-          late-else))))))
-
+     (late-bound-richnav [late-then (late-path then-path)
+                          late-else (late-path else-path)]
+                         (select* [this vals structure next-fn]
+                                  (n/if-select
+                                   vals
+                                   structure
+                                   next-fn
+                                   afn
+                                   late-then
+                                   late-else))
+                         (transform* [this vals structure next-fn]
+                                     (n/if-transform
+                                      vals
+                                      structure
+                                      next-fn
+                                      afn
+                                      late-then
+                                      late-else)))
+     (late-bound-richnav [late-cond (late-path cond-p)
+                          late-then (late-path then-path)
+                          late-else (late-path else-path)]
+                         (select* [this vals structure next-fn]
+                                  (n/if-select
+                                   vals
+                                   structure
+                                   next-fn
+                                   #(n/selected?* late-cond vals %)
+                                   late-then
+                                   late-else))
+                         (transform* [this vals structure next-fn]
+                                     (n/if-transform
+                                      vals
+                                      structure
+                                      next-fn
+                                      #(n/selected?* late-cond vals %)
+                                      late-then
+                                      late-else))))))
 
 (defdynamicnav cond-path
   "Takes in alternating cond-path path cond-path path...
@@ -1436,11 +1371,10 @@
   [& conds]
   (let [pairs (reverse (partition 2 conds))]
     (reduce
-      (fn [p [tester apath]]
-        (if-path tester apath p))
-      STOP
-      pairs)))
-
+     (fn [p [tester apath]]
+       (if-path tester apath p))
+     STOP
+     pairs)))
 
 (defdynamicnav multi-path
   "A path that branches on multiple paths. For updates,
@@ -1450,21 +1384,19 @@
   ([path1 path2]
    (late-bound-richnav [late1 (late-path path1)
                         late2 (late-path path2)]
-     (select* [this vals structure next-fn]
-       (let [res1 (i/exec-select* late1 vals structure next-fn)]
-         (if (reduced? res1)
-           res1
-           (let [res2 (i/exec-select* late2 vals structure next-fn)]
-             (if (identical? NONE res1)
-               res2
-               res1
-               )))))
-     (transform* [this vals structure next-fn]
-       (let [s1 (i/exec-transform* late1 vals structure next-fn)]
-         (i/exec-transform* late2 vals s1 next-fn)))))
+                       (select* [this vals structure next-fn]
+                                (let [res1 (i/exec-select* late1 vals structure next-fn)]
+                                  (if (reduced? res1)
+                                    res1
+                                    (let [res2 (i/exec-select* late2 vals structure next-fn)]
+                                      (if (identical? NONE res1)
+                                        res2
+                                        res1)))))
+                       (transform* [this vals structure next-fn]
+                                   (let [s1 (i/exec-transform* late1 vals structure next-fn)]
+                                     (i/exec-transform* late2 vals s1 next-fn)))))
   ([path1 path2 & paths]
    (reduce multi-path (multi-path path1 path2) paths)))
-
 
 (defdynamicnav stay-then-continue
   "Navigates to the current element and then navigates via the provided path.
@@ -1484,23 +1416,20 @@
           same semantics as clojure.walk."}
   walker
   (recursive-path [afn] p
-    (cond-path (pred afn) STAY
-               coll? [ALL p]
-               )))
+                  (cond-path (pred afn) STAY
+                             coll? [ALL p])))
 
 (def
   ^{:doc "Like `walker` but maintains metadata of any forms traversed."}
   codewalker
   (recursive-path [afn] p
-    (cond-path (pred afn) STAY
-               coll? [ALL-WITH-META p]
-               )))
+                  (cond-path (pred afn) STAY
+                             coll? [ALL-WITH-META p])))
 
 (let [empty->NONE (if-path empty? (terminal-val NONE))
       compact* (fn [nav] (multi-path nav empty->NONE))]
- (defdynamicnav compact
-   "During transforms, after each step of navigation in subpath check if the
+  (defdynamicnav compact
+    "During transforms, after each step of navigation in subpath check if the
     value is empty. If so, remove that value by setting it to NONE."
-   [& path]
-   (map compact* path)
-   ))
+    [& path]
+    (map compact* path)))
