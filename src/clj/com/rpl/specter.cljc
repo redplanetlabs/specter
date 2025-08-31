@@ -271,77 +271,79 @@
        of Specter provides huge speedup. This macro is automatically used by the
        select/transform/setval/replace-in/etc. macros."
        [& path]
-       (let [;;this is a hack, but the composition of &env is considered stable for cljs
-             platform (if (contains? &env :locals) :cljs :clj)
-             local-syms (if (= platform :cljs)
-                          (-> &env :locals keys set) ;cljs
-                          (-> &env keys set)) ;clj
+       #?(:bb `(comp-paths ~@path)
+          :default
+          (let [;;this is a hack, but the composition of &env is considered stable for cljs
+                  platform (if (contains? &env :locals) :cljs :clj)
+                  local-syms (if (= platform :cljs)
+                               (-> &env :locals keys set) ;cljs
+                               (-> &env keys set)) ;clj
 
-             used-locals (i/used-locals local-syms path)
+                  used-locals (i/used-locals local-syms path)
 
-             ;; note: very important to use riddley's macroexpand-all here, so that
-             ;; &env is preserved in any potential nested calls to select (like via
-             ;; a view function)
-             expanded (if (= platform :clj)
-                        (i/clj-macroexpand-all (vec path))
-                        (cljs-macroexpand-all &env (vec path)))
+                  ;; note: very important to use riddley's macroexpand-all here, so that
+                  ;; &env is preserved in any potential nested calls to select (like via
+                  ;; a view function)
+                  expanded (if (= platform :clj)
+                             (i/clj-macroexpand-all (vec path))
+                             (cljs-macroexpand-all &env (vec path)))
 
-             prepared-path (ic-prepare-path local-syms expanded)
-             possible-params (vec (ic-possible-params expanded))
+                  prepared-path (ic-prepare-path local-syms expanded)
+                  possible-params (vec (ic-possible-params expanded))
 
-             cache-sym (vary-meta
-                        (gensym "pathcache")
-                        merge {:cljs.analyzer/no-resolve true :no-doc true :private true})
+                  cache-sym (vary-meta
+                             (gensym "pathcache")
+                             merge {:cljs.analyzer/no-resolve true :no-doc true :private true})
 
-             info-sym (gensym "info")
+                  info-sym (gensym "info")
 
-             get-cache-code (if (= platform :clj)
-                              `(try (i/get-cell ~cache-sym)
-                                    (catch ClassCastException e#
-                                      ;; With AOT compilation it's possible for:
-                                      ;; Thread 1: unbound, so throw exception
-                                      ;; Thread 2: unbound, so throw exception
-                                      ;; Thread 1: do alter-var-root
-                                      ;; Thread 2: it's bound, so retrieve the current value
-                                      (if (bound? (var ~cache-sym))
-                                        (i/get-cell ~cache-sym)
-                                        (do
-                                          (alter-var-root
-                                           (var ~cache-sym)
-                                           (fn [_#] (i/mutable-cell)))
-                                          nil))))
-                              cache-sym)
+                  get-cache-code (if (= platform :clj)
+                                   `(try (i/get-cell ~cache-sym)
+                                         (catch ClassCastException e#
+                                           ;; With AOT compilation it's possible for:
+                                           ;; Thread 1: unbound, so throw exception
+                                           ;; Thread 2: unbound, so throw exception
+                                           ;; Thread 1: do alter-var-root
+                                           ;; Thread 2: it's bound, so retrieve the current value
+                                           (if (bound? (var ~cache-sym))
+                                             (i/get-cell ~cache-sym)
+                                             (do
+                                               (alter-var-root
+                                                (var ~cache-sym)
+                                                (fn [_#] (i/mutable-cell)))
+                                               nil))))
+                                   cache-sym)
 
-             add-cache-code (if (= platform :clj)
-                              `(i/set-cell! ~cache-sym ~info-sym)
-                              `(def ~cache-sym ~info-sym))
+                  add-cache-code (if (= platform :clj)
+                                   `(i/set-cell! ~cache-sym ~info-sym)
+                                   `(def ~cache-sym ~info-sym))
 
-             precompiled-sym (gensym "precompiled")
+                  precompiled-sym (gensym "precompiled")
 
-             handle-params-code
-             (if (= platform :clj)
-               `(~precompiled-sym ~@used-locals)
-               `(~precompiled-sym ~possible-params))]
-         (if (= platform :clj)
-           (i/intern* *ns* cache-sym (i/mutable-cell)))
-         `(let [info# ~get-cache-code
+                  handle-params-code
+                  (if (= platform :clj)
+                    `(~precompiled-sym ~@used-locals)
+                    `(~precompiled-sym ~possible-params))]
+              (if (= platform :clj)
+                (i/intern* *ns* cache-sym (i/mutable-cell)))
+              `(let [info# ~get-cache-code
 
-                info#
-                (if (nil? info#)
-                  (let [~info-sym (i/magic-precompilation
-                                   ~prepared-path
-                                   ~(str *ns*)
-                                   (quote ~used-locals)
-                                   (quote ~possible-params))]
-                    ~add-cache-code
-                    ~info-sym)
-                  info#)
+                     info#
+                     (if (nil? info#)
+                       (let [~info-sym (i/magic-precompilation
+                                        ~prepared-path
+                                        ~(str *ns*)
+                                        (quote ~used-locals)
+                                        (quote ~possible-params))]
+                         ~add-cache-code
+                         ~info-sym)
+                       info#)
 
-                ~precompiled-sym (i/cached-path-info-precompiled info#)
-                dynamic?# (i/cached-path-info-dynamic? info#)]
-            (if dynamic?#
-              ~handle-params-code
-              ~precompiled-sym))))
+                     ~precompiled-sym (i/cached-path-info-precompiled info#)
+                     dynamic?# (i/cached-path-info-dynamic? info#)]
+                 (if dynamic?#
+                   ~handle-params-code
+                   ~precompiled-sym)))))
 
 
      (defmacro select
