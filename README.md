@@ -18,17 +18,8 @@ Consider these examples:
            :b [{:dd 4}]})
 
 ;; Manual Clojure
-(defn map-vals [m afn]
-  (->> m (map (fn [[k v]] [k (afn v)])) (into (empty m))))
-
-(map-vals data
-  (fn [v]
-    (mapv
-      (fn [m]
-        (map-vals
-          m
-          (fn [v] (if (even? v) (inc v) v))))
-      v)))
+(let [update-even #(update-vals % (fn [v] (cond-> v (even? v) inc)))]
+  (update-vals data #(mapv update-even %)))
 
 ;; Specter
 (transform [MAP-VALS ALL MAP-VALS even?] inc data)
@@ -40,7 +31,7 @@ Consider these examples:
 (def data {:a [1 2 3]})
 
 ;; Manual Clojure
-(update data :a (fn [v] (into (if v v []) [4 5])))
+(update data :a concat [4 5])
 
 ;; Specter
 (setval [:a END] [4 5] data)
