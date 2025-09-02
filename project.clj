@@ -9,6 +9,8 @@
   :test-paths ["test", "target/test-classes"]
   :auto-clean false
   :dependencies [[riddley "0.1.12"]]
+  :license {:name "Apache-2.0 License"
+            :url "https://www.apache.org/licenses/LICENSE-2.0"}
   :plugins [[lein-codox "0.10.7"]
             [lein-doo "0.1.7"]]
   :codox {:source-paths ["target/classes" "src/clj"]
