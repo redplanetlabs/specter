@@ -1,3 +1,8 @@
+## 1.1.5
+
+* Implement ALL for strings
+* Fix compilation regression with latest version of babashka
+
 ## 1.1.4
 
 * Add arglist metadata to navs (thanks @phronmophobic)
