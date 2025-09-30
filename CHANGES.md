@@ -1,3 +1,7 @@
+## 1.1.6
+
+* Release built with Java 8
+
 ## 1.1.5
 
 * Implement ALL for strings
